@@ -29,12 +29,70 @@
 		1EC2DA762F33CC2F00CE8BD3 /* NumworksApplicationUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumworksApplicationUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		1EC2DA602F33CC2D00CE8BD3 /* NumworksApplication */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = NumworksApplication;
-			sourceTree = "<group>";
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1EC2DB2C2F33CD6E00CE8BD3 /* Exceptions for "NumWorksMac" folder in "NumworksApplication" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/AppController.swift,
+				App/AppLifecycle.swift,
+				App/NumWorksMacApp.swift,
+				Core/MenuBar/MenuBarActions.swift,
+				Core/MenuBar/MenuBarController.swift,
+				Core/Preferences.swift,
+				Core/Simulator/SimulatorPaths.swift,
+				Core/Simulator/SimulatorRuntime.swift,
+				Core/Simulator/WebInjection.swift,
+				Core/Updaters/AppUpdater.swift,
+				Core/Updaters/SimulatorUpdater.swift,
+				Core/WindowManagement.swift,
+				README_STRUCTURE.txt,
+				Resources/Assets.xcassets,
+				"Resources/DefaultSimulator/numworks-simulator.html",
+				UI/Calculator/CalculatorView.swift,
+				UI/Calculator/CalculatorWebView.swift,
+				UI/Calculator/CalculatorWindow.swift,
+				UI/MenuBar/MenuBarPopoverView.swift,
+				UI/RootView.swift,
+				UI/Settings/SettingsView.swift,
+				UI/Updates/AppUpdateView.swift,
+				UI/Updates/SimulatorUpdateView.swift,
+				UI/Updates/UpdateCenterView.swift,
+			);
+			target = 1EC2DA5D2F33CC2D00CE8BD3 /* NumworksApplication */;
 		};
+		1EC2DB2D2F33CD6E00CE8BD3 /* Exceptions for "NumWorksMac" folder in "NumworksApplicationUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				App/AppController.swift,
+				App/AppLifecycle.swift,
+				App/NumWorksMacApp.swift,
+				Core/MenuBar/MenuBarActions.swift,
+				Core/MenuBar/MenuBarController.swift,
+				Core/Preferences.swift,
+				Core/Simulator/SimulatorPaths.swift,
+				Core/Simulator/SimulatorRuntime.swift,
+				Core/Simulator/WebInjection.swift,
+				Core/Updaters/AppUpdater.swift,
+				Core/Updaters/SimulatorUpdater.swift,
+				Core/WindowManagement.swift,
+				README_STRUCTURE.txt,
+				Resources/Assets.xcassets,
+				"Resources/DefaultSimulator/numworks-simulator.html",
+				UI/Calculator/CalculatorView.swift,
+				UI/Calculator/CalculatorWebView.swift,
+				UI/Calculator/CalculatorWindow.swift,
+				UI/MenuBar/MenuBarPopoverView.swift,
+				UI/RootView.swift,
+				UI/Settings/SettingsView.swift,
+				UI/Updates/AppUpdateView.swift,
+				UI/Updates/SimulatorUpdateView.swift,
+				UI/Updates/UpdateCenterView.swift,
+			);
+			target = 1EC2DA752F33CC2F00CE8BD3 /* NumworksApplicationUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
 		1EC2DA6F2F33CC2F00CE8BD3 /* NumworksApplicationTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = NumworksApplicationTests;
@@ -43,6 +101,15 @@
 		1EC2DA792F33CC2F00CE8BD3 /* NumworksApplicationUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = NumworksApplicationUITests;
+			sourceTree = "<group>";
+		};
+		1EC2DB132F33CD6E00CE8BD3 /* NumWorksMac */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1EC2DB2C2F33CD6E00CE8BD3 /* Exceptions for "NumWorksMac" folder in "NumworksApplication" target */,
+				1EC2DB2D2F33CD6E00CE8BD3 /* Exceptions for "NumWorksMac" folder in "NumworksApplicationUITests" target */,
+			);
+			path = NumWorksMac;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,7 +142,7 @@
 		1EC2DA552F33CC2D00CE8BD3 = {
 			isa = PBXGroup;
 			children = (
-				1EC2DA602F33CC2D00CE8BD3 /* NumworksApplication */,
+				1EC2DB132F33CD6E00CE8BD3 /* NumWorksMac */,
 				1EC2DA6F2F33CC2F00CE8BD3 /* NumworksApplicationTests */,
 				1EC2DA792F33CC2F00CE8BD3 /* NumworksApplicationUITests */,
 				1EC2DA5F2F33CC2D00CE8BD3 /* Products */,
@@ -106,9 +173,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				1EC2DA602F33CC2D00CE8BD3 /* NumworksApplication */,
 			);
 			name = NumworksApplication;
 			packageProductDependencies = (
@@ -155,6 +219,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				1EC2DA792F33CC2F00CE8BD3 /* NumworksApplicationUITests */,
+				1EC2DB132F33CD6E00CE8BD3 /* NumWorksMac */,
 			);
 			name = NumworksApplicationUITests;
 			packageProductDependencies = (
@@ -302,6 +367,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = "";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
@@ -366,6 +432,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = "";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
@@ -394,7 +461,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = NumworksApplication/NumworksApplication.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -421,7 +489,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = NumworksApplication/NumworksApplication.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
