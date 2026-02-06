@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 
 enum MenuBarIconStyle: String {
@@ -20,6 +21,8 @@ final class MenuBarController: NSObject {
     private let actions: MenuBarActions
     private let statusItem: NSStatusItem
 
+    private var cancellables = Set<AnyCancellable>()
+
     private(set) var iconStyle: MenuBarIconStyle = .outline
     private(set) var iconSize: CGFloat = 18
 
@@ -39,6 +42,18 @@ final class MenuBarController: NSObject {
         }
 
         applyIcon()
+
+        Preferences.shared.$menuBarIconStyle
+            .sink { [weak self] style in
+                self?.setIconStyle(style)
+            }
+            .store(in: &cancellables)
+
+        Preferences.shared.$menuBarIconSize
+            .sink { [weak self] size in
+                self?.setIconSize(size)
+            }
+            .store(in: &cancellables)
     }
 
     func setIconStyle(_ style: MenuBarIconStyle) {

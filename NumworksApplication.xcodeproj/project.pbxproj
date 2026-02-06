@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1E426DAC2F369BD3003F7FAB /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1E426DAB2F369BD3003F7FAB /* KeyboardShortcuts */; };
+		1E426DAF2F369BEF003F7FAB /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 1E426DAE2F369BEF003F7FAB /* LaunchAtLogin */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1EC2DA6D2F33CC2F00CE8BD3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -119,6 +124,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E426DAF2F369BEF003F7FAB /* LaunchAtLogin in Frameworks */,
+				1E426DAC2F369BD3003F7FAB /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +183,8 @@
 			);
 			name = NumworksApplication;
 			packageProductDependencies = (
+				1E426DAB2F369BD3003F7FAB /* KeyboardShortcuts */,
+				1E426DAE2F369BEF003F7FAB /* LaunchAtLogin */,
 			);
 			productName = NumworksApplication;
 			productReference = 1EC2DA5E2F33CC2D00CE8BD3 /* NumworksApplication.app */;
@@ -260,6 +269,10 @@
 			);
 			mainGroup = 1EC2DA552F33CC2D00CE8BD3;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1E426DAA2F369BD3003F7FAB /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				1E426DAD2F369BEF003F7FAB /* XCRemoteSwiftPackageReference "LaunchAtLogin" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1EC2DA5F2F33CC2D00CE8BD3 /* Products */;
 			projectDirPath = "";
@@ -620,6 +633,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1E426DAA2F369BD3003F7FAB /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.0;
+			};
+		};
+		1E426DAD2F369BEF003F7FAB /* XCRemoteSwiftPackageReference "LaunchAtLogin" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1E426DAB2F369BD3003F7FAB /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E426DAA2F369BD3003F7FAB /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+		1E426DAE2F369BEF003F7FAB /* LaunchAtLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E426DAD2F369BEF003F7FAB /* XCRemoteSwiftPackageReference "LaunchAtLogin" */;
+			productName = LaunchAtLogin;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1EC2DA562F33CC2D00CE8BD3 /* Project object */;
 }

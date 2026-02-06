@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import KeyboardShortcuts
 
 final class AppController: NSObject, NSWindowDelegate {
     static let shared = AppController()
@@ -10,6 +11,7 @@ final class AppController: NSObject, NSWindowDelegate {
 
     private var suppressFrameSaves = false
     private let windowFrameDefaultsKey = "MainWindowFrame"
+    private var settingsWindowOpen = false
 
     private override init() {
         super.init()
@@ -21,8 +23,41 @@ final class AppController: NSObject, NSWindowDelegate {
         UserDefaults.standard.set(NSStringFromRect(window.frame), forKey: windowFrameDefaultsKey)
     }
 
+    private func applyDockIconVisibility() {
+        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon
+        let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
+
+        if NSApp.activationPolicy() != policy {
+            _ = NSApp.setActivationPolicy(policy)
+        }
+    }
+
     func start() {
         updateMenuBarIcon()
+
+        applyDockIconVisibility()
+
+        NotificationCenter.default.publisher(for: .settingsWindowDidAppear)
+            .sink { [weak self] _ in
+                self?.settingsWindowOpen = true
+                self?.applyDockIconVisibility()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .settingsWindowDidDisappear)
+            .sink { [weak self] _ in
+                self?.settingsWindowOpen = false
+                self?.applyDockIconVisibility()
+            }
+            .store(in: &cancellables)
+
+        KeyboardShortcuts.onKeyUp(for: .hideShowApp) { [weak self] in
+            self?.toggleVisibility()
+        }
+
+        KeyboardShortcuts.onKeyUp(for: .pinUnpinApp) { [weak self] in
+            self?.togglePinned()
+        }
 
         windowManagement.setPinned(Preferences.shared.isPinned)
 
@@ -39,6 +74,12 @@ final class AppController: NSObject, NSWindowDelegate {
         Preferences.shared.$isPinned
             .sink { [weak self] v in
                 self?.windowManagement.setPinned(v)
+            }
+            .store(in: &cancellables)
+
+        Preferences.shared.$showDockIcon
+            .sink { [weak self] _ in
+                self?.applyDockIconVisibility()
             }
             .store(in: &cancellables)
 
@@ -129,4 +170,9 @@ final class AppController: NSObject, NSWindowDelegate {
     func quit() {
         NSApp.terminate(nil)
     }
+}
+
+extension Notification.Name {
+    static let settingsWindowDidAppear = Notification.Name("settingsWindowDidAppear")
+    static let settingsWindowDidDisappear = Notification.Name("settingsWindowDidDisappear")
 }

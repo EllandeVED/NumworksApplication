@@ -10,6 +10,8 @@ final class Preferences: ObservableObject {
     @Published var menuBarIconSize: CGFloat = 20
 
     @Published var isMenuBarIconEnabled: Bool = true
-    @Published var isPinned: Bool = false
+    @Published var showPinButtonOnCalculator: Bool = true
+    @Published var showDockIcon: Bool = true
+    @Published var isPinned: Bool = true
     @Published var isAppVisible: Bool = true
 }

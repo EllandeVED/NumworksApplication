@@ -1,5 +1,9 @@
 import SwiftUI
 import AppKit
+import KeyboardShortcuts
+import LaunchAtLogin
+
+private let settingsTitleSize: CGFloat = 30
 
 struct SettingsView: View {
     enum Tab: String, CaseIterable, Identifiable {
@@ -36,7 +40,7 @@ struct SettingsView: View {
     }
 
     @State private var selection: Tab = .general
-
+    
     private let panes: [Pane] = [
         .init(tab: .general, view: AnyView(GeneralSettingsPane())),
         .init(tab: .appUpdate, view: AnyView(AppUpdateSettingsPane())),
@@ -53,7 +57,14 @@ struct SettingsView: View {
             }
         }
         .tabViewStyle(.sidebarAdaptable)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .frame(minWidth: 620, minHeight: 420)
+        .onAppear {
+            NotificationCenter.default.post(name: .settingsWindowDidAppear, object: nil)
+        }
+        .onDisappear {
+            NotificationCenter.default.post(name: .settingsWindowDidDisappear, object: nil)
+        }
     }
 }
 
@@ -62,31 +73,82 @@ private struct GeneralSettingsPane: View {
 
     var body: some View {
         Form {
-            Section("Menu Bar") {
-                Toggle("Show menu bar icon", isOn: $prefs.isMenuBarIconEnabled)
-
-                Toggle("Keep app pinned", isOn: $prefs.isPinned)
-            }
-
-            Section("Appearance") {
-                Picker("Menu bar icon style", selection: $prefs.menuBarIconStyle) {
-                    Text("Filled").tag(MenuBarIconStyle.filled)
-                    Text("Outline").tag(MenuBarIconStyle.outline)
+            Section("Shortcuts") {
+                LabeledContent("Hide/Show App") {
+                    KeyboardShortcuts.Recorder(for: .hideShowApp)
                 }
 
-                Stepper(value: $prefs.menuBarIconSize, in: 12...28, step: 1) {
-                    HStack {
-                        Text("Menu bar icon size")
-                        Spacer()
-                        Text("\(Int(prefs.menuBarIconSize))")
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                LabeledContent("Pin/Unpin App") {
+                    KeyboardShortcuts.Recorder(for: .pinUnpinApp)
+                }
+            }
+
+            Section("Startup") {
+                LaunchAtLogin.Toggle()
+                    .onAppear {
+                        let key = "didSetDefaultLaunchAtLogin"
+                        if !UserDefaults.standard.bool(forKey: key) {
+                            LaunchAtLogin.isEnabled = true
+                            UserDefaults.standard.set(true, forKey: key)
+                        }
                     }
+            }
+
+            Section("Interface") {
+                Toggle(
+                    "Hide Menu Bar Icon",
+                    isOn: Binding(
+                        get: { !prefs.isMenuBarIconEnabled },
+                        set: { prefs.isMenuBarIconEnabled = !$0 }
+                    )
+                )
+
+                Toggle("Show Pin/Unpin button on Calculator", isOn: $prefs.showPinButtonOnCalculator)
+
+                Toggle("Show Dock Icon", isOn: $prefs.showDockIcon)
+            }
+
+            Section("Preferred Icon") {
+                HStack(spacing: 12) {
+                    iconChoice(title: "Filled", style: .filled)
+                    iconChoice(title: "Outline", style: .outline)
+                    Spacer(minLength: 0)
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
         .padding(16)
-        .navigationTitle("General")
+        .navigationTitle("") 
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("NumWorks Settings")
+                    .font(.system(size: settingsTitleSize, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func iconChoice(title: String, style: MenuBarIconStyle) -> some View {
+        let selected = prefs.menuBarIconStyle == style
+
+        Button {
+            prefs.menuBarIconStyle = style
+        } label: {
+            HStack(spacing: 8) {
+                Image(style.assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                Text(title)
+            }
+            .frame(minWidth: 120)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+        }
+        .buttonStyle(.bordered)
+        .tint(selected ? .accentColor : .gray.opacity(0.2))
     }
 }
 
@@ -102,7 +164,17 @@ private struct AppUpdateSettingsPane: View {
 
             Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
         .padding(16)
+        .navigationTitle("") 
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("NumWorks Settings")
+                    .font(.system(size: settingsTitleSize, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
     }
 }
 
@@ -118,7 +190,17 @@ private struct EpsilonUpdateSettingsPane: View {
 
             Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
         .padding(16)
+        .navigationTitle("") 
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("NumWorks Settings")
+                    .font(.system(size: settingsTitleSize, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
     }
 }
 
@@ -134,10 +216,26 @@ private struct AboutSettingsPane: View {
 
             Spacer()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
         .padding(16)
+        .navigationTitle("")
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("NumWorks Settings")
+                    .font(.system(size: settingsTitleSize, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
     }
 }
 
-#Preview {
-    SettingsView()
+extension KeyboardShortcuts.Name {
+    static let hideShowApp = Self("hideShowApp")
+    static let pinUnpinApp = Self("pinUnpinApp")
 }
+
+
+//#Preview {
+//    SettingsView()
+//}
