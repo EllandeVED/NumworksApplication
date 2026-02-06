@@ -11,7 +11,6 @@ final class AppController: NSObject, NSWindowDelegate {
 
     private var suppressFrameSaves = false
     private let windowFrameDefaultsKey = "MainWindowFrame"
-    private var settingsWindowOpen = false
 
     private override init() {
         super.init()
@@ -24,32 +23,26 @@ final class AppController: NSObject, NSWindowDelegate {
     }
 
     private func applyDockIconVisibility() {
-        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon
+        let show = Preferences.shared.showDockIcon
         let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
 
         if NSApp.activationPolicy() != policy {
             _ = NSApp.setActivationPolicy(policy)
         }
+
+        if Preferences.shared.isAppVisible {
+            windowManagement.show()
+            if Preferences.shared.isPinned {
+                windowManagement.setPinned(true)
+            }
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func start() {
         updateMenuBarIcon()
-
         applyDockIconVisibility()
-
-        NotificationCenter.default.publisher(for: .settingsWindowDidAppear)
-            .sink { [weak self] _ in
-                self?.settingsWindowOpen = true
-                self?.applyDockIconVisibility()
-            }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: .settingsWindowDidDisappear)
-            .sink { [weak self] _ in
-                self?.settingsWindowOpen = false
-                self?.applyDockIconVisibility()
-            }
-            .store(in: &cancellables)
 
         KeyboardShortcuts.onKeyUp(for: .hideShowApp) { [weak self] in
             self?.toggleVisibility()
@@ -66,6 +59,8 @@ final class AppController: NSObject, NSWindowDelegate {
         }
 
         Preferences.shared.$isMenuBarIconEnabled
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateMenuBarIcon()
             }
@@ -84,7 +79,8 @@ final class AppController: NSObject, NSWindowDelegate {
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: NSWindow.didChangeOcclusionStateNotification, object: windowManagement.nsWindow)
-            .sink { _ in
+            .sink { [weak self] _ in
+                guard let self else { return }
                 if Preferences.shared.isPinned {
                     Preferences.shared.isAppVisible = self.windowManagement.isVisibleForUser
                 }
@@ -100,7 +96,8 @@ final class AppController: NSObject, NSWindowDelegate {
             .store(in: &cancellables)
 
         NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
-            .sink { _ in
+            .sink { [weak self] _ in
+                guard let self else { return }
                 if Preferences.shared.isPinned {
                     Preferences.shared.isAppVisible = self.windowManagement.isVisibleForUser
                 } else {
@@ -117,6 +114,7 @@ final class AppController: NSObject, NSWindowDelegate {
                 menuBarController = MenuBarController(wm: windowManagement)
             }
         } else {
+            menuBarController?.invalidate()
             menuBarController = nil
         }
     }
@@ -170,9 +168,4 @@ final class AppController: NSObject, NSWindowDelegate {
     func quit() {
         NSApp.terminate(nil)
     }
-}
-
-extension Notification.Name {
-    static let settingsWindowDidAppear = Notification.Name("settingsWindowDidAppear")
-    static let settingsWindowDidDisappear = Notification.Name("settingsWindowDidDisappear")
 }

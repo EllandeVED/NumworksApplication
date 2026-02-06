@@ -21,6 +21,10 @@ final class MenuBarController: NSObject {
     private let actions: MenuBarActions
     private let statusItem: NSStatusItem
 
+    deinit {
+        invalidate()
+    }
+
     private var cancellables = Set<AnyCancellable>()
 
     private(set) var iconStyle: MenuBarIconStyle = .outline
@@ -54,6 +58,15 @@ final class MenuBarController: NSObject {
                 self?.setIconSize(size)
             }
             .store(in: &cancellables)
+    }
+
+    func invalidate() {
+        cancellables.removeAll()
+        if let b = statusItem.button {
+            b.target = nil
+            b.action = nil
+        }
+        NSStatusBar.system.removeStatusItem(statusItem)
     }
 
     func setIconStyle(_ style: MenuBarIconStyle) {

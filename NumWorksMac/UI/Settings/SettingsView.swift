@@ -40,7 +40,7 @@ struct SettingsView: View {
     }
 
     @State private var selection: Tab = .general
-    
+
     private let panes: [Pane] = [
         .init(tab: .general, view: AnyView(GeneralSettingsPane())),
         .init(tab: .appUpdate, view: AnyView(AppUpdateSettingsPane())),
@@ -73,17 +73,25 @@ private struct GeneralSettingsPane: View {
 
     var body: some View {
         Form {
-            Section("Shortcuts") {
-                LabeledContent("Hide/Show App") {
+            Section {
+                Text("Shortcuts")
+                    .fontWeight(.bold)
+
+                HStack(spacing: 12) {
                     KeyboardShortcuts.Recorder(for: .hideShowApp)
+                    Text("Hide / Show App")
                 }
 
-                LabeledContent("Pin/Unpin App") {
+                HStack(spacing: 12) {
                     KeyboardShortcuts.Recorder(for: .pinUnpinApp)
+                    Text("Pin / Unpin App")
                 }
             }
 
-            Section("Startup") {
+            Section {
+                Text("Startup")
+                    .fontWeight(.bold)
+
                 LaunchAtLogin.Toggle()
                     .onAppear {
                         let key = "didSetDefaultLaunchAtLogin"
@@ -94,21 +102,19 @@ private struct GeneralSettingsPane: View {
                     }
             }
 
-            Section("Interface") {
-                Toggle(
-                    "Hide Menu Bar Icon",
-                    isOn: Binding(
-                        get: { !prefs.isMenuBarIconEnabled },
-                        set: { prefs.isMenuBarIconEnabled = !$0 }
-                    )
-                )
+            Section {
+                Text("Interface")
+                    .fontWeight(.bold)
 
+                Toggle("Show Menu Bar Icon", isOn: $prefs.isMenuBarIconEnabled)
                 Toggle("Show Pin/Unpin button on Calculator", isOn: $prefs.showPinButtonOnCalculator)
-
                 Toggle("Show Dock Icon", isOn: $prefs.showDockIcon)
             }
 
-            Section("Preferred Icon") {
+            Section {
+                Text("Preferred Icon")
+                    .fontWeight(.bold)
+
                 HStack(spacing: 12) {
                     iconChoice(title: "Filled", style: .filled)
                     iconChoice(title: "Outline", style: .outline)
@@ -119,7 +125,7 @@ private struct GeneralSettingsPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .multilineTextAlignment(.leading)
         .padding(16)
-        .navigationTitle("") 
+        .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("NumWorks Settings")
@@ -167,7 +173,7 @@ private struct AppUpdateSettingsPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .multilineTextAlignment(.leading)
         .padding(16)
-        .navigationTitle("") 
+        .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("NumWorks Settings")
@@ -193,7 +199,7 @@ private struct EpsilonUpdateSettingsPane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .multilineTextAlignment(.leading)
         .padding(16)
-        .navigationTitle("") 
+        .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .principal) {
                 Text("NumWorks Settings")
@@ -235,7 +241,7 @@ extension KeyboardShortcuts.Name {
     static let pinUnpinApp = Self("pinUnpinApp")
 }
 
-
-//#Preview {
-//    SettingsView()
-//}
+extension Notification.Name {
+    static let settingsWindowDidAppear = Notification.Name("settingsWindowDidAppear")
+    static let settingsWindowDidDisappear = Notification.Name("settingsWindowDidDisappear")
+}
