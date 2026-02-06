@@ -8,4 +8,8 @@ final class Preferences: ObservableObject {
 
     @Published var menuBarIconStyle: MenuBarIconStyle = .filled
     @Published var menuBarIconSize: CGFloat = 20
+
+    @Published var isMenuBarIconEnabled: Bool = true
+    @Published var isPinned: Bool = false
+    @Published var isAppVisible: Bool = true
 }

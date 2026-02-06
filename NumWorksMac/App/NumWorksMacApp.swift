@@ -17,12 +17,10 @@ struct NumWorksMacApp: App {
             }
         }
     }
-    
-    
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let controller = AppController()
+    private let controller = AppController.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller.start()

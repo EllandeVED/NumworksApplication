@@ -12,6 +12,8 @@ final class WindowManagement {
     
     var minContentWidth: CGFloat = 260
     var isShownForUI: Bool { window.isVisible && window.isKeyWindow }
+    var nsWindow: NSWindow { window }
+    var isVisibleForUser: Bool { window.isVisible && window.occlusionState.contains(.visible) }
 
     private var isShown: Bool {
         window.isVisible && window.isKeyWindow
@@ -36,17 +38,21 @@ final class WindowManagement {
     }
 
     func show() {
-        if let f = lastFrame {
-            window.setFrame(f, display: true)
-        }
+        restoreWindowFrameIfAny()
+        applyWindowFlags(window)
+
+        window.windowController?.showWindow(nil)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        applyWindowFlags(window)
+
+        if isPinned {
+            window.orderFrontRegardless()
+        }
+
         NotificationCenter.default.post(name: .windowManagementDidChange, object: self)
     }
 
     func hide() {
-        lastFrame = window.frame
         window.orderOut(nil)
         NotificationCenter.default.post(name: .windowManagementDidChange, object: self)
     }
@@ -55,12 +61,16 @@ final class WindowManagement {
         isPinned = enabled
         if window.isVisible {
             applyWindowFlags(window)
+            if enabled {
+                window.orderFrontRegardless()
+            }
         }
         NotificationCenter.default.post(name: .windowManagementDidChange, object: self)
     }
 
     func togglePinned() {
-        setPinned(!isPinned)
+        Preferences.shared.isPinned.toggle()
+        setPinned(Preferences.shared.isPinned)
     }
 
     func attachWebView(_ webView: WKWebView) {
@@ -85,7 +95,14 @@ final class WindowManagement {
 
     private func applyWindowFlags(_ window: NSWindow) {
         window.level = isPinned ? .floating : .normal
+        window.hidesOnDeactivate = false
         window.collectionBehavior.insert(.moveToActiveSpace)
+    }
+
+    private func restoreWindowFrameIfAny() {
+        if let f = lastFrame {
+            window.setFrame(f, display: true)
+        }
     }
 
     private final class DelegateProxy: NSObject, NSWindowDelegate {

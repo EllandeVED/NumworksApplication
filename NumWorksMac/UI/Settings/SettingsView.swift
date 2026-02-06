@@ -62,7 +62,13 @@ private struct GeneralSettingsPane: View {
 
     var body: some View {
         Form {
-            Section {
+            Section("Menu Bar") {
+                Toggle("Show menu bar icon", isOn: $prefs.isMenuBarIconEnabled)
+
+                Toggle("Keep app pinned", isOn: $prefs.isPinned)
+            }
+
+            Section("Appearance") {
                 Picker("Menu bar icon style", selection: $prefs.menuBarIconStyle) {
                     Text("Filled").tag(MenuBarIconStyle.filled)
                     Text("Outline").tag(MenuBarIconStyle.outline)

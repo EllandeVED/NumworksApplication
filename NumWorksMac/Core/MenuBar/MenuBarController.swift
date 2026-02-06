@@ -19,7 +19,6 @@ final class MenuBarController: NSObject {
     private let wm: WindowManagement
     private let actions: MenuBarActions
     private let statusItem: NSStatusItem
-    private let popover = NSPopover()
 
     private(set) var iconStyle: MenuBarIconStyle = .outline
     private(set) var iconSize: CGFloat = 18
@@ -39,7 +38,6 @@ final class MenuBarController: NSObject {
             b.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        popover.behavior = .transient
         applyIcon()
     }
 
@@ -67,18 +65,71 @@ final class MenuBarController: NSObject {
     @objc private func onStatusItemAction() {
         let isRight = NSApp.currentEvent?.type == .rightMouseUp
         if isRight {
-            togglePopover()
+            showMenu()
         } else {
-            actions.toggleShown()
+            AppController.shared.toggleVisibility()
         }
     }
 
-    private func togglePopover() {
-        guard let b = statusItem.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            popover.show(relativeTo: b.bounds, of: b, preferredEdge: .minY)
+    private func showMenu() {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+
+        let pinTitle = Preferences.shared.isPinned ? "Unpin" : "Pin"
+        let pinItem = NSMenuItem(title: pinTitle, action: #selector(togglePinned), keyEquivalent: "")
+        pinItem.target = self
+        menu.addItem(pinItem)
+
+        let visibilityTitle = Preferences.shared.isAppVisible ? "Hide" : "Show"
+        let visibilityItem = NSMenuItem(title: visibilityTitle, action: #selector(toggleVisibility), keyEquivalent: "")
+        visibilityItem.target = self
+        menu.addItem(visibilityItem)
+
+        menu.addItem(.separator())
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
+        menu.addItem(.separator())
+
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        NSMenu.popUpContextMenu(menu, with: NSApp.currentEvent!, for: statusItem.button!)
+    }
+
+    @objc private func togglePinned() {
+        AppController.shared.togglePinned()
+    }
+
+    @objc private func toggleVisibility() {
+        AppController.shared.toggleVisibility()
+    }
+
+    @objc private func openSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        guard let item = NSApp.mainMenu?.firstSettingsMenuItem() else { return }
+        guard let action = item.action else { return }
+        NSApp.sendAction(action, to: item.target, from: item)
+    }
+
+    @objc private func quitApp() {
+        AppController.shared.quit()
+    }
+}
+
+private extension NSMenu {
+    func firstSettingsMenuItem() -> NSMenuItem? {
+        for item in items {
+            if item.keyEquivalent == "," && item.keyEquivalentModifierMask.contains(.command) {
+                return item
+            }
+            if let found = item.submenu?.firstSettingsMenuItem() {
+                return found
+            }
         }
+        return nil
     }
 }
