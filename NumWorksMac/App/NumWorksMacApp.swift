@@ -1,5 +1,3 @@
-
-
 import SwiftUI
 
 @main
@@ -8,9 +6,19 @@ struct NumWorksMacApp: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView()
+        }
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                SettingsLink {
+                    Text("Settings…")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
         }
     }
+    
+    
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {

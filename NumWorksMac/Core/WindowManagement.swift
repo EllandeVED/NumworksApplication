@@ -1,8 +1,21 @@
 import AppKit
 import WebKit
+import Foundation
+
+extension Notification.Name {
+    static let windowManagementDidChange = Notification.Name("windowManagementDidChange")
+}
 
 final class WindowManagement {
-    private(set) var isAlwaysOnTop = false
+    private(set) var isPinned = false
+    private var lastFrame: NSRect?
+    
+    var minContentWidth: CGFloat = 260
+    var isShownForUI: Bool { window.isVisible && window.isKeyWindow }
+
+    private var isShown: Bool {
+        window.isVisible && window.isKeyWindow
+    }
 
     private var baseSize: CGSize?
     private weak var webView: WKWebView?
@@ -18,22 +31,36 @@ final class WindowManagement {
         return w
     }()
 
-    func showCalculatorWindow() {
+    func toggleShown() {
+        isShown ? hide() : show()
+    }
+
+    func show() {
+        if let f = lastFrame {
+            window.setFrame(f, display: true)
+        }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    func hideCalculatorWindow() {
-        window.orderOut(nil)
-    }
-
-    func toggleCalculatorWindow() {
-        window.isVisible ? hideCalculatorWindow() : showCalculatorWindow()
-    }
-
-    func setAlwaysOnTop(_ enabled: Bool) {
-        isAlwaysOnTop = enabled
         applyWindowFlags(window)
+        NotificationCenter.default.post(name: .windowManagementDidChange, object: self)
+    }
+
+    func hide() {
+        lastFrame = window.frame
+        window.orderOut(nil)
+        NotificationCenter.default.post(name: .windowManagementDidChange, object: self)
+    }
+
+    func setPinned(_ enabled: Bool) {
+        isPinned = enabled
+        if window.isVisible {
+            applyWindowFlags(window)
+        }
+        NotificationCenter.default.post(name: .windowManagementDidChange, object: self)
+    }
+
+    func togglePinned() {
+        setPinned(!isPinned)
     }
 
     func attachWebView(_ webView: WKWebView) {
@@ -44,7 +71,7 @@ final class WindowManagement {
         baseSize = size
         window.contentAspectRatio = size
 
-        let minW: CGFloat = 120 //Minimum window size
+        let minW = minContentWidth
         let minH = minW * size.height / size.width
         minContentSize = NSSize(width: minW, height: minH)
 
@@ -57,7 +84,8 @@ final class WindowManagement {
     }
 
     private func applyWindowFlags(_ window: NSWindow) {
-        window.level = isAlwaysOnTop ? .floating : .normal
+        window.level = isPinned ? .floating : .normal
+        window.collectionBehavior.insert(.moveToActiveSpace)
     }
 
     private final class DelegateProxy: NSObject, NSWindowDelegate {
