@@ -8,6 +8,7 @@ final class AppController: NSObject, NSWindowDelegate {
     let windowManagement = WindowManagement()
     private var menuBarController: MenuBarController?
     private var cancellables = Set<AnyCancellable>()
+    private var settingsWindowOpen = false
 
     private var suppressFrameSaves = false
     private let windowFrameDefaultsKey = "MainWindowFrame"
@@ -23,21 +24,12 @@ final class AppController: NSObject, NSWindowDelegate {
     }
 
     private func applyDockIconVisibility() {
-        let show = Preferences.shared.showDockIcon
+        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon
         let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
 
         if NSApp.activationPolicy() != policy {
             _ = NSApp.setActivationPolicy(policy)
         }
-
-        if Preferences.shared.isAppVisible {
-            windowManagement.show()
-            if Preferences.shared.isPinned {
-                windowManagement.setPinned(true)
-            }
-        }
-
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     func start() {
@@ -74,6 +66,22 @@ final class AppController: NSObject, NSWindowDelegate {
 
         Preferences.shared.$showDockIcon
             .sink { [weak self] _ in
+                self?.applyDockIconVisibility()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .settingsWindowDidAppear)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.settingsWindowOpen = true
+                self?.applyDockIconVisibility()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .settingsWindowDidDisappear)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.settingsWindowOpen = false
                 self?.applyDockIconVisibility()
             }
             .store(in: &cancellables)

@@ -8,6 +8,7 @@ struct NumWorksMacApp: App {
         Settings {
             SettingsView()
         }
+        .defaultSize(width: 520, height: 420)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 SettingsLink {

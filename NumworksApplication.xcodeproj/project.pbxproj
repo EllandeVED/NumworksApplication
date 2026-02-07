@@ -29,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1E426DB02F36BAF3003F7FAB /* NumworksApplication-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "NumworksApplication-Info.plist"; sourceTree = "<group>"; };
 		1EC2DA5E2F33CC2D00CE8BD3 /* NumworksApplication.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumworksApplication.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EC2DA6C2F33CC2F00CE8BD3 /* NumworksApplicationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumworksApplicationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EC2DA762F33CC2F00CE8BD3 /* NumworksApplicationUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumworksApplicationUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -149,6 +150,7 @@
 		1EC2DA552F33CC2D00CE8BD3 = {
 			isa = PBXGroup;
 			children = (
+				1E426DB02F36BAF3003F7FAB /* NumworksApplication-Info.plist */,
 				1EC2DB132F33CD6E00CE8BD3 /* NumWorksMac */,
 				1EC2DA6F2F33CC2F00CE8BD3 /* NumworksApplicationTests */,
 				1EC2DA792F33CC2F00CE8BD3 /* NumworksApplicationUITests */,
@@ -483,6 +485,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "NumworksApplication-Info.plist";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -511,6 +514,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "NumworksApplication-Info.plist";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

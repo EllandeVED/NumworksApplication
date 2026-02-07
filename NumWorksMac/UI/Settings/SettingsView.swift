@@ -58,7 +58,7 @@ struct SettingsView: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .frame(minWidth: 620, minHeight: 420)
+        .frame(minWidth: 420, minHeight: 420)
         .onAppear {
             NotificationCenter.default.post(name: .settingsWindowDidAppear, object: nil)
         }
