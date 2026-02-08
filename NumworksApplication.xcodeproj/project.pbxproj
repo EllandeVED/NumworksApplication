@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1E426DAC2F369BD3003F7FAB /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1E426DAB2F369BD3003F7FAB /* KeyboardShortcuts */; };
 		1E426DAF2F369BEF003F7FAB /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 1E426DAE2F369BEF003F7FAB /* LaunchAtLogin */; };
+		1E426E322F3922CE003F7FAB /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1E426E312F3922CE003F7FAB /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -129,6 +130,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E426E322F3922CE003F7FAB /* MarkdownUI in Frameworks */,
 				1E426DAF2F369BEF003F7FAB /* LaunchAtLogin in Frameworks */,
 				1E426DAC2F369BD3003F7FAB /* KeyboardShortcuts in Frameworks */,
 			);
@@ -191,6 +193,7 @@
 			packageProductDependencies = (
 				1E426DAB2F369BD3003F7FAB /* KeyboardShortcuts */,
 				1E426DAE2F369BEF003F7FAB /* LaunchAtLogin */,
+				1E426E312F3922CE003F7FAB /* MarkdownUI */,
 			);
 			productName = NumworksApplication;
 			productReference = 1EC2DA5E2F33CC2D00CE8BD3 /* NumWorks.app */;
@@ -278,6 +281,7 @@
 			packageReferences = (
 				1E426DAA2F369BD3003F7FAB /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				1E426DAD2F369BEF003F7FAB /* XCRemoteSwiftPackageReference "LaunchAtLogin" */,
+				1E426E302F3922CE003F7FAB /* XCRemoteSwiftPackageReference "MarkdownUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1EC2DA5F2F33CC2D00CE8BD3 /* Products */;
@@ -661,6 +665,14 @@
 				kind = branch;
 			};
 		};
+		1E426E302F3922CE003F7FAB /* XCRemoteSwiftPackageReference "MarkdownUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/MarkdownUI";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -673,6 +685,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1E426DAD2F369BEF003F7FAB /* XCRemoteSwiftPackageReference "LaunchAtLogin" */;
 			productName = LaunchAtLogin;
+		};
+		1E426E312F3922CE003F7FAB /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E426E302F3922CE003F7FAB /* XCRemoteSwiftPackageReference "MarkdownUI" */;
+			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

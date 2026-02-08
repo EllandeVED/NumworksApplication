@@ -10,7 +10,7 @@ final class AppUpdater: ObservableObject {
 
     enum Phase {
         case idle
-        case updateAvailable(version: String, url: URL)
+        case updateAvailable(version: String, url: URL, releaseNotes: String)
         case downloading
         case readyToOpen
         case failed(String)
@@ -23,8 +23,11 @@ final class AppUpdater: ObservableObject {
     private let fileManager = FileManager.default
 
     func presentUpdate(remoteURL: URL, remoteVersion: String) {
-        phase = .updateAvailable(version: remoteVersion, url: remoteURL)
-        showPanel()
+        Task { @MainActor in
+            let notes = (try? await AppUpdateChecker.fetchLatestReleaseNotes()) ?? ""
+            phase = .updateAvailable(version: remoteVersion, url: remoteURL, releaseNotes: notes)
+            showPanel()
+        }
     }
 
     func dismiss() {
@@ -94,8 +97,8 @@ final class AppUpdater: ObservableObject {
         let host = NSHostingController(rootView: AppUpdateView(updater: self))
 
         let p = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 200),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
@@ -103,6 +106,7 @@ final class AppUpdater: ObservableObject {
         p.isFloatingPanel = true
         p.level = .floating
         p.isReleasedWhenClosed = false
+        p.minSize = NSSize(width: 480, height: 360)
         p.center()
         p.contentViewController = host
         p.makeKeyAndOrderFront(nil)

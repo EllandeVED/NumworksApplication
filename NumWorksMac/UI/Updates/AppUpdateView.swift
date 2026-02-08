@@ -1,6 +1,6 @@
-
-
 import SwiftUI
+import AppKit
+import MarkdownUI
 
 struct AppUpdateView: View {
 
@@ -12,12 +12,29 @@ struct AppUpdateView: View {
             case .idle:
                 EmptyView()
 
-            case .updateAvailable(let version, let url):
-                Text("A new version of the app is available")
-                    .font(.headline)
+            case .updateAvailable(let version, let url, let releaseNotes):
+                HStack(spacing: 12) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 48, height: 48)
+
+                    Text("A new version of the app is available")
+                        .font(.headline)
+                }
 
                 Text("Version \(version)")
                     .foregroundColor(.secondary)
+
+                if !releaseNotes.isEmpty {
+                    ScrollView {
+                        Markdown(releaseNotes)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                    }
+                    .frame(maxHeight: 220)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(6)
+                }
 
                 HStack {
                     Button("Later") {

@@ -1,5 +1,5 @@
 {
-  "originHash" : "75202cb1391d816c99db5fd453a4e93e5c6249cccf4bef19dc4eb15568d40c1e",
+  "originHash" : "d3b19a93b43968eecb1a8994be319da749ca96a70c1bca6c5eff0af49db7a108",
   "pins" : [
     {
       "identity" : "keyboardshortcuts",
@@ -17,6 +17,33 @@
       "state" : {
         "branch" : "main",
         "revision" : "9a894d799269cb591037f9f9cb0961510d4dca81"
+      }
+    },
+    {
+      "identity" : "markdownui",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gonzalezreal/MarkdownUI",
+      "state" : {
+        "revision" : "5f613358148239d0292c0cef674a3c2314737f9e",
+        "version" : "2.4.1"
+      }
+    },
+    {
+      "identity" : "networkimage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gonzalezreal/NetworkImage",
+      "state" : {
+        "revision" : "2849f5323265386e200484b0d0f896e73c3411b9",
+        "version" : "6.0.1"
+      }
+    },
+    {
+      "identity" : "swift-cmark",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-cmark",
+      "state" : {
+        "revision" : "5d9bdaa4228b381639fff09403e39a04926e2dbe",
+        "version" : "0.7.1"
       }
     }
   ],

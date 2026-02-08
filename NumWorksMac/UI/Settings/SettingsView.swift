@@ -159,14 +159,34 @@ private struct GeneralSettingsPane: View {
 }
 
 private struct AppUpdateSettingsPane: View {
+    @State private var currentAppVersion: String = ""
+    @State private var isChecking = false
+    @State private var showNoUpdatesAlert = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("App Update")
                 .font(.title2)
                 .bold()
 
-            Text("Add your updater settings here.")
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text("Current version:")
+                Text(currentAppVersion)
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                checkForUpdates()
+            } label: {
+                if isChecking {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text("Check for updates")
+                }
+            }
+            .disabled(isChecking)
 
             Spacer()
         }
@@ -181,12 +201,56 @@ private struct AppUpdateSettingsPane: View {
                     .foregroundStyle(.white)
             }
         }
+        .onAppear {
+            currentAppVersion = appVersionString()
+        }
+        .alert("No updates available", isPresented: $showNoUpdatesAlert) {
+            Button("OK") {}
+        } message: {
+            Text("You already have the latest app version.")
+        }
+    }
+
+    private func appVersionString() -> String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        ?? Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        ?? ""
+    }
+
+    private func checkForUpdates() {
+        guard !isChecking else { return }
+        isChecking = true
+
+        Task { @MainActor in
+            defer { isChecking = false }
+            do {
+                let report = try await AppUpdateChecker.checkLatestRelease()
+
+                if report.needsUpdate {
+                    NotificationCenter.default.post(
+                        name: .requestAppUpdateUI,
+                        object: nil,
+                        userInfo: [
+                            "latestURL": report.latestZipURL,
+                            "latestTag": report.latestTag
+                        ]
+                    )
+                } else {
+                    showNoUpdatesAlert = true
+                }
+
+                currentAppVersion = appVersionString()
+            } catch {
+                print("[Settings] app update check failed: \(error)")
+            }
+        }
     }
 }
 
 private struct EpsilonUpdateSettingsPane: View {
     @State private var currentSimulatorVersion: String = ""
     @State private var isChecking = false
+    @State private var showNoUpdatesAlert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -229,6 +293,11 @@ private struct EpsilonUpdateSettingsPane: View {
         .onAppear {
             currentSimulatorVersion = simulatorVersionString()
         }
+        .alert("No updates available", isPresented: $showNoUpdatesAlert) {
+            Button("OK") {}
+        } message: {
+            Text("You already have the latest simulator version.")
+        }
     }
 
     private func simulatorVersionString() -> String {
@@ -255,6 +324,8 @@ private struct EpsilonUpdateSettingsPane: View {
                             "required": false
                         ]
                     )
+                } else {
+                    showNoUpdatesAlert = true
                 }
 
                 currentSimulatorVersion = simulatorVersionString()
@@ -346,4 +417,3 @@ extension Notification.Name {
     static let settingsWindowDidAppear = Notification.Name("settingsWindowDidAppear")
     static let settingsWindowDidDisappear = Notification.Name("settingsWindowDidDisappear")
 }
-

@@ -6,6 +6,7 @@ struct AppUpdateChecker {
         let latestVersion: AppSemVer
         let latestTag: String
         let latestZipURL: URL
+        let latestReleaseNotesMarkdown: String
         let needsUpdate: Bool
     }
 
@@ -35,6 +36,7 @@ struct AppUpdateChecker {
 
         let r = try JSONDecoder().decode(GitHubLatestRelease.self, from: data)
         let tag = r.tag_name
+        let notes = r.body ?? ""
         let cleaned = AppSemVer.clean(tag)
         guard let latest = AppSemVer(cleaned) else {
             throw Error.invalidLatestTag(tag)
@@ -50,13 +52,31 @@ struct AppUpdateChecker {
             latestVersion: latest,
             latestTag: tag,
             latestZipURL: zipURL,
+            latestReleaseNotesMarkdown: notes,
             needsUpdate: latest > current
         )
+    }
+
+    static func fetchLatestReleaseNotes(owner: String = "EllandeVED", repo: String = "NumworksApplication") async throws -> String {
+        let api = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases/latest")!
+        var req = URLRequest(url: api)
+        req.httpMethod = "GET"
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        req.setValue("NumworksApplication", forHTTPHeaderField: "User-Agent")
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw Error.invalidResponse
+        }
+
+        let r = try JSONDecoder().decode(GitHubLatestRelease.self, from: data)
+        return r.body ?? ""
     }
 }
 
 private struct GitHubLatestRelease: Decodable {
     let tag_name: String
+    let body: String?
     let assets: [GitHubReleaseAsset]
 }
 

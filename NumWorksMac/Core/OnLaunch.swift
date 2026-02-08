@@ -117,8 +117,8 @@ enum OnLaunch {
         }
 
         // 3) Let the app finish loading and settle
-        print("[OnLaunch] updates found → waiting 10s")
-        try? await Task.sleep(nanoseconds: 10_000_000_000)
+        print("[OnLaunch] updates found → waiting 5s")
+        try? await Task.sleep(nanoseconds: 5_000_000_000)
 
         // 4) Order: App update first, then Epsilon update
         if appNeedsUpdate {
