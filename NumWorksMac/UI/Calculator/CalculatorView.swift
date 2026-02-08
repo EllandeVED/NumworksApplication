@@ -9,11 +9,20 @@ struct CalculatorView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            CalculatorWebView(
-                onReady: { wm.attachWebView($0) },
-                onBaseSize: { wm.setBaseSize($0) }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if OnLaunch.hasInstalledSimulator() {
+                CalculatorWebView(
+                    onReady: {
+                        wm.attachWebView($0)
+                        print("[Calculator] onReady → posting calculatorDidLoad")
+                        NotificationCenter.default.post(name: .calculatorDidLoad, object: nil)
+                    },
+                    onBaseSize: { wm.setBaseSize($0) }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
 
             if prefs.showPinButtonOnCalculator {
                 Button {
@@ -43,6 +52,7 @@ struct CalculatorView: View {
                 .accessibilityLabel(prefs.isPinned ? "Unpin" : "Pin")
                 .offset(x: -10, y: 10)
             }
+            SimulatorUpdateView()
         }
     }
 }

@@ -1,8 +1,12 @@
 import Foundation
 
-/// Responsible for ensuring the simulator HTML exists in Application Support and returning a loadable URL.
+/// Resolves which simulator HTML to load.
 ///
-/// This intentionally keeps all knowledge about the bundled seed file here.
+/// Behavior:
+/// - If an installed simulator exists in Application Support (Simulator/current/numworks-simulator.html), load that.
+/// - Otherwise, load the bundled DefaultSimulator directly from the app bundle.
+///
+/// The bundled default is never copied into Application Support.
 final class SimulatorRuntime {
 
     enum RuntimeError: Error {
@@ -10,40 +14,36 @@ final class SimulatorRuntime {
     }
 
     /// Returns the URL that WKWebView should load.
-    /// If the HTML is missing in Application Support, copies the bundled default there first.
     func urlToLoad() throws -> URL {
-        try SimulatorPaths.ensureDirectoriesExist()
-
-        let target = try SimulatorPaths.currentHTMLURL()
-        if FileManager.default.fileExists(atPath: target.path) {
-            return target
+        if let installed = installedSimulatorHTMLURL(), FileManager.default.fileExists(atPath: installed.path) {
+            return installed
         }
 
-        try installBundledDefaultIfNeeded(to: target)
-        return target
-    }
-
-    // MARK: - Install bundled seed
-
-    private func installBundledDefaultIfNeeded(to targetURL: URL) throws {
         guard let bundled = bundledDefaultHTMLURL() else {
             throw RuntimeError.bundledHTMLNotFound
         }
-
-        let fm = FileManager.default
-        // Ensure parent directory exists.
-        try fm.createDirectory(at: targetURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-
-        // Copy bundled file into Application Support.
-        // (We expect it not to exist yet, but handle the case defensively.)
-        if fm.fileExists(atPath: targetURL.path) {
-            return
-        }
-        try fm.copyItem(at: bundled, to: targetURL)
+        return bundled
     }
 
+    // MARK: - Installed simulator
+
+    private func installedSimulatorHTMLURL() -> URL? {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        guard let base else { return nil }
+
+        let id = Bundle.main.bundleIdentifier ?? "NumworksApplication"
+        let currentDir = base
+            .appendingPathComponent(id, isDirectory: true)
+            .appendingPathComponent("Simulator", isDirectory: true)
+            .appendingPathComponent("current", isDirectory: true)
+
+        return currentDir.appendingPathComponent("numworks-simulator.html", isDirectory: false)
+    }
+
+    // MARK: - Bundled default
+
     private func bundledDefaultHTMLURL() -> URL? {
-        return Bundle.main.url(forResource: "numworks-simulator", withExtension: "html", subdirectory: "DefaultSimulator")
+        Bundle.main.url(forResource: "numworks-simulator", withExtension: "html", subdirectory: "DefaultSimulator")
             ?? Bundle.main.url(forResource: "numworks-simulator", withExtension: "html")
     }
 }

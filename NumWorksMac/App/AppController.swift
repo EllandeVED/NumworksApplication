@@ -9,6 +9,7 @@ final class AppController: NSObject, NSWindowDelegate {
     private var menuBarController: MenuBarController?
     private var cancellables = Set<AnyCancellable>()
     private var settingsWindowOpen = false
+    private var didRunOnLaunch = false
 
     private var suppressFrameSaves = false
     private let windowFrameDefaultsKey = "MainWindowFrame"
@@ -17,22 +18,14 @@ final class AppController: NSObject, NSWindowDelegate {
         super.init()
     }
 
-    private func saveWindowFrame(_ window: NSWindow) {
-        guard !suppressFrameSaves else { return }
-        guard window.isVisible, !window.isMiniaturized else { return }
-        UserDefaults.standard.set(NSStringFromRect(window.frame), forKey: windowFrameDefaultsKey)
-    }
-
-    private func applyDockIconVisibility() {
-        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon
-        let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
-
-        if NSApp.activationPolicy() != policy {
-            _ = NSApp.setActivationPolicy(policy)
-        }
-    }
-
     func start() {
+        print("[App] start()")
+        OnLaunch.ensureAppSupportExists()
+        let hasSim = OnLaunch.hasInstalledSimulator()
+        if hasSim {
+            print("[App] simulator detected in Application Support")
+        }
+
         updateMenuBarIcon()
         applyDockIconVisibility()
 
@@ -44,11 +37,30 @@ final class AppController: NSObject, NSWindowDelegate {
             self?.togglePinned()
         }
 
+        if !hasSim {
+            print("[App] no installed simulator → keeping menu bar icon, blocking calculator window")
+            Preferences.shared.isAppVisible = false
+            OnLaunch.requestRequiredSimulatorUpdater()
+            return
+
+        }
+
         windowManagement.setPinned(Preferences.shared.isPinned)
 
         if Preferences.shared.isAppVisible {
             windowManagement.show()
         }
+
+        NotificationCenter.default.publisher(for: .calculatorDidLoad)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                guard !self.didRunOnLaunch else { return }
+                self.didRunOnLaunch = true
+                print("[OnLaunch] calculatorDidLoad received → running OnLaunch")
+                OnLaunch.run()
+            }
+            .store(in: &cancellables)
 
         Preferences.shared.$isMenuBarIconEnabled
             .removeDuplicates()
@@ -116,12 +128,30 @@ final class AppController: NSObject, NSWindowDelegate {
             .store(in: &cancellables)
     }
 
+    private func saveWindowFrame(_ window: NSWindow) {
+        guard !suppressFrameSaves else { return }
+        guard window.isVisible, !window.isMiniaturized else { return }
+        UserDefaults.standard.set(NSStringFromRect(window.frame), forKey: windowFrameDefaultsKey)
+    }
+
+    private func applyDockIconVisibility() {
+        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon
+        let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
+
+        if NSApp.activationPolicy() != policy {
+            _ = NSApp.setActivationPolicy(policy)
+        }
+    }
+
     private func updateMenuBarIcon() {
+        print("[MenuBar] updateMenuBarIcon enabled=\(Preferences.shared.isMenuBarIconEnabled)")
         if Preferences.shared.isMenuBarIconEnabled {
+            print("[MenuBar] creating status item")
             if menuBarController == nil {
                 menuBarController = MenuBarController(wm: windowManagement)
             }
         } else {
+            print("[MenuBar] removing status item")
             menuBarController?.invalidate()
             menuBarController = nil
         }
