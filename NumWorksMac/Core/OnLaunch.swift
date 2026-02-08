@@ -80,7 +80,7 @@ enum OnLaunch {
             let report = try await AppUpdateChecker.checkLatestRelease()
             appNeedsUpdate = report.needsUpdate
             print("[OnLaunch] app update check needsUpdate=\(report.needsUpdate) tag=\(report.latestTag)")
-            appLatestURL = report.latestHTMLURL
+            appLatestURL = report.latestZipURL
             appLatestTag = report.latestTag
         } catch {
             print("[OnLaunch] app update check failed: \(error)")
@@ -122,20 +122,25 @@ enum OnLaunch {
 
         // 4) Order: App update first, then Epsilon update
         if appNeedsUpdate {
-            print("[OnLaunch] requesting AppUpdate UI")
-            NotificationCenter.default.post(
-                name: .requestAppUpdateUI,
-                object: nil,
-                userInfo: [
-                    "latestURL": appLatestURL as Any,
-                    "latestTag": appLatestTag as Any
-                ]
-            )
+            if let u = appLatestURL, u.pathExtension.lowercased() == "zip" {
+                print("[OnLaunch] requesting AppUpdate UI")
+                NotificationCenter.default.post(
+                    name: .requestAppUpdateUI,
+                    object: nil,
+                    userInfo: [
+                        "latestURL": u,
+                        "latestTag": appLatestTag ?? ""
+                    ]
+                )
 
-            if epsilonNeedsUpdate {
-                print("[OnLaunch] waiting for appUpdateFlowDidFinish")
-                await waitForNotification(.appUpdateFlowDidFinish)
-                print("[OnLaunch] appUpdateFlowDidFinish received")
+                if epsilonNeedsUpdate {
+                    print("[OnLaunch] waiting for appUpdateFlowDidFinish")
+                    await waitForNotification(.appUpdateFlowDidFinish)
+                    print("[OnLaunch] appUpdateFlowDidFinish received")
+                }
+            } else {
+                print("[OnLaunch] app update available but no valid zip URL; skipping UI")
+                appNeedsUpdate = false
             }
         }
 

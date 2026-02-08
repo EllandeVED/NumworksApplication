@@ -5,7 +5,7 @@ struct AppUpdateChecker {
         let currentVersion: AppSemVer
         let latestVersion: AppSemVer
         let latestTag: String
-        let latestHTMLURL: URL
+        let latestZipURL: URL
         let needsUpdate: Bool
     }
 
@@ -13,7 +13,7 @@ struct AppUpdateChecker {
         case invalidCurrentVersion(String)
         case invalidResponse
         case invalidLatestTag(String)
-        case missingLatestHTMLURL
+        case missingLatestZipURL
     }
 
     static func checkLatestRelease(owner: String = "EllandeVED", repo: String = "NumworksApplication") async throws -> Report {
@@ -39,15 +39,17 @@ struct AppUpdateChecker {
         guard let latest = AppSemVer(cleaned) else {
             throw Error.invalidLatestTag(tag)
         }
-        guard let html = URL(string: r.html_url) else {
-            throw Error.missingLatestHTMLURL
+        guard let zipURL = r.assets
+            .compactMap({ URL(string: $0.browser_download_url) })
+            .first(where: { $0.pathExtension.lowercased() == "zip" }) else {
+            throw Error.missingLatestZipURL
         }
 
         return .init(
             currentVersion: current,
             latestVersion: latest,
             latestTag: tag,
-            latestHTMLURL: html,
+            latestZipURL: zipURL,
             needsUpdate: latest > current
         )
     }
@@ -55,7 +57,12 @@ struct AppUpdateChecker {
 
 private struct GitHubLatestRelease: Decodable {
     let tag_name: String
-    let html_url: String
+    let assets: [GitHubReleaseAsset]
+}
+
+private struct GitHubReleaseAsset: Decodable {
+    let name: String
+    let browser_download_url: String
 }
 
 struct AppSemVer: Comparable, Sendable {

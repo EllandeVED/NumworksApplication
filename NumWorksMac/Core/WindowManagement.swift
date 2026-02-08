@@ -8,8 +8,9 @@ extension Notification.Name {
 
 final class WindowManagement {
     private(set) var isPinned = false
+    private var appUpdateObserver: NSObjectProtocol?
     private var lastFrame: NSRect?
-    
+
     var minContentWidth: CGFloat = 260
     var isShownForUI: Bool { window.isVisible && window.isKeyWindow }
     var nsWindow: NSWindow { window }
@@ -32,6 +33,26 @@ final class WindowManagement {
         applyWindowFlags(w)
         return w
     }()
+
+    init() {
+        appUpdateObserver = NotificationCenter.default.addObserver(
+            forName: .requestAppUpdateUI,
+            object: nil,
+            queue: .main
+        ) { n in
+            print("[WindowManagement] received requestAppUpdateUI")
+            guard let u = n.userInfo else { return }
+            guard let url = u["latestURL"] as? URL else { return }
+            let tag = (u["latestTag"] as? String) ?? ""
+            AppUpdater.shared.presentUpdate(remoteURL: url, remoteVersion: tag)
+        }
+    }
+
+    deinit {
+        if let o = appUpdateObserver {
+            NotificationCenter.default.removeObserver(o)
+        }
+    }
 
     func toggleShown() {
         isShown ? hide() : show()

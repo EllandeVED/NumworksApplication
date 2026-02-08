@@ -30,7 +30,7 @@
 
 /* Begin PBXFileReference section */
 		1E426DB02F36BAF3003F7FAB /* NumworksApplication-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "NumworksApplication-Info.plist"; sourceTree = "<group>"; };
-		1EC2DA5E2F33CC2D00CE8BD3 /* NumworksApplication.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumworksApplication.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EC2DA5E2F33CC2D00CE8BD3 /* NumWorks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumWorks.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EC2DA6C2F33CC2F00CE8BD3 /* NumworksApplicationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumworksApplicationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EC2DA762F33CC2F00CE8BD3 /* NumworksApplicationUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumworksApplicationUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -165,7 +165,7 @@
 		1EC2DA5F2F33CC2D00CE8BD3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1EC2DA5E2F33CC2D00CE8BD3 /* NumworksApplication.app */,
+				1EC2DA5E2F33CC2D00CE8BD3 /* NumWorks.app */,
 				1EC2DA6C2F33CC2F00CE8BD3 /* NumworksApplicationTests.xctest */,
 				1EC2DA762F33CC2F00CE8BD3 /* NumworksApplicationUITests.xctest */,
 			);
@@ -193,7 +193,7 @@
 				1E426DAE2F369BEF003F7FAB /* LaunchAtLogin */,
 			);
 			productName = NumworksApplication;
-			productReference = 1EC2DA5E2F33CC2D00CE8BD3 /* NumworksApplication.app */;
+			productReference = 1EC2DA5E2F33CC2D00CE8BD3 /* NumWorks.app */;
 			productType = "com.apple.product-type.application";
 		};
 		1EC2DA6B2F33CC2F00CE8BD3 /* NumworksApplicationTests */ = {
@@ -490,6 +490,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "NumworksApplication-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = NumWorks;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -497,7 +498,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumworksApplication;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = NumWorks;
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -519,6 +520,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "NumworksApplication-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = NumWorks;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -526,7 +528,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumworksApplication;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = NumWorks;
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
