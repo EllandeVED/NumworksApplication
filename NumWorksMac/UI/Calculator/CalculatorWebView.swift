@@ -18,8 +18,12 @@ struct CalculatorWebView: NSViewRepresentable {
         webView.setValue(false, forKey: "drawsBackground")
         webView.navigationDelegate = context.coordinator
 
-        let url = try! runtime.urlToLoad()
-        webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        do {
+            let url = try runtime.urlToLoad()
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } catch {
+            print("[CalculatorWebView] no valid simulator to load: \(error)")
+        }
         return webView
     }
 

@@ -15,7 +15,7 @@ struct EpsilonUpdateChecker {
         case couldNotExtractRemoteVersion(URL)
     }
 
-    static func check(remoteURL: URL, currentVersionString: String = EpsilonVersions.bundledSimulator) throws -> Report {
+    static func check(remoteURL: URL, currentVersionString: String) throws -> Report {
         guard let current = SemVer(currentVersionString) else {
             throw Error.invalidCurrentVersion(currentVersionString)
         }
@@ -81,7 +81,7 @@ struct EpsilonUpdateChecker {
         return best.url
     }
 
-    static func checkLatest(currentVersionString: String = EpsilonVersions.bundledSimulator) async throws -> Report {
+    static func checkLatest(currentVersionString: String) async throws -> Report {
         let remoteURL = try await fetchLatestRemoteURL()
         return try check(remoteURL: remoteURL, currentVersionString: currentVersionString)
     }

@@ -2,10 +2,10 @@ import Foundation
 
 /// Centralized paths for the offline NumWorks simulator assets.
 ///
-/// Design goals:
-/// - The app ships with a bundled default HTML (Resources/DefaultSimulator/numworks-simulator.html)
-/// - If a newer simulator is downloaded, it lives in Application Support/<bundle-id>/Simulator/current
-/// - The app prefers the downloaded simulator when present, otherwise falls back to the bundled default
+/// Notes:
+/// - The app does not ship with any bundled simulator.
+/// - Downloaded simulator assets live in Application Support/<bundle-id>/Simulator/current
+/// - Versioning and selection logic live in `EpsilonVersions`.
 
 enum SimulatorPaths {
 
@@ -34,37 +34,23 @@ enum SimulatorPaths {
         try simulatorDirectory().appendingPathComponent("current", isDirectory: true)
     }
 
-    // MARK: - Entry HTML
+    // MARK: - Simulator entry HTML helpers
 
-    /// Bundled default simulator HTML inside the app.
-    static func bundledHTMLURL() -> URL {
-        guard let url = Bundle.main.url(
-            forResource: "numworks-simulator",
-            withExtension: "html",
-            subdirectory: "DefaultSimulator"
-        ) else {
-            fatalError("Missing bundled DefaultSimulator/numworks-simulator.html")
-        }
-        return url
+    /// Build the expected simulator HTML URL for a given normalized version string (NN.NN.NN).
+    static func simulatorHTMLURL(version: String) throws -> URL {
+        try currentSimulatorDirectory().appendingPathComponent("numworks-simulator-\(version).html", isDirectory: false)
     }
 
-    /// Downloaded simulator HTML if present in Application Support.
-    static func installedHTMLURLIfPresent() -> URL? {
+    /// List all HTML files directly in the current simulator directory.
+    /// Selection/parsing logic is handled elsewhere.
+    static func simulatorHTMLCandidates() -> [URL] {
         do {
-            let url = try currentSimulatorDirectory().appendingPathComponent("numworks-simulator.html", isDirectory: false)
-            if FileManager.default.fileExists(atPath: url.path) {
-                return url
-            }
-            return nil
+            let dir = try currentSimulatorDirectory()
+            let items = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+            return items.filter { $0.pathExtension.lowercased() == "html" }
         } catch {
-            return nil
+            return []
         }
-    }
-
-    /// URL the app should load.
-    /// Prefer downloaded simulator; fall back to bundled default.
-    static func urlToLoad() -> URL {
-        installedHTMLURLIfPresent() ?? bundledHTMLURL()
     }
 
     // MARK: - Ensure directories exist (for updater)

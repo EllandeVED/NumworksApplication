@@ -21,9 +21,10 @@ final class AppController: NSObject, NSWindowDelegate {
     func start() {
         print("[App] start()")
         OnLaunch.ensureAppSupportExists()
-        let hasSim = OnLaunch.hasInstalledSimulator()
+        let simulatorVersion = EpsilonVersions.currentSimulatorVersionString()
+        let hasSim = simulatorVersion != "00.00.00"
         if hasSim {
-            print("[App] simulator detected in Application Support")
+            print("[App] simulator detected in Application Support version=\(simulatorVersion)")
         }
 
         updateMenuBarIcon()
@@ -38,7 +39,7 @@ final class AppController: NSObject, NSWindowDelegate {
         }
 
         if !hasSim {
-            print("[App] no installed simulator → keeping menu bar icon, blocking calculator window")
+            print("[App] no valid simulator → version=\(simulatorVersion) → keeping menu bar icon, blocking calculator window")
             Preferences.shared.isAppVisible = false
             OnLaunch.requestRequiredSimulatorUpdater()
             return

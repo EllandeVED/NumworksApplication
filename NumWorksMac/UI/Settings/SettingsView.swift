@@ -232,7 +232,7 @@ private struct EpsilonUpdateSettingsPane: View {
     }
 
     private func simulatorVersionString() -> String {
-        UserDefaults.standard.string(forKey: "installedSimulatorVersion") ?? EpsilonVersions.bundledSimulator
+        EpsilonVersions.currentSimulatorVersionString()
     }
 
     private func checkForUpdates() {
@@ -333,7 +333,7 @@ private struct AboutSettingsPane: View {
     }
 
     private func simulatorVersionString() -> String {
-        UserDefaults.standard.string(forKey: "installedSimulatorVersion") ?? EpsilonVersions.bundledSimulator
+        EpsilonVersions.currentSimulatorVersionString()
     }
 }
 

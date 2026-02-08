@@ -27,7 +27,7 @@ enum OnLaunch {
     }
 
     static func hasInstalledSimulator() -> Bool {
-        SimulatorPaths.installedHTMLURLIfPresent() != nil
+        EpsilonVersions.currentSimulatorVersionString() != "00.00.00"
     }
 
     static func requestRequiredSimulatorUpdater() {
@@ -94,10 +94,7 @@ enum OnLaunch {
         do {
             print("[OnLaunch] checking epsilon update")
 
-            // If we are using the bundled simulator, ensure the installed-version marker is cleared.
-            SimulatorUpdater.clearInstalledSimulatorVersionIfUsingBundled()
-
-            let current = SimulatorUpdater.installedSimulatorVersionString()
+            let current = EpsilonVersions.currentSimulatorVersionString()
             let report = try await EpsilonUpdateChecker.checkLatest(currentVersionString: current)
 
             epsilonNeedsUpdate = report.needsUpdate

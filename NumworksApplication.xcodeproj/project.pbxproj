@@ -40,7 +40,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/AppController.swift,
-				App/AppLifecycle.swift,
 				App/NumWorksMacApp.swift,
 				Core/AppMover/AppMover.swift,
 				Core/AppMover/Extensions.swift,
@@ -62,8 +61,6 @@
 				UI/Calculator/CalculatorView.swift,
 				UI/Calculator/CalculatorWebView.swift,
 				UI/Calculator/CalculatorWindow.swift,
-				UI/MenuBar/MenuBarPopoverView.swift,
-				UI/RootView.swift,
 				UI/Settings/MITLicence.swift,
 				UI/Settings/SettingsView.swift,
 				UI/Updates/AppUpdateView.swift,
@@ -76,7 +73,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				App/AppController.swift,
-				App/AppLifecycle.swift,
 				App/NumWorksMacApp.swift,
 				Core/MenuBar/MenuBarActions.swift,
 				Core/MenuBar/MenuBarController.swift,
@@ -96,8 +92,6 @@
 				UI/Calculator/CalculatorView.swift,
 				UI/Calculator/CalculatorWebView.swift,
 				UI/Calculator/CalculatorWindow.swift,
-				UI/MenuBar/MenuBarPopoverView.swift,
-				UI/RootView.swift,
 				UI/Settings/MITLicence.swift,
 				UI/Settings/SettingsView.swift,
 				UI/Updates/AppUpdateView.swift,

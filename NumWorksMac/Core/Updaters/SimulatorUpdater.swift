@@ -19,7 +19,7 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
     @Published var isPresented = false
     @Published var phase: Phase = .idle
 
-    @Published var fromVersion: String = EpsilonVersions.bundledSimulator
+    @Published var fromVersion: String = EpsilonVersions.currentSimulatorVersionString()
     @Published var toVersion: String = ""
 
     @Published var progress: Double = 0
@@ -57,7 +57,7 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
         restartTimer = nil
         restartSecondsRemaining = 0
         self.remoteURL = remoteURL
-        self.fromVersion = currentInstalledVersion
+        self.fromVersion = EpsilonVersions.currentSimulatorVersionString()
         self.toVersion = remoteVersion
         setProgress(0)
         self.phase = .prompt
@@ -74,7 +74,7 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
         restartTimer = nil
         restartSecondsRemaining = 0
         self.remoteURL = remoteURL
-        self.fromVersion = currentInstalledVersion
+        self.fromVersion = EpsilonVersions.currentSimulatorVersionString()
         self.toVersion = remoteVersion
         setProgress(0)
         self.phase = .prompt
@@ -134,10 +134,8 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
                 try? fm.removeItem(at: currentDir)
             }
             try fm.moveItem(at: stagingDir, to: currentDir)
-            try ensureSimulatorEntryHTML(in: currentDir)
-
-            setInstalledVersion(toVersion)
-            print("[SimulatorUpdater] installed version set to \(toVersion)")
+            let normalizedTo = try normalizeVersionString(toVersion)
+            try ensureSimulatorEntryHTML(in: currentDir, version: normalizedTo)
 
             // cleanup staged artifacts
             try? fm.removeItem(at: zip)
@@ -232,7 +230,7 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
 
     // Added per update prompting fixes and cleanup
     nonisolated static func installedSimulatorVersionString() -> String {
-        UserDefaults.standard.string(forKey: "installedSimulatorVersion") ?? EpsilonVersions.bundledSimulator
+        EpsilonVersions.currentSimulatorVersionString()
     }
 
     nonisolated static func hasInstalledSimulatorInAppSupport() -> Bool {
@@ -331,14 +329,6 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
 
     // MARK: - Paths + versions
 
-    private var currentInstalledVersion: String {
-        UserDefaults.standard.string(forKey: "installedSimulatorVersion") ?? EpsilonVersions.bundledSimulator
-    }
-
-    private func setInstalledVersion(_ v: String) {
-        UserDefaults.standard.set(v, forKey: "installedSimulatorVersion")
-    }
-
     private var appSupportDir: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let id = Bundle.main.bundleIdentifier ?? "NumworksApplication"
@@ -363,9 +353,9 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
 
     // MARK: - Install helpers
 
-    private func ensureSimulatorEntryHTML(in currentDir: URL) throws {
+    private func ensureSimulatorEntryHTML(in currentDir: URL, version: String) throws {
         let fm = FileManager.default
-        let desired = currentDir.appendingPathComponent("numworks-simulator.html", isDirectory: false)
+        let desired = currentDir.appendingPathComponent("numworks-simulator-\(version).html", isDirectory: false)
         if fm.fileExists(atPath: desired.path) { return }
 
         let index = currentDir.appendingPathComponent("index.html", isDirectory: false)
@@ -380,6 +370,15 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
             try? fm.removeItem(at: desired)
             try fm.moveItem(at: firstHTML, to: desired)
         }
+    }
+
+    private func normalizeVersionString(_ v: String) throws -> String {
+        let parts = v.split(separator: ".")
+        guard parts.count == 3 else { throw NSError(domain: "SimulatorUpdater", code: 1) }
+        guard let major = Int(parts[0]), let minor = Int(parts[1]), let patch = Int(parts[2]) else {
+            throw NSError(domain: "SimulatorUpdater", code: 2)
+        }
+        return String(format: "%02d.%02d.%02d", major, minor, patch)
     }
 
     private func unzip(zipFile: URL, to dest: URL) throws {
