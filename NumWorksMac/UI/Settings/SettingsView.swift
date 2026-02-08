@@ -58,7 +58,7 @@ struct SettingsView: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .frame(minWidth: 420, minHeight: 420)
+        .frame(minWidth: 420, minHeight: 460)
         .onAppear {
             NotificationCenter.default.post(name: .settingsWindowDidAppear, object: nil)
         }
@@ -72,8 +72,13 @@ private struct GeneralSettingsPane: View {
     @StateObject private var prefs = Preferences.shared
 
     var body: some View {
-        Form {
-            Section {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("General")
+                .font(.title2)
+                .bold()
+
+            VStack(alignment: .leading, spacing: 16) {
+                // Shortcuts
                 Text("Shortcuts")
                     .fontWeight(.bold)
 
@@ -86,9 +91,8 @@ private struct GeneralSettingsPane: View {
                     KeyboardShortcuts.Recorder(for: .pinUnpinApp)
                     Text("Pin / Unpin App")
                 }
-            }
 
-            Section {
+                // Startup
                 Text("Startup")
                     .fontWeight(.bold)
 
@@ -100,18 +104,16 @@ private struct GeneralSettingsPane: View {
                             UserDefaults.standard.set(true, forKey: key)
                         }
                     }
-            }
 
-            Section {
+                // Interface
                 Text("Interface")
                     .fontWeight(.bold)
 
                 Toggle("Show Menu Bar Icon", isOn: $prefs.isMenuBarIconEnabled)
                 Toggle("Show Pin/Unpin button on Calculator", isOn: $prefs.showPinButtonOnCalculator)
                 Toggle("Show Dock Icon", isOn: $prefs.showDockIcon)
-            }
 
-            Section {
+                // Preferred icon
                 Text("Preferred Icon")
                     .fontWeight(.bold)
 
@@ -355,6 +357,7 @@ private struct AboutSettingsPane: View {
 
             HStack(spacing: 8) {
                 Text("Running on Epsilon")
+                    .fontWeight(.bold)
                 Text(simulatorVersionString())
                     .monospaced()
                     .foregroundStyle(.secondary)
@@ -363,14 +366,22 @@ private struct AboutSettingsPane: View {
             Divider().padding(.vertical, 6)
 
             HStack(spacing: 8) {
-                Text("Made by")
+                Text("Made by:")
                     .fontWeight(.bold)
                 Text("Ellande VED")
             }
+            
+            HStack(spacing: 8) {
+                Text("See on GitHub:")
+                Link("NumworksApplication", destination: repoURL)
 
-            Link("See on GitHub: NumworksApplication", destination: repoURL)
-
-            Link("Report an issue/request: Report", destination: repoURL)
+            }
+            
+            HStack(spacing: 8) {
+                Text("Report an issue/request: ")
+                Link("Report", destination: repoURL)
+            }
+            
 
             Divider().padding(.vertical, 6)
 
@@ -417,3 +428,4 @@ extension Notification.Name {
     static let settingsWindowDidAppear = Notification.Name("settingsWindowDidAppear")
     static let settingsWindowDidDisappear = Notification.Name("settingsWindowDidDisappear")
 }
+
