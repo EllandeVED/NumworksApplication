@@ -77,7 +77,7 @@ private struct GeneralSettingsPane: View {
                 .font(.title2)
                 .bold()
 
-            VStack(alignment: .leading, spacing: 16) {
+            
                 // Shortcuts
                 Text("Shortcuts")
                     .fontWeight(.bold)
@@ -122,8 +122,10 @@ private struct GeneralSettingsPane: View {
                     iconChoice(title: "Outline", style: .outline)
                     Spacer(minLength: 0)
                 }
+
+                Spacer()
             }
-        }
+        
         .frame(maxWidth: .infinity, alignment: .leading)
         .multilineTextAlignment(.leading)
         .padding(16)
@@ -173,6 +175,7 @@ private struct AppUpdateSettingsPane: View {
 
             HStack(spacing: 8) {
                 Text("Current version:")
+                    .fontWeight(.semibold)
                 Text(currentAppVersion)
                     .monospaced()
                     .foregroundStyle(.secondary)
@@ -262,6 +265,7 @@ private struct EpsilonUpdateSettingsPane: View {
 
             HStack(spacing: 8) {
                 Text("Current version:")
+                    .fontWeight(.semibold)
                 Text(currentSimulatorVersion)
                     .monospaced()
                     .foregroundStyle(.secondary)
@@ -378,7 +382,7 @@ private struct AboutSettingsPane: View {
             }
             
             HStack(spacing: 8) {
-                Text("Report an issue/request: ")
+                Text("Report an issue/request:")
                 Link("Report", destination: repoURL)
             }
             
