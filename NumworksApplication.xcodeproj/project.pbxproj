@@ -57,7 +57,6 @@
 				Core/Updaters/EpsilonUpdateChecker.swift,
 				Core/Updaters/SimulatorUpdater.swift,
 				Core/WindowManagement.swift,
-				README_STRUCTURE.txt,
 				Resources/Assets.xcassets,
 				UI/Calculator/CalculatorView.swift,
 				UI/Calculator/CalculatorWebView.swift,
@@ -88,7 +87,6 @@
 				Core/Updaters/EpsilonUpdateChecker.swift,
 				Core/Updaters/SimulatorUpdater.swift,
 				Core/WindowManagement.swift,
-				README_STRUCTURE.txt,
 				Resources/Assets.xcassets,
 				UI/Calculator/CalculatorView.swift,
 				UI/Calculator/CalculatorWebView.swift,
@@ -500,7 +498,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumworksApplication;
 				PRODUCT_NAME = NumWorks;
 				REGISTER_APP_GROUPS = YES;
@@ -530,7 +528,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumworksApplication;
 				PRODUCT_NAME = NumWorks;
 				REGISTER_APP_GROUPS = YES;
