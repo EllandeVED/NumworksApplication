@@ -185,14 +185,131 @@ private struct AppUpdateSettingsPane: View {
 }
 
 private struct EpsilonUpdateSettingsPane: View {
+    @State private var currentSimulatorVersion: String = ""
+    @State private var isChecking = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Epsilon Update")
                 .font(.title2)
                 .bold()
 
-            Text("Add Epsilon-specific update options here.")
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text("Current version:")
+                Text(currentSimulatorVersion)
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                checkForUpdates()
+            } label: {
+                if isChecking {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Text("Check for updates")
+                }
+            }
+            .disabled(isChecking)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.leading)
+        .padding(16)
+        .navigationTitle("")
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("NumWorks Settings")
+                    .font(.system(size: settingsTitleSize, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .onAppear {
+            currentSimulatorVersion = simulatorVersionString()
+        }
+    }
+
+    private func simulatorVersionString() -> String {
+        UserDefaults.standard.string(forKey: "installedSimulatorVersion") ?? EpsilonVersions.bundledSimulator
+    }
+
+    private func checkForUpdates() {
+        guard !isChecking else { return }
+        isChecking = true
+
+        Task { @MainActor in
+            defer { isChecking = false }
+            do {
+                let current = simulatorVersionString()
+                let report = try await EpsilonUpdateChecker.checkLatest(currentVersionString: current)
+
+                if report.needsUpdate {
+                    NotificationCenter.default.post(
+                        name: .requestEpsilonUpdateUI,
+                        object: nil,
+                        userInfo: [
+                            "remoteURL": report.remoteURL,
+                            "remoteVersion": report.remoteVersion.string,
+                            "required": false
+                        ]
+                    )
+                }
+
+                currentSimulatorVersion = simulatorVersionString()
+            } catch {
+                print("[Settings] epsilon update check failed: \(error)")
+            }
+        }
+    }
+}
+
+private struct AboutSettingsPane: View {
+    private let repoURL = URL(string: "https://github.com/EllandeVED/NumworksApplication")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("About")
+                .font(.title2)
+                .bold()
+
+            HStack(spacing: 8) {
+                Text("App version")
+                    .fontWeight(.bold)
+                Text(appVersionString())
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                Text("Running on Epsilon")
+                Text(simulatorVersionString())
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+            }
+
+            Divider().padding(.vertical, 6)
+
+            HStack(spacing: 8) {
+                Text("Made by")
+                    .fontWeight(.bold)
+                Text("Ellande VED")
+            }
+
+            Link("See on GitHub: NumworksApplication", destination: repoURL)
+
+            Link("Report an issue/request: Report", destination: repoURL)
+
+            Divider().padding(.vertical, 6)
+
+            Button {
+                MITLiscence.present()
+            } label: {
+                Text("MIT LISCENCE")
+                    .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
 
             Spacer()
         }
@@ -208,31 +325,15 @@ private struct EpsilonUpdateSettingsPane: View {
             }
         }
     }
-}
 
-private struct AboutSettingsPane: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("About")
-                .font(.title2)
-                .bold()
+    private func appVersionString() -> String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        ?? Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+        ?? ""
+    }
 
-            Text("Build info, credits, links, etc.")
-                .foregroundStyle(.secondary)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .multilineTextAlignment(.leading)
-        .padding(16)
-        .navigationTitle("")
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("NumWorks Settings")
-                    .font(.system(size: settingsTitleSize, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-        }
+    private func simulatorVersionString() -> String {
+        UserDefaults.standard.string(forKey: "installedSimulatorVersion") ?? EpsilonVersions.bundledSimulator
     }
 }
 
@@ -245,3 +346,4 @@ extension Notification.Name {
     static let settingsWindowDidAppear = Notification.Name("settingsWindowDidAppear")
     static let settingsWindowDidDisappear = Notification.Name("settingsWindowDidDisappear")
 }
+
