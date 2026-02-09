@@ -2,6 +2,8 @@
 
 # NUMWORKS APP FOR MAC
 
+<img width="128" height="128" alt="icon_128x128" src="https://github.com/user-attachments/assets/ebf83080-d4f8-4cfd-9b79-790e0f1f98ce" />
+
 </div>
 
 A native macOS application that embeds the official **NumWorks htlm simulator** into a real `.app`, with full macOS integration, offline support, and built-in update mechanisms.
