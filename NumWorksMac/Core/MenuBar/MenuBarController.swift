@@ -19,7 +19,7 @@ enum MenuBarIconStyle: String {
 final class MenuBarController: NSObject {
     private let wm: WindowManagement
     private let actions: MenuBarActions
-    private let statusItem: NSStatusItem
+    private var statusItem: NSStatusItem?
 
     deinit {
         invalidate()
@@ -33,19 +33,21 @@ final class MenuBarController: NSObject {
     init(wm: WindowManagement) {
         self.wm = wm
         self.actions = MenuBarActions(wm: wm)
-        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
 
         iconStyle = Preferences.shared.menuBarIconStyle
         iconSize = Preferences.shared.menuBarIconSize
 
-        if let b = statusItem.button {
-            b.target = self
-            b.action = #selector(onStatusItemAction)
-            b.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        if Preferences.shared.isMenuBarIconEnabled {
+            ensureStatusItem()
         }
 
-        applyIcon()
+        Preferences.shared.$isMenuBarIconEnabled
+            .sink { [weak self] enabled in
+                guard let self else { return }
+                enabled ? self.ensureStatusItem() : self.removeStatusItem()
+            }
+            .store(in: &cancellables)
 
         Preferences.shared.$menuBarIconStyle
             .sink { [weak self] style in
@@ -62,11 +64,14 @@ final class MenuBarController: NSObject {
 
     func invalidate() {
         cancellables.removeAll()
-        if let b = statusItem.button {
+        if let b = statusItem?.button {
             b.target = nil
             b.action = nil
         }
-        NSStatusBar.system.removeStatusItem(statusItem)
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+        }
+        statusItem = nil
     }
 
     func setIconStyle(_ style: MenuBarIconStyle) {
@@ -80,7 +85,7 @@ final class MenuBarController: NSObject {
     }
 
     private func applyIcon() {
-        guard let b = statusItem.button else { return }
+        guard let b = statusItem?.button else { return }
         let img = NSImage(named: iconStyle.assetName)
         img?.isTemplate = true
         if let img {
@@ -88,6 +93,32 @@ final class MenuBarController: NSObject {
         }
         b.imageScaling = .scaleProportionallyDown
         b.image = img
+    }
+
+    private func ensureStatusItem() {
+        if statusItem != nil { return }
+
+        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = item
+
+        if let b = item.button {
+            b.target = self
+            b.action = #selector(onStatusItemAction)
+            b.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
+
+        applyIcon()
+    }
+
+    private func removeStatusItem() {
+        if let b = statusItem?.button {
+            b.target = nil
+            b.action = nil
+        }
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+        }
+        statusItem = nil
     }
 
     @objc private func onStatusItemAction() {
@@ -125,7 +156,8 @@ final class MenuBarController: NSObject {
         quitItem.target = self
         menu.addItem(quitItem)
 
-        NSMenu.popUpContextMenu(menu, with: NSApp.currentEvent!, for: statusItem.button!)
+        guard let button = statusItem?.button, let event = NSApp.currentEvent else { return }
+        NSMenu.popUpContextMenu(menu, with: event, for: button)
     }
 
     @objc private func togglePinned() {

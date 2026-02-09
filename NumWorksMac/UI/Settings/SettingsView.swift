@@ -69,7 +69,7 @@ struct SettingsView: View {
 }
 
 private struct GeneralSettingsPane: View {
-    @StateObject private var prefs = Preferences.shared
+    @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -344,6 +344,7 @@ private struct EpsilonUpdateSettingsPane: View {
 
 private struct AboutSettingsPane: View {
     private let repoURL = URL(string: "https://github.com/EllandeVED/NumworksApplication")!
+    private let issueURL = URL(string: "https://github.com/EllandeVED/NumworksApplication/issues")!
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -383,7 +384,7 @@ private struct AboutSettingsPane: View {
             
             HStack(spacing: 8) {
                 Text("Report an issue/request:")
-                Link("Report", destination: repoURL)
+                Link("Report", destination: issueURL)
             }
             
 

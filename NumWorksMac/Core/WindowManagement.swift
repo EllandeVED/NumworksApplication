@@ -46,6 +46,7 @@ final class WindowManagement {
             let tag = (u["latestTag"] as? String) ?? ""
             AppUpdater.shared.presentUpdate(remoteURL: url, remoteVersion: tag)
         }
+        isPinned = Preferences.shared.isPinned
     }
 
     deinit {
