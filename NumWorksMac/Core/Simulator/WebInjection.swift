@@ -4,7 +4,7 @@ import WebKit
 enum WebInjection {
     static let css = """
     :root {
-      --nwZoom: 1.17;
+      --nwZoom: 1.18;
       --nwBezelYOffset: 2.1%;
       --nwScreenZoom: 1.04;
       --nwGlobalYOffset: 3.6%;
