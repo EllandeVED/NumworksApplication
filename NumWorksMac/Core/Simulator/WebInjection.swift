@@ -4,10 +4,10 @@ import WebKit
 enum WebInjection {
     static let css = """
     :root {
-      --nwZoom: 1.18;
-      --nwBezelYOffset: 2.1%;
-      --nwScreenZoom: 1.04;
-      --nwGlobalYOffset: 3.6%;
+      --nwZoom: 1.17;
+      --nwBezelYOffset: 1.1%;
+      --nwScreenZoom: 0.992;
+      --nwGlobalYOffset: 5.975%;
     }
     html, body {
       margin: 0 !important;
@@ -53,6 +53,11 @@ enum WebInjection {
       backface-visibility: hidden !important;
       will-change: transform !important;
       transform: translate3d(0, var(--nwBezelYOffset), 0) !important;
+    
+      /* Hide the simulator-rendered calculator image, but keep its layout
+         so button hitboxes and screen geometry remain unchanged. */
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     .calculator canvas {

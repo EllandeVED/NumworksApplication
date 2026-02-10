@@ -9,6 +9,11 @@ struct CalculatorView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
+            Image("CalculatorImage")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
             if OnLaunch.hasInstalledSimulator() {
                 CalculatorWebView(
                     onReady: {
