@@ -2,6 +2,8 @@
 
 # NUMWORKS APP FOR MAC
 
+<img width="128" height="128" alt="icon_128x128" src="https://github.com/user-attachments/assets/ebf83080-d4f8-4cfd-9b79-790e0f1f98ce" />
+
 </div>
 
 A native macOS application that embeds the official **NumWorks htlm simulator** into a real `.app`, with full macOS integration, offline support, and built-in update mechanisms.
@@ -63,17 +65,15 @@ The app is now ready to use.
 ### App Updates
 - The app checks for updates automatically
 - Updates are handled **inside the app**
-- When an update is available:
-  - The new version is downloaded to `~/Downloads`
-  - You are prompted to open the updated app
+
 
 > For app updates to work correctly, the app **must be located in the Applications folder**.
 
 ### Simulator (Epsilon) Updates
 - The NumWorks simulator is managed separately from the app
-- Simulator files are stored in **Application Support**
-- If no simulator is installed, or if it is outdated, the app **forces a simulator update**
-- Simulator updates can also be triggered manually from Settings
+- Simulator files are stored in **Application Support** (at `~/Library/Application Support/<USERNAME>.NumworksApplication/Simulator/current`)
+- If no simulator is installed, the app **forces a simulator update**
+- If it is outdated, the app **suggests a simulator update** (see [**Advanced**](https://github.com/EllandeVED/NumworksApplication/edit/main/README.md#advanced) to prevent this)
 
 ---
 
@@ -85,13 +85,11 @@ The app is now ready to use.
   - on first launch
   - or when checking for updates
 
-There are **no bundled simulators** inside the app — everything is managed dynamically.
+This app **does not bundled the official NumWorks simulator** — everything is managed dynamically.
 
 ---
 
 ## Settings & Customization
-
-The app includes a native **Settings window** with multiple tabs:
 
 ### General
 - Menu bar icon visibility
@@ -101,34 +99,26 @@ The app includes a native **Settings window** with multiple tabs:
 - Launch at login
 
 ### App Update
-- Manual “Check for updates” button
-- In-app update UI if a new version is available
+- Manual checking for updates
+- Follow in-app instructions for updates
 
 ### Epsilon Update
 - Displays the current simulator version
 - Manual “Check for updates” button
-- In-app simulator update UI
-- Alert when already up to date
+- Automatic in-app simulator updater
 
-### About
-- App version
-- Simulator version
-- Project links and license
 
-### Accessing Settings
 
-You can open the Settings window:
-1. By right-clicking the menu bar icon  
-2. From the macOS menu bar: **NumWorks → Settings**
+
 
 <img width="357" height="308" alt="Settings Menu" src="https://github.com/user-attachments/assets/cbd895cd-71b2-44a3-8bd5-2d7047f08399" />
 
 ---
 ## Advanced
 If you want to use a custom NumWorks framework (not the official simulator provided by NumWorks) follow these instuctions:
-- Got to ~/Library/Application Support/<USERNAME>.NumworksApplication/Simulator/current'
-- Paste your custom framework
-- Make sure you name it `numworks-simulator-99.99.99.html` to avoid triggering the simulator auto updater.
+1. Go to `~/Library/Application Support/<USERNAME>.NumworksApplication/Simulator/current`
+2. Paste your custom framework
+3. Make sure you name it `numworks-simulator-99.99.99.html` to avoid triggering the simulator auto updater.
 
 - [ ] I plan to add an option in settings to disable `Webinjection.swift`so it doesn't mess up with your custom framework
 
@@ -140,6 +130,9 @@ If you want to use a custom NumWorks framework (not the official simulator provi
 This project is licensed under the **MIT License**.
 
 Copyright (c) 2025–2026 **EllandeVED**
+
+This project includes third-party open-source components licensed under their respective licenses  
+(e.g. MIT, BSD). See individual repositories for details.
 
 This app embeds the official **NumWorks web simulator**, which is developed and licensed separately by **NumWorks** under the **GNU General Public License v3 (GPL-3.0)**.
 
