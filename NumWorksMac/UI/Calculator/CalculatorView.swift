@@ -4,29 +4,104 @@ import AppKit
 
 struct CalculatorView: View {
     let wm: WindowManagement
-    @StateObject private var prefs = Preferences.shared
+    @ObservedObject private var prefs = Preferences.shared
+    //not modify these
     @State private var hoveringPin = false
+    @State private var didLockOverlay = false
+    @State private var extraRatioX: CGFloat = 0
+    @State private var extraRatioY: CGFloat = 0
+    @State private var offsetRatioX: CGFloat = 0
+    @State private var offsetRatioY: CGFloat = 0
+
+    // Overlay calibration (adjust these values manually)
+    // overlayExtra = global growth in all directions
+    // overlayExtraX / overlayExtraY = fine tuning per axis
+    // overlayOffsetX / overlayOffsetY = positional adjustments
+    //modifiable these
+    private let overlayExtra: CGFloat = 36.5
+    private let overlayExtraX: CGFloat = 0
+    private let overlayExtraY: CGFloat = 26
+
+    private let overlayOffsetX: CGFloat = 0
+    private let overlayOffsetY: CGFloat = 45
+
+    private func lockOverlayIfNeeded(for size: CGSize) {
+        guard !didLockOverlay else { return }
+        let w = size.width
+        let h = size.height
+        guard w > 0, h > 0 else { return }
+
+        // Convert the user-provided calibration values into ratios relative to the current window size.
+        // After this point, resizing stays proportional.
+        extraRatioX = (overlayExtra + overlayExtraX) / w
+        extraRatioY = (overlayExtra + overlayExtraY) / h
+        offsetRatioX = overlayOffsetX / w
+        offsetRatioY = overlayOffsetY / h
+
+        didLockOverlay = true
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Image("CalculatorImage")
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            GeometryReader { geo in
+                Image("CalculatorImage")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width, height: geo.size.height)
 
-            if OnLaunch.hasInstalledSimulator() {
-                CalculatorWebView(
-                    onReady: {
-                        wm.attachWebView($0)
-                        print("[Calculator] onReady → posting calculatorDidLoad")
-                        NotificationCenter.default.post(name: .calculatorDidLoad, object: nil)
-                    },
-                    onBaseSize: { wm.setBaseSize($0) }
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if OnLaunch.hasInstalledSimulator() {
+                    CalculatorWebView(
+                        onReady: {
+                            wm.attachWebView($0)
+                            print("[Calculator] onReady → posting calculatorDidLoad")
+                            NotificationCenter.default.post(name: .calculatorDidLoad, object: nil)
+                        },
+                        onBaseSize: { wm.setBaseSize($0) }
+                    )
+                    .frame(
+                        width: {
+                            let w = geo.size.width
+                            if w <= 0 { return w }
+
+                            let ex = w * (didLockOverlay ? extraRatioX : ((overlayExtra + overlayExtraX) / w))
+                            return w + ex * 2
+                        }(),
+                        height: {
+                            let h = geo.size.height
+                            if h <= 0 { return h }
+
+                            let ey = h * (didLockOverlay ? extraRatioY : ((overlayExtra + overlayExtraY) / h))
+                            return h + ey * 2
+                        }()
+                    )
+                    .offset(
+                        x: {
+                            let w = geo.size.width
+                            if w <= 0 { return 0 }
+
+                            let ex = w * (didLockOverlay ? extraRatioX : ((overlayExtra + overlayExtraX) / w))
+                            let ox = w * (didLockOverlay ? offsetRatioX : (overlayOffsetX / w))
+                            return ox - ex
+                        }(),
+                        y: {
+                            let h = geo.size.height
+                            if h <= 0 { return 0 }
+
+                            let ey = h * (didLockOverlay ? extraRatioY : ((overlayExtra + overlayExtraY) / h))
+                            let oy = h * (didLockOverlay ? offsetRatioY : (overlayOffsetY / h))
+                            return oy - ey
+                        }()
+                    )
+                    .onAppear {
+                        lockOverlayIfNeeded(for: geo.size)
+                    }
+                    .onChange(of: geo.size) { _, newSize in
+                        lockOverlayIfNeeded(for: newSize)
+                    }
+                } else {
+                    Color.clear
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
             }
 
             if prefs.showPinButtonOnCalculator {

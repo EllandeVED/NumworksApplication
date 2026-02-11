@@ -4,10 +4,12 @@ import WebKit
 enum WebInjection {
     static let css = """
     :root {
-      --nwZoom: 1.17;
-      --nwBezelYOffset: 1.1%;
-      --nwScreenZoom: 0.992;
-      --nwGlobalYOffset: 5.975%;
+      /* Keep the simulator at 1:1 to avoid canvas blur.
+         Use SwiftUI overlayScale/offset instead to align to the background image. */
+      --nwZoom: 1;
+      --nwBezelYOffset: 0;
+      --nwScreenZoom: 1;
+      --nwGlobalYOffset: 0;
     }
     html, body {
       margin: 0 !important;
@@ -28,7 +30,7 @@ enum WebInjection {
       width: 100vw !important;
       height: 100vh !important;
       will-change: transform !important;
-      transform: translate3d(0, var(--nwGlobalYOffset), 0) scale(var(--nwZoom)) !important;
+      transform: translate3d(0, var(--nwGlobalYOffset), 0) !important;
       transform-origin: center center !important;
       contain: layout paint !important;
     }
@@ -61,9 +63,8 @@ enum WebInjection {
     }
 
     .calculator canvas {
-      transform-origin: center center !important;
-      transform: scale(var(--nwScreenZoom)) !important;
-      will-change: transform !important;
+      transform: none !important;
+      will-change: auto !important;
     }
 
     .actions { display: none !important; }
