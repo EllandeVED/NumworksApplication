@@ -159,8 +159,13 @@ enum OnLaunch {
 
     @MainActor
     private static func waitForNotification(_ name: Notification.Name) async {
-        var it = NotificationCenter.default.notifications(named: name).makeAsyncIterator()
-        _ = await it.next()
+        await withCheckedContinuation { cont in
+            var token: NSObjectProtocol?
+            token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
+                if let token { NotificationCenter.default.removeObserver(token) }
+                cont.resume()
+            }
+        }
     }
 
     @MainActor

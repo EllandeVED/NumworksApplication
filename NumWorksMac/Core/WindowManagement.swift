@@ -44,7 +44,9 @@ final class WindowManagement {
             guard let u = n.userInfo else { return }
             guard let url = u["latestURL"] as? URL else { return }
             let tag = (u["latestTag"] as? String) ?? ""
-            AppUpdater.shared.presentUpdate(remoteURL: url, remoteVersion: tag)
+            Task { @MainActor in
+                AppUpdater.shared.presentUpdate(remoteURL: url, remoteVersion: tag)
+            }
         }
         isPinned = Preferences.shared.isPinned
     }
