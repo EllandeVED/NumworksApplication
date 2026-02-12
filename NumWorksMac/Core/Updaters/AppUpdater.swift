@@ -58,11 +58,28 @@ final class AppUpdater: ObservableObject {
                 throw NSError(domain: "AppUpdater", code: 2)
             }
 
+            let unzipStart = Date()
             try unzip(zipURL: zipURL, to: downloads)
             try? fileManager.removeItem(at: zipURL)
 
+            let extractedApp = try findNewestExtractedApp(in: downloads, since: unzipStart)
+            let targetApp = downloads.appendingPathComponent("NumWorks.app")
+
+            if extractedApp.standardizedFileURL != targetApp.standardizedFileURL {
+                try? fileManager.removeItem(at: targetApp)
+                try fileManager.moveItem(at: extractedApp, to: targetApp)
+            } else {
+                // If it already extracted as NumWorks.app, make sure it replaces any previous copy.
+                // (At this point, targetApp is the extracted app.)
+            }
+
             phase = .readyToOpen
         } catch {
+            // Best effort cleanup
+            if let downloads = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first {
+                let fallback = downloads.appendingPathComponent("NumWorks.zip")
+                try? fileManager.removeItem(at: fallback)
+            }
             phase = .failed(error.localizedDescription)
         }
     }
@@ -71,6 +88,34 @@ final class AppUpdater: ObservableObject {
         let downloads = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first!
         NSWorkspace.shared.open(downloads)
         NSApp.terminate(nil)
+    }
+
+    private func findNewestExtractedApp(in downloads: URL, since: Date) throws -> URL {
+        let fm = fileManager
+        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .isDirectoryKey]
+
+        guard let e = fm.enumerator(at: downloads, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles]) else {
+            throw NSError(domain: "AppUpdater", code: 3)
+        }
+
+        var bestURL: URL?
+        var bestDate: Date = since
+
+        for case let url as URL in e {
+            if url.pathExtension.lowercased() != "app" { continue }
+
+            let rv = try? url.resourceValues(forKeys: keys)
+            guard rv?.isDirectory == true else { continue }
+
+            let d = rv?.contentModificationDate ?? .distantPast
+            if d >= bestDate {
+                bestDate = d
+                bestURL = url
+            }
+        }
+
+        if let bestURL { return bestURL }
+        throw NSError(domain: "AppUpdater", code: 4)
     }
 
     private func unzip(zipURL: URL, to destination: URL) throws {
