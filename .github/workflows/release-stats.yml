@@ -102,7 +102,7 @@ jobs:
               "tag": tag,
               "date": rel["published_date"],
               "downloads_total": rel["totals"].get(days[-1], 0) if days else 0,
-              "downloads_last7": vals
+              "downloads_per_day_last7": vals
             })
 
           payload = {
