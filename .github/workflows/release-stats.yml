@@ -22,104 +22,104 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os, urllib.request, datetime, pathlib
-
-          owner = os.environ["OWNER"]
-          repo = os.environ["REPO"]
-          asset_name = os.environ["ASSET_NAME"]
-
-          api = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=10"
-          req = urllib.request.Request(
-              api,
-              headers={
-                  "Accept": "application/vnd.github+json",
-                  "User-Agent": f"{owner}-{repo}-release-stats"
+              
+              owner = os.environ["OWNER"]
+              repo = os.environ["REPO"]
+              asset_name = os.environ["ASSET_NAME"]
+              
+              api = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=10"
+              req = urllib.request.Request(
+                  api,
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "User-Agent": f"{owner}-{repo}-release-stats"
+                  }
+              )
+              
+              releases = json.loads(urllib.request.urlopen(req).read().decode("utf-8"))
+              releases = [r for r in releases if not r.get("draft")]
+              releases.sort(key=lambda r: r.get("published_at") or "", reverse=True)
+              releases = releases[:2]
+              
+              def ddmmyy(iso_dt: str) -> str:
+                  if not iso_dt:
+                      return ""
+                  d = iso_dt.split("T")[0]
+                  y, m, dd = d.split("-")
+                  return f"{dd}/{m}/{y[2:]}"
+              
+              def asset_downloads(release) -> int:
+                  for a in release.get("assets", []):
+                      if a.get("name") == asset_name:
+                          return int(a.get("download_count", 0))
+                  return 0
+              
+              # Always last 7 calendar days as STRINGS
+              today = datetime.date.today()
+              days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
+              today_key = days[-1]
+              
+              out_dir = pathlib.Path("site")
+              out_dir.mkdir(parents=True, exist_ok=True)
+              
+              hist_path = out_dir / "history.json"
+              if hist_path.exists():
+                  hist = json.loads(hist_path.read_text(encoding="utf-8"))
+              else:
+                  hist = {"releases": {}}
+              
+              # Defensive cleanup: if any old history used non-string keys, drop them
+              for rel in hist.get("releases", {}).values():
+                  totals = rel.get("totals", {})
+                  if isinstance(totals, dict):
+                      rel["totals"] = {str(k): v for k, v in totals.items()}
+              
+              latest2 = []
+              
+              for r in releases:
+                  tag = r.get("tag_name", "")
+                  total = asset_downloads(r)
+              
+                  rel = hist["releases"].setdefault(tag, {"totals": {}})
+                  rel["published_date"] = ddmmyy(r.get("published_at", ""))
+              
+                  totals = rel.get("totals", {})
+                  totals[today_key] = total
+              
+                  # keep only totals that are within our 7-day window
+                  totals = {d: totals.get(d) for d in days if d in totals}
+                  rel["totals"] = totals
+              
+                  # compute daily deltas (pad missing with 0)
+                  vals = []
+                  prev = None
+                  for d in days:
+                      cur = totals.get(d)
+                      if cur is None:
+                          vals.append(0)
+                          continue
+                      if prev is None:
+                          vals.append(0)
+                      else:
+                          vals.append(max(0, cur - prev))
+                      prev = cur
+              
+                  latest2.append({
+                      "tag": tag,
+                      "date": rel["published_date"],
+                      "downloads_total": total,
+                      "downloads_per_day_last7": vals
+                  })
+              
+              payload = {
+                  "updated": datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+                  "asset": asset_name,
+                  "days": days,
+                  "latest2": latest2
               }
-          )
-          releases = json.loads(urllib.request.urlopen(req).read().decode("utf-8"))
-
-          releases = [r for r in releases if not r.get("draft")]
-          releases.sort(key=lambda r: r.get("published_at") or "", reverse=True)
-          releases = releases[:2]
-
-          def ddmmyy(iso_dt: str) -> str:
-            if not iso_dt: return ""
-            d = iso_dt.split("T")[0]
-            y, m, dd = d.split("-")
-            return f"{dd}/{m}/{y[2:]}"
-
-          def asset_downloads(release) -> int:
-            for a in release.get("assets", []):
-              if a.get("name") == asset_name:
-                return int(a.get("download_count", 0))
-            return 0
-
-          out_dir = pathlib.Path("site")
-          out_dir.mkdir(parents=True, exist_ok=True)
-
-          hist_path = out_dir / "history.json"
-          if hist_path.exists():
-            hist = json.loads(hist_path.read_text(encoding="utf-8"))
-          else:
-            hist = {"days": [], "releases": {}}
-
-          today = datetime.date.today()
-          
-          # Always build last 7 calendar days (including today)
-          days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
-          hist["days"] = days
-
-          latest2 = []
-          for r in releases:
-            tag = r.get("tag_name", "")
-            total = asset_downloads(r)
-
-            rel = hist["releases"].setdefault(tag, {
-              "tag": tag,
-              "published_at": r.get("published_at", ""),
-              "published_date": ddmmyy(r.get("published_at", "")),
-              "totals": {}
-            })
-
-            rel["published_at"] = r.get("published_at", "")
-            rel["published_date"] = ddmmyy(r.get("published_at", ""))
-            rel["totals"][today] = total
-
-            keys = list(rel["totals"].keys())[-7:]
-            rel["totals"] = {k: rel["totals"][k] for k in keys}
-
-            vals = []
-            prev = None
-            
-            for d in days:
-                cur = rel["totals"].get(d)
-            
-                if cur is None:
-                    vals.append(0)
-                    continue
-            
-                if prev is None:
-                    vals.append(0)
-                else:
-                    vals.append(max(0, cur - prev))
-            
-                prev = cur
-
-            latest2.append({
-              "tag": tag,
-              "date": rel["published_date"],
-              "downloads_total": rel["totals"].get(days[-1], 0) if days else 0,
-              "downloads_per_day_last7": vals
-            })
-
-          payload = {
-            "updated": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
-            "asset": asset_name,
-            "days": days,
-            "latest2": latest2
-          }
-
-          (out_dir / "history.json").write_text(json.dumps(hist, indent=2), encoding="utf-8")
-          (out_dir / "stats.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+              
+              hist_path.write_text(json.dumps(hist, indent=2), encoding="utf-8")
+              (out_dir / "stats.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
           PY
 
       - name: Publish to gh-pages
