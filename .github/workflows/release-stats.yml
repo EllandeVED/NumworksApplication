@@ -62,12 +62,11 @@ jobs:
           else:
             hist = {"days": [], "releases": {}}
 
-          today = datetime.date.today().isoformat()
-          if today not in hist["days"]:
-            hist["days"].append(today)
-          hist["days"] = hist["days"][-7:]
-
-          days = hist["days"]
+          today = datetime.date.today()
+          
+          # Always build last 7 calendar days (including today)
+          days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
+          hist["days"] = days
 
           latest2 = []
           for r in releases:
@@ -90,13 +89,20 @@ jobs:
 
             vals = []
             prev = None
+            
             for d in days:
-              cur = rel["totals"].get(d)
-              if cur is None or prev is None:
-                vals.append(0)
-              else:
-                vals.append(max(0, cur - prev))
-              prev = cur if cur is not None else prev
+                cur = rel["totals"].get(d)
+            
+                if cur is None:
+                    vals.append(0)
+                    continue
+            
+                if prev is None:
+                    vals.append(0)
+                else:
+                    vals.append(max(0, cur - prev))
+            
+                prev = cur
 
             latest2.append({
               "tag": tag,
