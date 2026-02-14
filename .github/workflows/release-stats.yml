@@ -2,7 +2,7 @@ name: Release download stats (NumWorks.zip)
 
 on:
   schedule:
-    - cron: "15 * * * *"   # every hour at xx:15 UTC
+    - cron: "15 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -37,7 +37,6 @@ jobs:
           )
           releases = json.loads(urllib.request.urlopen(req).read().decode("utf-8"))
 
-          # Keep only published (not drafts), sorted newest first by published_at
           releases = [r for r in releases if not r.get("draft")]
           releases.sort(key=lambda r: r.get("published_at") or "", reverse=True)
           releases = releases[:2]
@@ -66,7 +65,7 @@ jobs:
           today = datetime.date.today().isoformat()
           if today not in hist["days"]:
             hist["days"].append(today)
-          hist["days"] = hist["days"][-7:]  # keep last 7 days
+          hist["days"] = hist["days"][-7:]
 
           days = hist["days"]
 
@@ -86,11 +85,9 @@ jobs:
             rel["published_date"] = ddmmyy(r.get("published_at", ""))
             rel["totals"][today] = total
 
-            # keep only last 7 totals keys
             keys = list(rel["totals"].keys())[-7:]
             rel["totals"] = {k: rel["totals"][k] for k in keys}
 
-            # compute per-day deltas from totals
             vals = []
             prev = None
             for d in days:
@@ -123,13 +120,10 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
-          # Create a clean gh-pages branch content from /site
           git checkout --orphan gh-pages
           git rm -rf .
           cp -R site/* .
           touch .nojekyll
-
           git add .
           git commit -m "Update stats"
           git push -f origin gh-pages
