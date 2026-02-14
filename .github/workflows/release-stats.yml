@@ -121,14 +121,20 @@ jobs:
 
           def day2(iso_day: str) -> str:
               d = datetime.date.fromisoformat(iso_day)
-              return d.strftime("%a")[:2]  # "Mo", "Tu", ...
+              return d.strftime("%a")[:2]
           
-          if latest2:
-              r0 = latest2[0]  # latest release
+          def write_csv(filename: str, release_obj: dict):
               csv_lines = ["day,value"]
-              for iso_day, val in zip(days, r0["downloads_per_day_last7"]):
-                  csv_lines.append(f"{day2(iso_day)},{val}")
-              (out_dir / "stats.csv").write_text("\n".join(csv_lines), encoding="utf-8")          
+              for iso_day, val in zip(days, release_obj["downloads_per_day_last7"]):
+                  v = "" if int(val) == 0 else str(int(val))  # blank = no bar
+                  csv_lines.append(f"{day2(iso_day)},{v}")
+              (out_dir / filename).write_text("\n".join(csv_lines), encoding="utf-8")
+          
+          if len(latest2) > 0:
+              write_csv("stats_r0.csv", latest2[0])
+          
+          if len(latest2) > 1:
+              write_csv("stats_r1.csv", latest2[1])       
 
           hist_path.write_text(json.dumps(hist, indent=2), encoding="utf-8")
           (out_dir / "stats.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
