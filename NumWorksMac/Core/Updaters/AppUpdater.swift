@@ -86,7 +86,15 @@ final class AppUpdater: ObservableObject {
 
     func openDownloadsAndQuit() {
         let downloads = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first!
-        NSWorkspace.shared.open(downloads)
+        let targetApp = downloads.appendingPathComponent("NumWorks.app")
+
+        if fileManager.fileExists(atPath: targetApp.path) {
+            NSWorkspace.shared.activateFileViewerSelecting([targetApp])
+        } else {
+            // Fallback: just open Downloads if the app is not found
+            NSWorkspace.shared.open(downloads)
+        }
+
         NSApp.terminate(nil)
     }
 

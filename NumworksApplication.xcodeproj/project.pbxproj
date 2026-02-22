@@ -498,7 +498,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.01;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumworksApplication;
 				PRODUCT_NAME = NumWorks;
 				REGISTER_APP_GROUPS = YES;
@@ -528,7 +528,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.01;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumworksApplication;
 				PRODUCT_NAME = NumWorks;
 				REGISTER_APP_GROUPS = YES;
