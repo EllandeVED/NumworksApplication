@@ -64,6 +64,15 @@ struct AppUpdateView: View {
                     .font(.headline)
                 Text(message)
                     .foregroundColor(.red)
+
+                HStack {
+                    Button("Later") {
+                        updater.dismiss()
+                    }
+                    Button("Retry") {
+                        updater.retry()
+                    }
+                }
             }
         }
         .padding(24)

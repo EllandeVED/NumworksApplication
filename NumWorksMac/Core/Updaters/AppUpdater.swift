@@ -19,12 +19,15 @@ final class AppUpdater: ObservableObject {
     @Published var phase: Phase = .idle
 
     private var panel: NSPanel?
+    /// Kept so Retry can run after a failed attempt (phase does not carry URL).
+    private var lastUpdateURL: URL?
 
     private let fileManager = FileManager.default
 
     func presentUpdate(remoteURL: URL, remoteVersion: String) {
         Task { @MainActor in
             let notes = (try? await AppUpdateChecker.fetchLatestReleaseNotes()) ?? ""
+            lastUpdateURL = remoteURL
             phase = .updateAvailable(version: remoteVersion, url: remoteURL, releaseNotes: notes)
             showPanel()
         }
@@ -33,19 +36,33 @@ final class AppUpdater: ObservableObject {
     func dismiss() {
         closePanel()
         phase = .idle
+        lastUpdateURL = nil
+        NotificationCenter.default.post(name: .appUpdateFlowDidFinish, object: nil)
+    }
+
+    func retry() {
+        guard let url = lastUpdateURL else { return }
+        Task { await downloadAndInstall(remoteURL: url) }
     }
 
     func downloadAndInstall(remoteURL: URL) async {
+        if case .downloading = phase { return }
         phase = .downloading
+        lastUpdateURL = remoteURL
+
+        guard let downloads = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first else {
+            phase = .failed("Downloads folder unavailable.")
+            return
+        }
+
+        let extractDir = downloads.appendingPathComponent("NumWorksUpdate", isDirectory: true)
 
         do {
             let (tmpURL, response) = try await URLSession.shared.download(from: remoteURL)
 
-            let downloads = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first!
-
             var filename = response.suggestedFilename ?? remoteURL.lastPathComponent
             if filename.isEmpty { filename = "NumWorks.zip" }
-            if filename.lowercased().hasSuffix(".zip") == false {
+            if !filename.lowercased().hasSuffix(".zip") {
                 filename += ".zip"
             }
 
@@ -54,32 +71,25 @@ final class AppUpdater: ObservableObject {
             try? fileManager.removeItem(at: zipURL)
             try fileManager.moveItem(at: tmpURL, to: zipURL)
 
-            if zipURL.pathExtension.lowercased() != "zip" {
-                throw NSError(domain: "AppUpdater", code: 2)
-            }
+            try? fileManager.removeItem(at: extractDir)
+            try fileManager.createDirectory(at: extractDir, withIntermediateDirectories: true)
 
-            let unzipStart = Date()
-            try unzip(zipURL: zipURL, to: downloads)
+            try unzip(zipURL: zipURL, to: extractDir)
             try? fileManager.removeItem(at: zipURL)
 
-            let extractedApp = try findNewestExtractedApp(in: downloads, since: unzipStart)
+            let extractedApp = try findExtractedApp(in: extractDir)
             let targetApp = downloads.appendingPathComponent("NumWorks.app")
 
             if extractedApp.standardizedFileURL != targetApp.standardizedFileURL {
                 try? fileManager.removeItem(at: targetApp)
                 try fileManager.moveItem(at: extractedApp, to: targetApp)
-            } else {
-                // If it already extracted as NumWorks.app, make sure it replaces any previous copy.
-                // (At this point, targetApp is the extracted app.)
             }
 
+            try? fileManager.removeItem(at: extractDir)
             phase = .readyToOpen
         } catch {
-            // Best effort cleanup
-            if let downloads = fileManager.urls(for: .downloadsDirectory, in: .userDomainMask).first {
-                let fallback = downloads.appendingPathComponent("NumWorks.zip")
-                try? fileManager.removeItem(at: fallback)
-            }
+            try? fileManager.removeItem(at: extractDir)
+            try? fileManager.removeItem(at: downloads.appendingPathComponent("NumWorks.zip"))
             phase = .failed(error.localizedDescription)
         }
     }
@@ -98,31 +108,23 @@ final class AppUpdater: ObservableObject {
         NSApp.terminate(nil)
     }
 
-    private func findNewestExtractedApp(in downloads: URL, since: Date) throws -> URL {
+    /// Finds the first .app bundle under the given directory (e.g. our dedicated extract folder).
+    /// Unzip often restores timestamps from the zip, so we do not filter by date.
+    private func findExtractedApp(in directory: URL) throws -> URL {
         let fm = fileManager
-        let keys: Set<URLResourceKey> = [.contentModificationDateKey, .isDirectoryKey]
+        let keys: Set<URLResourceKey> = [.isDirectoryKey]
 
-        guard let e = fm.enumerator(at: downloads, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles]) else {
+        guard let e = fm.enumerator(at: directory, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles]) else {
             throw NSError(domain: "AppUpdater", code: 3)
         }
 
-        var bestURL: URL?
-        var bestDate: Date = since
-
         for case let url as URL in e {
-            if url.pathExtension.lowercased() != "app" { continue }
-
+            guard url.pathExtension.lowercased() == "app" else { continue }
             let rv = try? url.resourceValues(forKeys: keys)
             guard rv?.isDirectory == true else { continue }
-
-            let d = rv?.contentModificationDate ?? .distantPast
-            if d >= bestDate {
-                bestDate = d
-                bestURL = url
-            }
+            return url
         }
 
-        if let bestURL { return bestURL }
         throw NSError(domain: "AppUpdater", code: 4)
     }
 
