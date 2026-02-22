@@ -109,10 +109,6 @@ This app **does not bundled the official NumWorks simulator** — everything is 
 
 
 
-
-
-<img width="357" height="308" alt="Settings Menu" src="https://github.com/user-attachments/assets/cbd895cd-71b2-44a3-8bd5-2d7047f08399" />
-
 ---
 ## Advanced
 If you want to use a custom NumWorks framework (not the official simulator provided by NumWorks) follow these instuctions:
