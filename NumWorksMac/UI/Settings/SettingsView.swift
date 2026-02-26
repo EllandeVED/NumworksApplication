@@ -163,6 +163,7 @@ private struct GeneralSettingsPane: View {
 }
 
 private struct AppUpdateSettingsPane: View {
+    @ObservedObject private var prefs = Preferences.shared
     @State private var currentAppVersion: String = ""
     @State private var isChecking = false
     @State private var showNoUpdatesAlert = false
@@ -180,6 +181,8 @@ private struct AppUpdateSettingsPane: View {
                     .monospaced()
                     .foregroundStyle(.secondary)
             }
+
+            Toggle("Check for app updates automatically", isOn: $prefs.checkForAppUpdatesAutomatically)
 
             Button {
                 checkForUpdates()
@@ -284,6 +287,8 @@ private struct EpsilonUpdateSettingsPane: View {
                     .foregroundStyle(.secondary)
             }
 
+            Toggle("Check for simulator updates automatically", isOn: $prefs.checkForEpsilonUpdatesAutomatically)
+
             Button {
                 checkForUpdates()
             } label: {
@@ -302,14 +307,14 @@ private struct EpsilonUpdateSettingsPane: View {
 
             Toggle("Disable web injection", isOn: $webInjectionDisabledLocal)
                 .onChange(of: webInjectionDisabledLocal) { _, _ in
-                    guard !isReverting, !isSyncingFromPrefs else { return }
+                    guard !isReverting, !isSyncingFromPrefs, !showRelaunchAlert else { return }
                     pendingRelaunchSetting = .webInjection
                     showRelaunchAlert = true
                 }
 
             Toggle("Disable calculator image", isOn: $calculatorImageHiddenLocal)
                 .onChange(of: calculatorImageHiddenLocal) { _, _ in
-                    guard !isReverting, !isSyncingFromPrefs else { return }
+                    guard !isReverting, !isSyncingFromPrefs, !showRelaunchAlert else { return }
                     pendingRelaunchSetting = .calculatorImage
                     showRelaunchAlert = true
                 }
@@ -346,7 +351,8 @@ private struct EpsilonUpdateSettingsPane: View {
                     }
                 }
                 pendingRelaunchSetting = nil
-                isReverting = false
+                showRelaunchAlert = false
+                DispatchQueue.main.async { isReverting = false }
             }
             Button("Relaunch") {
                 if let pending = pendingRelaunchSetting {

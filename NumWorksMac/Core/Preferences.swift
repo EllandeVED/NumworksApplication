@@ -13,6 +13,8 @@ final class Preferences: ObservableObject {
         static let isPinned = "prefs.isPinned"
         static let webInjectionDisabled = "prefs.webInjectionDisabled"
         static let calculatorImageHidden = "prefs.calculatorImageHidden"
+        static let checkForAppUpdatesAutomatically = "prefs.checkForAppUpdatesAutomatically"
+        static let checkForEpsilonUpdatesAutomatically = "prefs.checkForEpsilonUpdatesAutomatically"
     }
 
     // MARK: - Current settings (persisted)
@@ -50,6 +52,14 @@ final class Preferences: ObservableObject {
         didSet { d.set(calculatorImageHidden, forKey: Keys.calculatorImageHidden) }
     }
 
+    @Published var checkForAppUpdatesAutomatically: Bool {
+        didSet { d.set(checkForAppUpdatesAutomatically, forKey: Keys.checkForAppUpdatesAutomatically) }
+    }
+
+    @Published var checkForEpsilonUpdatesAutomatically: Bool {
+        didSet { d.set(checkForEpsilonUpdatesAutomatically, forKey: Keys.checkForEpsilonUpdatesAutomatically) }
+    }
+
     // MARK: - Session-only state (not persisted)
     // These values describe the current runtime state only
     // and are intentionally NOT stored in UserDefaults.
@@ -77,5 +87,7 @@ final class Preferences: ObservableObject {
         isPinned = d.object(forKey: Keys.isPinned) as? Bool ?? false
         webInjectionDisabled = d.object(forKey: Keys.webInjectionDisabled) as? Bool ?? false
         calculatorImageHidden = d.object(forKey: Keys.calculatorImageHidden) as? Bool ?? false
+        checkForAppUpdatesAutomatically = d.object(forKey: Keys.checkForAppUpdatesAutomatically) as? Bool ?? true
+        checkForEpsilonUpdatesAutomatically = d.object(forKey: Keys.checkForEpsilonUpdatesAutomatically) as? Bool ?? true
     }
 }

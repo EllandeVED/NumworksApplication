@@ -70,44 +70,50 @@ enum OnLaunch {
 
         // Removed simulator missing gate here (moved to AppController)
 
-        // 2) Run checkers
+        // 2) Run checkers (only if automatic checks are enabled)
         var appNeedsUpdate = false
         var appLatestURL: URL?
         var appLatestTag: String?
 
-        do {
-            print("[OnLaunch] checking app update")
-            let report = try await AppUpdateChecker.checkLatestRelease()
-            appNeedsUpdate = report.needsUpdate
-            print("[OnLaunch] app update check needsUpdate=\(report.needsUpdate) tag=\(report.latestTag)")
-            appLatestURL = report.latestZipURL
-            appLatestTag = report.latestTag
-        } catch {
-            print("[OnLaunch] app update check failed: \(error)")
-            // ignore
+        if Preferences.shared.checkForAppUpdatesAutomatically {
+            do {
+                print("[OnLaunch] checking app update")
+                let report = try await AppUpdateChecker.checkLatestRelease()
+                appNeedsUpdate = report.needsUpdate
+                print("[OnLaunch] app update check needsUpdate=\(report.needsUpdate) tag=\(report.latestTag)")
+                appLatestURL = report.latestZipURL
+                appLatestTag = report.latestTag
+            } catch {
+                print("[OnLaunch] app update check failed: \(error)")
+            }
+        } else {
+            print("[OnLaunch] app update check skipped (automatic check disabled)")
         }
 
         var epsilonNeedsUpdate = false
         var epsilonRemoteURL: URL?
         var epsilonRemoteVersion: String?
 
-        do {
-            print("[OnLaunch] checking epsilon update")
+        if Preferences.shared.checkForEpsilonUpdatesAutomatically {
+            do {
+                print("[OnLaunch] checking epsilon update")
+                let current = EpsilonVersions.currentSimulatorVersionString()
+                let report = try await EpsilonUpdateChecker.checkLatest(currentVersionString: current)
 
-            let current = EpsilonVersions.currentSimulatorVersionString()
-            let report = try await EpsilonUpdateChecker.checkLatest(currentVersionString: current)
+                epsilonNeedsUpdate = report.needsUpdate
+                print("[OnLaunch] epsilon update check needsUpdate=\(report.needsUpdate) remote=\(report.remoteVersion.string) current=\(report.currentVersion.string)")
 
-            epsilonNeedsUpdate = report.needsUpdate
-            print("[OnLaunch] epsilon update check needsUpdate=\(report.needsUpdate) remote=\(report.remoteVersion.string) current=\(report.currentVersion.string)")
-
-            if report.needsUpdate {
-                epsilonRemoteURL = report.remoteURL
-                epsilonRemoteVersion = report.remoteVersion.string
-            } else {
-                print("[OnLaunch] epsilon up to date")
+                if report.needsUpdate {
+                    epsilonRemoteURL = report.remoteURL
+                    epsilonRemoteVersion = report.remoteVersion.string
+                } else {
+                    print("[OnLaunch] epsilon up to date")
+                }
+            } catch {
+                print("[EpsilonUpdateChecker] error: \(error)")
             }
-        } catch {
-            print("[EpsilonUpdateChecker] error: \(error)")
+        } else {
+            print("[OnLaunch] epsilon update check skipped (automatic check disabled)")
         }
 
         guard appNeedsUpdate || epsilonNeedsUpdate else {
