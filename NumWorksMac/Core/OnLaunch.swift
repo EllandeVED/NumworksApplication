@@ -46,7 +46,7 @@ enum OnLaunch {
                     ]
                 )
             } catch {
-                print("[OnLaunch] failed to resolve simulator download URL: \(error)")
+                print("[EpsilonUpdateChecker] could not get remote URL: \(error)")
             }
         }
     }
@@ -107,8 +107,7 @@ enum OnLaunch {
                 print("[OnLaunch] epsilon up to date")
             }
         } catch {
-            print("[OnLaunch] epsilon update check failed: \(error)")
-            // ignore
+            print("[EpsilonUpdateChecker] error: \(error)")
         }
 
         guard appNeedsUpdate || epsilonNeedsUpdate else {

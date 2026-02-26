@@ -11,7 +11,9 @@ struct CalculatorWebView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        WebInjection.scripts().forEach { config.userContentController.addUserScript($0) }
+        if !Preferences.shared.webInjectionDisabled {
+            WebInjection.scripts().forEach { config.userContentController.addUserScript($0) }
+        }
         config.userContentController.add(context.coordinator, name: "nwSize")
 
         let webView = WKWebView(frame: .zero, configuration: config)

@@ -252,10 +252,23 @@ private struct AppUpdateSettingsPane: View {
     }
 }
 
+private enum RelaunchSetting {
+    case webInjection
+    case calculatorImage
+}
+
 private struct EpsilonUpdateSettingsPane: View {
+    @ObservedObject private var prefs = Preferences.shared
     @State private var currentSimulatorVersion: String = ""
     @State private var isChecking = false
     @State private var showNoUpdatesAlert = false
+
+    @State private var webInjectionDisabledLocal: Bool = false
+    @State private var calculatorImageHiddenLocal: Bool = false
+    @State private var showRelaunchAlert = false
+    @State private var pendingRelaunchSetting: RelaunchSetting?
+    @State private var isReverting = false
+    @State private var isSyncingFromPrefs = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -283,6 +296,24 @@ private struct EpsilonUpdateSettingsPane: View {
             }
             .disabled(isChecking)
 
+            Text("Simulator")
+                .fontWeight(.bold)
+                .padding(.top, 8)
+
+            Toggle("Disable web injection", isOn: $webInjectionDisabledLocal)
+                .onChange(of: webInjectionDisabledLocal) { _, _ in
+                    guard !isReverting, !isSyncingFromPrefs else { return }
+                    pendingRelaunchSetting = .webInjection
+                    showRelaunchAlert = true
+                }
+
+            Toggle("Disable calculator image", isOn: $calculatorImageHiddenLocal)
+                .onChange(of: calculatorImageHiddenLocal) { _, _ in
+                    guard !isReverting, !isSyncingFromPrefs else { return }
+                    pendingRelaunchSetting = .calculatorImage
+                    showRelaunchAlert = true
+                }
+
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -298,6 +329,37 @@ private struct EpsilonUpdateSettingsPane: View {
         }
         .onAppear {
             currentSimulatorVersion = simulatorVersionString()
+            isSyncingFromPrefs = true
+            webInjectionDisabledLocal = prefs.webInjectionDisabled
+            calculatorImageHiddenLocal = prefs.calculatorImageHidden
+            DispatchQueue.main.async {
+                isSyncingFromPrefs = false
+            }
+        }
+        .alert("The app needs to relaunch", isPresented: $showRelaunchAlert) {
+            Button("Undo") {
+                isReverting = true
+                if let pending = pendingRelaunchSetting {
+                    switch pending {
+                    case .webInjection: webInjectionDisabledLocal = prefs.webInjectionDisabled
+                    case .calculatorImage: calculatorImageHiddenLocal = prefs.calculatorImageHidden
+                    }
+                }
+                pendingRelaunchSetting = nil
+                isReverting = false
+            }
+            Button("Relaunch") {
+                if let pending = pendingRelaunchSetting {
+                    switch pending {
+                    case .webInjection: prefs.webInjectionDisabled = webInjectionDisabledLocal
+                    case .calculatorImage: prefs.calculatorImageHidden = calculatorImageHiddenLocal
+                    }
+                }
+                pendingRelaunchSetting = nil
+                SimulatorUpdater.relaunchApplication()
+            }
+        } message: {
+            Text("Your change will take effect after the app restarts.")
         }
         .alert("No updates available", isPresented: $showNoUpdatesAlert) {
             Button("OK") {}
@@ -336,7 +398,7 @@ private struct EpsilonUpdateSettingsPane: View {
 
                 currentSimulatorVersion = simulatorVersionString()
             } catch {
-                print("[Settings] epsilon update check failed: \(error)")
+                print("[EpsilonUpdateChecker] error: \(error)")
             }
         }
     }

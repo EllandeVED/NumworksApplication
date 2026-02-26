@@ -32,7 +32,8 @@ struct EpsilonUpdateChecker {
         )
     }
 
-    // Parses NumWorks' official download page, finds all simulator zip URLs, and returns the highest version.
+    // Parses NumWorks' download page for cdn.numworks.com zip URLs (e.g. numworks-simulator-*.zip or numworks-graphing-emulator-*.zip).
+    // Picks the URL whose filename contains the highest X.Y.Z version.
     static func fetchLatestRemoteURL() async throws -> URL {
         let page = URL(string: "https://www.numworks.com/simulator/download/")!
         var req = URLRequest(url: page)
@@ -48,24 +49,19 @@ struct EpsilonUpdateChecker {
             throw Error.invalidResponse
         }
 
-        let pattern = #"https:\/\/cdn\.numworks\.com\/[A-Za-z0-9_-]+\/numworks-simulator-(\d+\.\d+\.\d+)\.zip"#
-        let r = try NSRegularExpression(pattern: pattern)
+        // Match any cdn.numworks.com ... .zip URL (e.g. .../numworks-graphing-emulator-25.2.2.zip or .../26.1.zip).
+        let urlPattern = #"https://cdn\.numworks\.com/[^"'\s<>]+\.zip"#
+        let urlRegex = try NSRegularExpression(pattern: urlPattern)
         let range = NSRange(html.startIndex..<html.endIndex, in: html)
-        let matches = r.matches(in: html, range: range)
-        guard !matches.isEmpty else {
-            throw Error.couldNotExtractRemoteURL
-        }
+        let urlMatches = urlRegex.matches(in: html, range: range)
 
         var best: (url: URL, ver: SemVer)?
 
-        for m in matches {
+        for m in urlMatches {
             guard let urlRange = Range(m.range(at: 0), in: html) else { continue }
             let urlString = String(html[urlRange])
             guard let url = URL(string: urlString) else { continue }
-
-            guard let verRange = Range(m.range(at: 1), in: html) else { continue }
-            let verString = String(html[verRange])
-            guard let ver = SemVer(verString) else { continue }
+            guard let ver = parseVersionFromFilename(url.lastPathComponent) else { continue }
 
             if let currentBest = best {
                 if ver > currentBest.ver { best = (url, ver) }
@@ -90,13 +86,34 @@ struct EpsilonUpdateChecker {
         extractVersionString(from: url.lastPathComponent)
     }
 
+    /// Extracts a version string (X.Y or X.Y.Z) from a filename and normalizes to X.Y.Z for SemVer.
     static func extractVersionString(from filename: String) -> String? {
-        let pattern = #"(\d+)\.(\d+)\.(\d+)"#
-        guard let r = try? NSRegularExpression(pattern: pattern) else { return nil }
+        parseVersionFromFilename(filename)?.string
+    }
+
+    /// Parses X.Y or X.Y.Z from a filename (e.g. "26.1.zip" or "numworks-simulator-25.2.2.zip"). Returns nil if no valid version.
+    private static func parseVersionFromFilename(_ filename: String) -> SemVer? {
+        // Prefer X.Y.Z then X.Y (treat as X.Y.0).
+        let threePart = #"(\d+)\.(\d+)\.(\d+)"#
+        // X.Y only when not part of X.Y.Z (e.g. 26.1 in "26.1.zip" yes; 26.1 in "26.1.2.zip" no)
+        let twoPart = #"(\d+)\.(\d+)(?=\.zip|[^.\d]|$)"#
         let range = NSRange(filename.startIndex..<filename.endIndex, in: filename)
-        guard let m = r.firstMatch(in: filename, range: range) else { return nil }
-        guard let rr = Range(m.range(at: 0), in: filename) else { return nil }
-        return String(filename[rr])
+        if let r3 = try? NSRegularExpression(pattern: threePart),
+           let m3 = r3.firstMatch(in: filename, range: range),
+           let rr = Range(m3.range(at: 0), in: filename) {
+            let s = String(filename[rr])
+            return SemVer(s)
+        }
+        if let r2 = try? NSRegularExpression(pattern: twoPart),
+           let m2 = r2.firstMatch(in: filename, range: range),
+           let r0 = Range(m2.range(at: 0), in: filename),
+           let r1 = Range(m2.range(at: 1), in: filename),
+           let r2g = Range(m2.range(at: 2), in: filename) {
+            let major = Int(filename[r1]) ?? 0
+            let minor = Int(filename[r2g]) ?? 0
+            return SemVer("\(major).\(minor).0")
+        }
+        return nil
     }
 }
 

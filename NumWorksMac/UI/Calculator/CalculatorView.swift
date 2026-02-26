@@ -44,10 +44,12 @@ struct CalculatorView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             GeometryReader { geo in
-                Image("CalculatorImage")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: geo.size.width, height: geo.size.height)
+                if !prefs.calculatorImageHidden {
+                    Image("CalculatorImage")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
 
                 if OnLaunch.hasInstalledSimulator() {
                     CalculatorWebView(

@@ -11,6 +11,8 @@ final class Preferences: ObservableObject {
         static let showPinButtonOnCalculator = "prefs.showPinButtonOnCalculator"
         static let showDockIcon = "prefs.showDockIcon"
         static let isPinned = "prefs.isPinned"
+        static let webInjectionDisabled = "prefs.webInjectionDisabled"
+        static let calculatorImageHidden = "prefs.calculatorImageHidden"
     }
 
     // MARK: - Current settings (persisted)
@@ -40,6 +42,14 @@ final class Preferences: ObservableObject {
         didSet { d.set(isPinned, forKey: Keys.isPinned) }
     }
 
+    @Published var webInjectionDisabled: Bool {
+        didSet { d.set(webInjectionDisabled, forKey: Keys.webInjectionDisabled) }
+    }
+
+    @Published var calculatorImageHidden: Bool {
+        didSet { d.set(calculatorImageHidden, forKey: Keys.calculatorImageHidden) }
+    }
+
     // MARK: - Session-only state (not persisted)
     // These values describe the current runtime state only
     // and are intentionally NOT stored in UserDefaults.
@@ -65,5 +75,7 @@ final class Preferences: ObservableObject {
         showPinButtonOnCalculator = d.object(forKey: Keys.showPinButtonOnCalculator) as? Bool ?? true
         showDockIcon = d.object(forKey: Keys.showDockIcon) as? Bool ?? true
         isPinned = d.object(forKey: Keys.isPinned) as? Bool ?? false
+        webInjectionDisabled = d.object(forKey: Keys.webInjectionDisabled) as? Bool ?? false
+        calculatorImageHidden = d.object(forKey: Keys.calculatorImageHidden) as? Bool ?? false
     }
 }
