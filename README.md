@@ -73,7 +73,7 @@ The app is now ready to use.
 - The NumWorks simulator is managed separately from the app
 - Simulator files are stored in **Application Support** (at `~/Library/Application Support/<USERNAME>.NumworksApplication/Simulator/current`)
 - If no simulator is installed, the app **forces a simulator update**
-- If it is outdated, the app **suggests a simulator update** (see [**Advanced**](https://github.com/EllandeVED/NumworksApplication/edit/main/README.md#advanced) to prevent this)
+- If it is outdated, the app **suggests a simulator update** (see [**Advanced**](https://github.com/EllandeVED/NumworksApplication?tab=readme-ov-file#advanced) to prevent this)
 
 ---
 
