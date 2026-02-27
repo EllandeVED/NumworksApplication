@@ -1,0 +1,86 @@
+//
+//  AppErrorsReference.swift
+//  NumworksApplication
+//
+
+import SwiftUI
+import AppKit
+
+enum AppErrorsReference {
+    static func present() {
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        panel.title = "APP ERRORS REFERENCE"
+        panel.center()
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
+        panel.contentView = NSHostingView(rootView: AppErrorsReferenceView())
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+private struct AppErrorsReferenceView: View {
+    private let text = """
+APP ERRORS REFERENCE
+
+A dictionary of error types for the app and simulator update system.
+Source: AppUpdater.swift, AppUpdateChecker.swift, EpsilonUpdateChecker.swift; manual check alerts show domain, code, and description.
+
+—— AppUpdater (runtime update process) ——
+
+Code 1 — Unzip failure. The system unzip command (/usr/bin/unzip) failed. Update stops before extraction. Causes: corrupted zip, invalid zip, non-zero exit status.
+
+Code 2 — Invalid zip file. The downloaded file is not recognized as a .zip. Updater aborts before extraction. Causes: download URL not a zip asset, GitHub returned a tag page, file extension mismatch.
+
+Code 3 — Enumerator failure. The file system enumerator could not scan the Downloads folder. Updater cannot locate the extracted app. Causes: file system permission issue, failure accessing Downloads directory.
+
+Code 4 — Extracted app not found. After unzipping, no .app bundle was detected. Causes: zip preserves original timestamps (detection fails), zip does not contain a .app, app bundle nested differently than expected.
+
+—— AppUpdateChecker (GitHub API) ——
+
+InvalidCurrentVersion — The app's current version string (CFBundleShortVersionString) could not be parsed as semantic version. Cause: malformed version string in Info.plist.
+
+InvalidLatestTag — The latest GitHub release tag could not be parsed as semantic version. Cause: tag does not follow numeric format (e.g. X.Y.Z).
+
+InvalidResponse — GitHub API returned a non-2xx HTTP response. Causes: network issue, rate limiting, invalid repository name, API unavailable.
+
+MissingLatestZipURL — No .zip asset was found in the latest GitHub release. Causes: release has no zip asset, asset naming mismatch, wrong repository release configuration.
+
+—— EpsilonUpdateChecker (NumWorks simulator) ——
+
+couldNotExtractRemoteURL — The NumWorks download page could not be parsed to find a simulator zip URL. Causes: page structure changed, no matching CDN link, network or response error.
+
+couldNotExtractRemoteVersion — The remote simulator URL could not be parsed for a version (X.Y.Z). Cause: URL or filename format unexpected.
+
+invalidCurrentVersion — The current simulator version string could not be parsed as semantic version.
+
+invalidResponse — The NumWorks download page request failed or returned non-2xx. Causes: network issue, SSL error, server unavailable.
+
+—— Manual update check (Settings alert) ——
+
+When the user taps "Check for updates" in the App Update or Epsilon Update tab and the check fails, an alert shows the error domain, code, and description. Automatic checks on launch do not show this alert.
+
+NSURLErrorDomain, code -1001 — Request timed out.
+
+NSURLErrorDomain, code -1003 — Host could not be found.
+
+NSURLErrorDomain, code -1009 — No network connection (NSURLErrorNotConnectedToInternet).
+
+NSURLErrorDomain, code -1200 — SSL/TLS error; secure connection could not be made (NSURLErrorSecureConnectionFailed). Often caused by corporate proxy SSL inspection (custom CA not trusted on the device).
+"""
+
+    var body: some View {
+        ScrollView {
+            Text(text)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+    }
+}

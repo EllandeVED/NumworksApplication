@@ -5,6 +5,13 @@ import LaunchAtLogin
 
 private let settingsTitleSize: CGFloat = 30
 
+private func formatUpdateCheckError(_ error: Error) -> String {
+    if let ns = error as NSError? {
+        return "\(ns.domain) (code \(ns.code)): \(ns.localizedDescription)"
+    }
+    return error.localizedDescription
+}
+
 struct SettingsView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case general
@@ -167,6 +174,8 @@ private struct AppUpdateSettingsPane: View {
     @State private var currentAppVersion: String = ""
     @State private var isChecking = false
     @State private var showNoUpdatesAlert = false
+    @State private var showErrorAlert = false
+    @State private var lastErrorMessage: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -217,6 +226,11 @@ private struct AppUpdateSettingsPane: View {
         } message: {
             Text("You already have the latest app version.")
         }
+        .alert("Update check failed", isPresented: $showErrorAlert) {
+            Button("OK") {}
+        } message: {
+            Text(lastErrorMessage)
+        }
     }
 
     private func appVersionString() -> String {
@@ -250,6 +264,8 @@ private struct AppUpdateSettingsPane: View {
                 currentAppVersion = appVersionString()
             } catch {
                 print("[Settings] app update check failed: \(error)")
+                lastErrorMessage = formatUpdateCheckError(error)
+                showErrorAlert = true
             }
         }
     }
@@ -272,6 +288,8 @@ private struct EpsilonUpdateSettingsPane: View {
     @State private var pendingRelaunchSetting: RelaunchSetting?
     @State private var isReverting = false
     @State private var isSyncingFromPrefs = false
+    @State private var showErrorAlert = false
+    @State private var lastErrorMessage: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -372,6 +390,11 @@ private struct EpsilonUpdateSettingsPane: View {
         } message: {
             Text("You already have the latest simulator version.")
         }
+        .alert("Update check failed", isPresented: $showErrorAlert) {
+            Button("OK") {}
+        } message: {
+            Text(lastErrorMessage)
+        }
     }
 
     private func simulatorVersionString() -> String {
@@ -405,6 +428,8 @@ private struct EpsilonUpdateSettingsPane: View {
                 currentSimulatorVersion = simulatorVersionString()
             } catch {
                 print("[EpsilonUpdateChecker] error: \(error)")
+                lastErrorMessage = formatUpdateCheckError(error)
+                showErrorAlert = true
             }
         }
     }
@@ -462,6 +487,14 @@ private struct AboutSettingsPane: View {
                 MITLiscence.present()
             } label: {
                 Text("MIT LISCENCE")
+                    .foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                AppErrorsReference.present()
+            } label: {
+                Text("APP ERRORS REFERENCE")
                     .foregroundStyle(.blue)
             }
             .buttonStyle(.plain)
