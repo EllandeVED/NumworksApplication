@@ -10,6 +10,10 @@ A native macOS application that embeds the official **NumWorks htlm simulator** 
 
 ---
 
+> This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.
+
+---
+
 ## Overview
 
 **NumWorks App for Mac** provides a smooth, native experience around the official NumWorks simulator:
