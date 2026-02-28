@@ -10,6 +10,10 @@ A native macOS application that embeds the official **NumWorks htlm simulator** 
 
 ---
 
+> This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.
+
+---
+
 ## Overview
 
 **NumWorks App for Mac** provides a smooth, native experience around the official NumWorks simulator:
@@ -26,7 +30,7 @@ The goal is to make the NumWorks calculator feel like a first-class macOS applic
 
 ## Preview
 
-<img width="315" height="611" alt="NumWorks App Preview" src="https://github.com/user-attachments/assets/054255dc-bfcb-4314-8de6-0241dce6d988" />
+<img width="265" height="479" alt="NumWorks App Preview" src="https://github.com/user-attachments/assets/c5fba75b-d4da-41e8-8c04-0a69f164ffa7" />
 
 The app includes a full **Settings panel** to control appearance, behavior, and updates.
 
@@ -48,11 +52,11 @@ The app includes a full **Settings panel** to control appearance, behavior, and 
 3. Unzip it and open the app.  
    Because the app is not signed with a paid Apple Developer ID, macOS will display a security warning:
 
-   <img width="261" height="265" alt="Security Warning" src="https://github.com/user-attachments/assets/cc02b7e0-5220-4e7a-9ea5-d83e355945bb" />
+<img width="220" height="200" alt="Security Warning" src="https://github.com/user-attachments/assets/12e0d587-f73c-43fb-a1dd-d413e34dacba" />
 
 4. Open **System Settings → Privacy & Security**, then click **Open Anyway**:
 
-   <img width="737" height="648" alt="Open Anyway" src="https://github.com/user-attachments/assets/a2b2fa2f-db6a-49ec-b6ae-9c7ad19b583e" />
+   <img width="379" height="324" alt="Open Anyway" src="https://github.com/user-attachments/assets/a2b2fa2f-db6a-49ec-b6ae-9c7ad19b583e" />
 
 5. **Move the app to your Applications folder** (recommended).
 
@@ -72,8 +76,8 @@ The app is now ready to use.
 ### Simulator (Epsilon) Updates
 - The NumWorks simulator is managed separately from the app
 - Simulator files are stored in **Application Support** (at `~/Library/Application Support/<USERNAME>.NumworksApplication/Simulator/current`)
-- If no simulator is installed, the app **forces a simulator update**
-- If it is outdated, the app **suggests a simulator update** (see [**Advanced**](https://github.com/EllandeVED/NumworksApplication?tab=readme-ov-file#advanced) to prevent this)
+- If no simulator is installed, the app **forces a simulator instalation** (it won't work without it)
+- If it is outdated, the app **suggests a simulator update** (see [**Advanced**](https://github.com/EllandeVED/NumworksApplication?tab=readme-ov-file#advanced) to embed yoou own simulator this)
 
 ---
 
@@ -87,27 +91,6 @@ The app is now ready to use.
 
 This app **does not bundled the official NumWorks simulator** — everything is managed dynamically.
 
----
-
-## Settings & Customization
-
-### General
-- Menu bar icon visibility
-- Dock icon visibility
-- Pin / unpin calculator window
-- Keyboard shortcuts
-- Launch at login
-
-### App Update
-- Manual checking for updates
-- Follow in-app instructions for updates
-
-### Epsilon Update
-- Displays the current simulator version
-- Manual “Check for updates” button
-- Automatic in-app simulator updater
-
-
 
 ---
 ## Advanced
@@ -116,7 +99,7 @@ If you want to use a custom NumWorks framework (not the official simulator provi
 2. Paste your custom framework
 3. Make sure you name it `numworks-simulator-99.99.99.html` to avoid triggering the simulator auto updater.
 
-- [ ] I plan to add an option in settings to disable `Webinjection.swift`so it doesn't mess up with your custom framework
+- [x] I plan to add an option in settings to disable `Webinjection.swift`so it doesn't mess up with your custom framework (Done)
 
 
 ---
