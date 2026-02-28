@@ -23,7 +23,7 @@ struct CalculatorView: View {
     private let overlayExtraY: CGFloat = 11
 
     private let overlayOffsetX: CGFloat = 0
-    private let overlayOffsetY: CGFloat = 45.5
+    private let overlayOffsetY: CGFloat = 45
 
     private func lockOverlayIfNeeded(for size: CGSize) {
         guard !didLockOverlay else { return }
