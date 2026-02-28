@@ -4,7 +4,8 @@ import SwiftUI
 enum CalculatorWindow {
     static func make(_ wm: WindowManagement) -> NSWindow {
         let ratio: CGFloat = {
-            guard let img = NSImage(named: "CalculatorImage"), img.size.width > 0, img.size.height > 0 else {
+            let name = Preferences.shared.use3DCalculatorImage ? "CalculatorImage3D" : "CalculatorImage"
+            guard let img = NSImage(named: name), img.size.width > 0, img.size.height > 0 else {
                 return 360 / 640
             }
             return img.size.width / img.size.height

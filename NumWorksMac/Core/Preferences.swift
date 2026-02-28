@@ -15,6 +15,7 @@ final class Preferences: ObservableObject {
         static let calculatorImageHidden = "prefs.calculatorImageHidden"
         static let checkForAppUpdatesAutomatically = "prefs.checkForAppUpdatesAutomatically"
         static let checkForEpsilonUpdatesAutomatically = "prefs.checkForEpsilonUpdatesAutomatically"
+        static let use3DCalculatorImage = "prefs.use3DCalculatorImage"
     }
 
     // MARK: - Current settings (persisted)
@@ -60,6 +61,10 @@ final class Preferences: ObservableObject {
         didSet { d.set(checkForEpsilonUpdatesAutomatically, forKey: Keys.checkForEpsilonUpdatesAutomatically) }
     }
 
+    @Published var use3DCalculatorImage: Bool {
+        didSet { d.set(use3DCalculatorImage, forKey: Keys.use3DCalculatorImage) }
+    }
+
     // MARK: - Session-only state (not persisted)
     // These values describe the current runtime state only
     // and are intentionally NOT stored in UserDefaults.
@@ -89,5 +94,6 @@ final class Preferences: ObservableObject {
         calculatorImageHidden = d.object(forKey: Keys.calculatorImageHidden) as? Bool ?? false
         checkForAppUpdatesAutomatically = d.object(forKey: Keys.checkForAppUpdatesAutomatically) as? Bool ?? true
         checkForEpsilonUpdatesAutomatically = d.object(forKey: Keys.checkForEpsilonUpdatesAutomatically) as? Bool ?? true
+        use3DCalculatorImage = d.object(forKey: Keys.use3DCalculatorImage) as? Bool ?? true
     }
 }

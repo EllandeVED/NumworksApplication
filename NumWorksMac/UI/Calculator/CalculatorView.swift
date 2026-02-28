@@ -45,7 +45,7 @@ struct CalculatorView: View {
         ZStack(alignment: .topTrailing) {
             GeometryReader { geo in
                 if !prefs.calculatorImageHidden {
-                    Image("CalculatorImage")
+                    Image(prefs.use3DCalculatorImage ? "CalculatorImage3D" : "CalculatorImage")
                         .resizable()
                         .scaledToFit()
                         .frame(width: geo.size.width, height: geo.size.height)

@@ -130,6 +130,16 @@ private struct GeneralSettingsPane: View {
                     Spacer(minLength: 0)
                 }
 
+                // Calculator image
+                Text("Calculator Image")
+                    .fontWeight(.bold)
+
+                HStack(spacing: 12) {
+                    calculatorImageChoice(title: "3D", use3D: true)
+                    calculatorImageChoice(title: "Flat", use3D: false)
+                    Spacer(minLength: 0)
+                }
+
                 Spacer()
             }
         
@@ -155,6 +165,29 @@ private struct GeneralSettingsPane: View {
         } label: {
             HStack(spacing: 8) {
                 Image(style.assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                Text(title)
+            }
+            .frame(minWidth: 120)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+        }
+        .buttonStyle(.bordered)
+        .tint(selected ? .accentColor : .gray.opacity(0.2))
+    }
+
+    @ViewBuilder
+    private func calculatorImageChoice(title: String, use3D: Bool) -> some View {
+        let selected = prefs.use3DCalculatorImage == use3D
+        let assetName = use3D ? "CalculatorImage3D" : "CalculatorImage"
+
+        Button {
+            prefs.use3DCalculatorImage = use3D
+        } label: {
+            HStack(spacing: 8) {
+                Image(assetName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 16, height: 16)

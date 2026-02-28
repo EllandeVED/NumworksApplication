@@ -165,9 +165,9 @@ enum OnLaunch {
     @MainActor
     private static func waitForNotification(_ name: Notification.Name) async {
         await withCheckedContinuation { cont in
-            var token: NSObjectProtocol?
-            token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
-                if let token { NotificationCenter.default.removeObserver(token) }
+            let holder = TokenHolder()
+            holder.token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
+                if let t = holder.token { NotificationCenter.default.removeObserver(t) }
                 cont.resume()
             }
         }
@@ -177,6 +177,10 @@ enum OnLaunch {
     private static func maybeMoveToApplications() async {
         AppMover.moveIfNecessary()
     }
+}
+
+private final class TokenHolder: @unchecked Sendable {
+    var token: NSObjectProtocol?
 }
 
 extension Notification.Name {

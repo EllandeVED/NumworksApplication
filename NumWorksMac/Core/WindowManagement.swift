@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import WebKit
 import Foundation
 
@@ -10,11 +11,13 @@ final class WindowManagement {
     private(set) var isPinned = false
     private var appUpdateObserver: NSObjectProtocol?
     private var lastFrame: NSRect?
+    private var cancellables = Set<AnyCancellable>()
 
     var minContentWidth: CGFloat = 260
     /// Aspect ratio (width / height) of the calculator image so the window matches it and the image fills the window.
     private static var calculatorImageAspectRatio: CGFloat {
-        guard let img = NSImage(named: "CalculatorImage"), img.size.width > 0, img.size.height > 0 else {
+        let name = Preferences.shared.use3DCalculatorImage ? "CalculatorImage3D" : "CalculatorImage"
+        guard let img = NSImage(named: name), img.size.width > 0, img.size.height > 0 else {
             return 360 / 640
         }
         return img.size.width / img.size.height
@@ -57,6 +60,14 @@ final class WindowManagement {
             }
         }
         isPinned = Preferences.shared.isPinned
+
+        Preferences.shared.$use3DCalculatorImage
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.reapplyCalculatorImageAspectRatio()
+            }
+            .store(in: &cancellables)
     }
 
     deinit {
@@ -111,6 +122,11 @@ final class WindowManagement {
 
     func setBaseSize(_ size: CGSize) {
         baseSize = size
+        reapplyCalculatorImageAspectRatio()
+    }
+
+    /// Reapplies window aspect ratio and size from the current calculator image preference (3D vs flat). Call when the image preference changes.
+    func reapplyCalculatorImageAspectRatio() {
         let ratio = Self.calculatorImageAspectRatio
         let imageAspectSize = CGSize(width: 1, height: 1 / ratio)
         window.contentAspectRatio = imageAspectSize

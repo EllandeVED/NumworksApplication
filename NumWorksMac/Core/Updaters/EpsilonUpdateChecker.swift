@@ -106,7 +106,7 @@ struct EpsilonUpdateChecker {
         }
         if let r2 = try? NSRegularExpression(pattern: twoPart),
            let m2 = r2.firstMatch(in: filename, range: range),
-           let r0 = Range(m2.range(at: 0), in: filename),
+           Range(m2.range(at: 0), in: filename) != nil,
            let r1 = Range(m2.range(at: 1), in: filename),
            let r2g = Range(m2.range(at: 2), in: filename) {
             let major = Int(filename[r1]) ?? 0
