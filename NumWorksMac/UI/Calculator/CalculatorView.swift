@@ -18,12 +18,12 @@ struct CalculatorView: View {
     // overlayExtraX / overlayExtraY = fine tuning per axis
     // overlayOffsetX / overlayOffsetY = positional adjustments
     //modifiable these
-    private let overlayExtra: CGFloat = 36.5
+    private let overlayExtra: CGFloat = 40
     private let overlayExtraX: CGFloat = 0
-    private let overlayExtraY: CGFloat = 26
+    private let overlayExtraY: CGFloat = 11
 
     private let overlayOffsetX: CGFloat = 0
-    private let overlayOffsetY: CGFloat = 45
+    private let overlayOffsetY: CGFloat = 45.5
 
     private func lockOverlayIfNeeded(for size: CGSize) {
         guard !didLockOverlay else { return }

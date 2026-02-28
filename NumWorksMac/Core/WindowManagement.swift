@@ -12,6 +12,14 @@ final class WindowManagement {
     private var lastFrame: NSRect?
 
     var minContentWidth: CGFloat = 260
+    /// Aspect ratio (width / height) of the calculator image so the window matches it and the image fills the window.
+    private static var calculatorImageAspectRatio: CGFloat {
+        guard let img = NSImage(named: "CalculatorImage"), img.size.width > 0, img.size.height > 0 else {
+            return 360 / 640
+        }
+        return img.size.width / img.size.height
+    }
+
     var isShownForUI: Bool { window.isVisible && window.isKeyWindow }
     var nsWindow: NSWindow { window }
     var isVisibleForUser: Bool { window.isVisible && window.occlusionState.contains(.visible) }
@@ -103,10 +111,12 @@ final class WindowManagement {
 
     func setBaseSize(_ size: CGSize) {
         baseSize = size
-        window.contentAspectRatio = size
+        let ratio = Self.calculatorImageAspectRatio
+        let imageAspectSize = CGSize(width: 1, height: 1 / ratio)
+        window.contentAspectRatio = imageAspectSize
 
         let minW = minContentWidth
-        let minH = minW * size.height / size.width
+        let minH = minW / ratio
         minContentSize = NSSize(width: minW, height: minH)
 
         window.contentMinSize = minContentSize
@@ -114,7 +124,7 @@ final class WindowManagement {
 
         let r = window.contentLayoutRect
         let w = max(minW, r.width)
-        window.setContentSize(NSSize(width: w, height: w * size.height / size.width))
+        window.setContentSize(NSSize(width: w, height: w / ratio))
     }
 
     private func applyWindowFlags(_ window: NSWindow) {
