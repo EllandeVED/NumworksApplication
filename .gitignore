@@ -1,0 +1,78 @@
+# Xcode
+build/
+DerivedData/
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+# Package.resolved is usually committed to lock dependency versions
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editor / IDE
+*.swp
+*.swo
+*~
+.idea/
+*.xcuserstate
+
+# Code signing & provisioning (optional; uncomment if you keep these out of repo)
+# *.mobileprovision
+# *.p12
+# *.cer
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Carthage
+Carthage/Build/
+
+# CocoaPods
+Pods/
+# *.xcworkspace  # Only if you use CocoaPods and want to ignore the generated workspace
+
+# Temporary and backup
+*.log
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Test and coverage (optional)
+*.gcno
+*.gcda
+coverage/
+*.profraw
+*.profdata
+
+# Archives (optional: ignore zip downloads; be careful not to ignore repo assets)
+# *.zip
+
+# Local config and secrets (if you add any)
+.env
+.env.local
+*.xcconfig
+# Uncomment and add your local config file name if you use one
+# Local.xcconfig
