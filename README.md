@@ -89,7 +89,7 @@ The app is now ready to use.
   - on first launch
   - or when checking for updates
 
-This app **does not bundled the official NumWorks simulator** — everything is managed dynamically.
+> This app **does not bundled the official NumWorks simulator** — everything is managed dynamically.
 
 
 ---
@@ -113,7 +113,10 @@ Copyright (c) 2025–2026 **EllandeVED**
 This project includes third-party open-source components licensed under their respective licenses  
 (e.g. MIT, BSD). See individual repositories for details.
 
-This app embeds the official **NumWorks web simulator**, which is developed and licensed separately by **NumWorks** under the **GNU General Public License v3 (GPL-3.0)**.
+This app **does not embed** or redistribute the official **NumWorks web simulator**.
+Instead, the simulator is downloaded directly from the **official NumWorks** source after the application is launched.
+
+The **NumWorks web simulator** is developed and licensed **separately** by NumWorks under the **GNU General Public License v3 (GPL-3.0)**.
 
 This project is **not affiliated with, endorsed by, or sponsored by NumWorks**.
 
