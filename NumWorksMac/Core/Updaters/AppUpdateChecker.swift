@@ -57,6 +57,25 @@ struct AppUpdateChecker {
         )
     }
 
+    /// Builds a Report from version strings for testing/simulation (no network).
+    static func reportForTesting(currentVersion: String, latestVersion: String, latestTag: String? = nil, zipURL: URL = URL(string: "https://example.com/app.zip")!) throws -> Report {
+        guard let current = AppSemVer(currentVersion) else {
+            throw Error.invalidCurrentVersion(currentVersion)
+        }
+        let cleaned = AppSemVer.clean(latestVersion)
+        guard let latest = AppSemVer(cleaned) else {
+            throw Error.invalidLatestTag(latestVersion)
+        }
+        return Report(
+            currentVersion: current,
+            latestVersion: latest,
+            latestTag: latestTag ?? "v\(latestVersion)",
+            latestZipURL: zipURL,
+            latestReleaseNotesMarkdown: "",
+            needsUpdate: latest > current
+        )
+    }
+
     static func fetchLatestReleaseNotes(owner: String = "EllandeVED", repo: String = "NumworksApplication") async throws -> String {
         let api = URL(string: "https://api.github.com/repos/\(owner)/\(repo)/releases/latest")!
         var req = URLRequest(url: api)

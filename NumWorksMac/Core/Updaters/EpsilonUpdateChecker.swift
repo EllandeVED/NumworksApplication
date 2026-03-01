@@ -122,10 +122,13 @@ struct SemVer: Comparable, Sendable {
     let minor: Int
     let patch: Int
 
+    /// Accepts 1, 2, or 3 numeric parts; normalizes to major.minor.patch (e.g. "1" → 1.0.0, "1.6" → 1.6.0).
     init?(_ s: String) {
         let parts = s.split(separator: ".").compactMap { Int($0) }
-        guard parts.count == 3 else { return nil }
-        (major, minor, patch) = (parts[0], parts[1], parts[2])
+        guard !parts.isEmpty, parts.count <= 3 else { return nil }
+        major = parts[0]
+        minor = parts.count > 1 ? parts[1] : 0
+        patch = parts.count > 2 ? parts[2] : 0
     }
 
     static func < (lhs: SemVer, rhs: SemVer) -> Bool {

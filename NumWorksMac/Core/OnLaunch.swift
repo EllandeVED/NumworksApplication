@@ -175,6 +175,7 @@ enum OnLaunch {
 
     @MainActor
     private static func maybeMoveToApplications() async {
+        guard !ProcessInfo.processInfo.arguments.contains("-skipMoveToApplications") else { return }
         AppMover.moveIfNecessary()
     }
 }

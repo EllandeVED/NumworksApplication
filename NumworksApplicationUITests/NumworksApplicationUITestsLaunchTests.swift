@@ -1,9 +1,4 @@
-//
-//  NumworksApplicationUITestsLaunchTests.swift
-//  NumworksApplicationUITests
-//
-//  Created by van Egmond Dascon on 04/02/2026.
-//
+
 
 import XCTest
 
@@ -20,6 +15,7 @@ final class NumworksApplicationUITestsLaunchTests: XCTestCase {
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
+        app.launchArguments.append("-skipMoveToApplications")
         app.launch()
 
         // Insert steps here to perform after app launch but before taking a screenshot,
