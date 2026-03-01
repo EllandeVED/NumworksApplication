@@ -99,6 +99,7 @@ struct EpsilonUpdateCheckerTests {
         #expect(reportNewer.needsUpdate == false)
     }
 
+    
     @Test func checkThrowsInvalidCurrentVersion() {
         let url = URL(string: "https://cdn.numworks.com/numworks-26.1.0.zip")!
         #expect(throws: EpsilonUpdateChecker.Error.self) {
