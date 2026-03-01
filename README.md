@@ -89,7 +89,7 @@ The app is now ready to use.
   - on first launch
   - or when checking for updates
 
-This app **does not bundled the official NumWorks simulator** — everything is managed dynamically.
+> This app **does not bundled the official NumWorks simulator** — everything is managed dynamically.
 
 
 ---
