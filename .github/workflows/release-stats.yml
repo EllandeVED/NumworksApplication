@@ -11,14 +11,19 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      OWNER: EllandeVED
+      REPO: NumworksApplication
+      ASSET_NAME: NumWorks.zip
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fetch existing history from gh-pages
+        run: |
+          mkdir -p site
+          curl -sfL "https://${{ env.OWNER }}.github.io/${{ env.REPO }}/history.json" -o site/history.json || echo '{"releases":{}}' > site/history.json
+
       - name: Build stats.json for Widgy
-        env:
-          OWNER: EllandeVED
-          REPO: NumworksApplication
-          ASSET_NAME: NumWorks.zip
         run: |
           python3 - <<'PY'
           import json, os, urllib.request, datetime, pathlib
