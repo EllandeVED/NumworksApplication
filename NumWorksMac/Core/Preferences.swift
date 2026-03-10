@@ -19,8 +19,6 @@ final class Preferences: ObservableObject {
     }
 
     // MARK: - Current settings (persisted)
-    // These properties represent the *current user-selected settings*.
-    // Any change is immediately written to UserDefaults in `didSet`.
     @Published var menuBarIconStyle: MenuBarIconStyle {
         didSet { d.set(menuBarIconStyle.rawValue, forKey: Keys.menuBarIconStyle) }
     }
@@ -66,16 +64,12 @@ final class Preferences: ObservableObject {
     }
 
     // MARK: - Session-only state (not persisted)
-    // These values describe the current runtime state only
-    // and are intentionally NOT stored in UserDefaults.
     @Published var isAppVisible: Bool = true
 
     private let d = UserDefaults.standard
 
     private init() {
         // MARK: - Initialization
-        // On first launch: UserDefaults has no values → defaults are used.
-        // On subsequent launches: stored values are loaded as the current settings.
 
         // Default menu bar icon style: .filled
         let styleRaw = d.string(forKey: Keys.menuBarIconStyle) ?? MenuBarIconStyle.filled.rawValue
@@ -85,7 +79,6 @@ final class Preferences: ObservableObject {
         let size = d.object(forKey: Keys.menuBarIconSize) as? Double ?? 20
         menuBarIconSize = CGFloat(size)
 
-        // Default boolean settings used only on first launch
         isMenuBarIconEnabled = d.object(forKey: Keys.isMenuBarIconEnabled) as? Bool ?? true
         showPinButtonOnCalculator = d.object(forKey: Keys.showPinButtonOnCalculator) as? Bool ?? true
         showDockIcon = d.object(forKey: Keys.showDockIcon) as? Bool ?? true

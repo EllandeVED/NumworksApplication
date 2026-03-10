@@ -14,7 +14,6 @@ final class WindowManagement {
     private var cancellables = Set<AnyCancellable>()
 
     var minContentWidth: CGFloat = 260
-    /// Aspect ratio (width / height) of the calculator image so the window matches it and the image fills the window.
     private static var calculatorImageAspectRatio: CGFloat {
         let name = Preferences.shared.use3DCalculatorImage ? "CalculatorImage3D" : "CalculatorImage"
         guard let img = NSImage(named: name), img.size.width > 0, img.size.height > 0 else {
@@ -125,7 +124,6 @@ final class WindowManagement {
         reapplyCalculatorImageAspectRatio()
     }
 
-    /// Reapplies window aspect ratio and size from the current calculator image preference (3D vs flat). Call when the image preference changes.
     func reapplyCalculatorImageAspectRatio() {
         let ratio = Self.calculatorImageAspectRatio
         let imageAspectSize = CGSize(width: 1, height: 1 / ratio)

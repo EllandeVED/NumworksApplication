@@ -393,7 +393,6 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
         Self.relaunchApplication()
     }
 
-    /// Use when a settings change requires an app restart (e.g. disable web injection, hide calculator image).
     static func relaunchApplication() {
         let appURL = Bundle.main.bundleURL
         let appPath = appURL.path

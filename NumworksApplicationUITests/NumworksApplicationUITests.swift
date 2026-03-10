@@ -13,7 +13,6 @@ final class NumworksApplicationUITests: XCTestCase {
 
     override func tearDownWithError() throws {}
 
-    /// Launch the app with UI-test-only flags (e.g. skip "Move to Applications" pop-up).
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments.append("-skipMoveToApplications")
@@ -83,7 +82,6 @@ final class NumworksApplicationUITests: XCTestCase {
         openSettings(app)
         _ = app.staticTexts["Interface"].waitForExistence(timeout: 2)
 
-        // SwiftUI Toggle on macOS can appear as switch or checkbox
         let showMenuBar = toggleOrCheckbox(app, label: "Show Menu Bar Icon")
         let showPinButton = toggleOrCheckbox(app, label: "Show Pin/Unpin button on Calculator")
         let showDock = toggleOrCheckbox(app, label: "Show Dock Icon")
@@ -114,7 +112,6 @@ final class NumworksApplicationUITests: XCTestCase {
         XCTAssertTrue(threeDBtn.waitForExistence(timeout: 1), "3D button should exist")
         flatBtn.click()
         threeDBtn.click()
-        // No crash; 3D is selected again
     }
 
     @MainActor
@@ -171,7 +168,6 @@ final class NumworksApplicationUITests: XCTestCase {
         let app = launchApp()
         app.activate()
         waitForAppAndMenuBarReady(app)
-        // Status bar item: on macOS it may be under menuBars; our app's status item is often last.
         let statusItems = app.menuBars.descendants(matching: .button)
         let count = statusItems.count
         if count > 0 {
@@ -278,7 +274,6 @@ final class NumworksApplicationUITests: XCTestCase {
         _ = app.staticTexts["General"].waitForExistence(timeout: 4)
     }
 
-    /// Waits for the app to be fully launched and the menu bar icon to be available before interacting with the status bar.
     private func waitForAppAndMenuBarReady(_ app: XCUIApplication) {
         _ = app.windows["NumWorks"].waitForExistence(timeout: 6)
         var deadline = Date().addingTimeInterval(5)

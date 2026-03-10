@@ -18,14 +18,10 @@ enum EpsilonVersions {
         }
     }
 
-    /// Returns the currently detected simulator version.
-    /// - "NN.NN.NN" if a valid versioned simulator file is detected in Application Support.
-    /// - "00.00.00" if no valid simulator file is detected.
     static func currentSimulatorVersionString() -> String {
         bestDetectedSimulator()?.version.normalizedString ?? "00.00.00"
     }
 
-    /// Returns the URL of the best detected simulator HTML file, or nil if none are valid.
     static func bestSimulatorHTMLURL() -> URL? {
         bestDetectedSimulator()?.url
     }
@@ -48,8 +44,6 @@ enum EpsilonVersions {
         return best.map { (version: $0.0, url: $0.1) }
     }
 
-    /// Accepts filenames like: numworks-simulator-X.Y.Z.html where X/Y/Z are integers.
-    /// Normalization to NN.NN.NN is done via `SimulatorVersion.normalizedString`.
     private static func parseSimulatorVersion(from filename: String) -> SimulatorVersion? {
         let prefix = "numworks-simulator-"
         let suffix = ".html"

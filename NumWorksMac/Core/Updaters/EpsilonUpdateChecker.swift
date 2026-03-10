@@ -86,12 +86,10 @@ struct EpsilonUpdateChecker {
         extractVersionString(from: url.lastPathComponent)
     }
 
-    /// Extracts a version string (X.Y or X.Y.Z) from a filename and normalizes to X.Y.Z for SemVer.
     static func extractVersionString(from filename: String) -> String? {
         parseVersionFromFilename(filename)?.string
     }
 
-    /// Parses X.Y or X.Y.Z from a filename (e.g. "26.1.zip" or "numworks-simulator-25.2.2.zip"). Returns nil if no valid version.
     private static func parseVersionFromFilename(_ filename: String) -> SemVer? {
         // Prefer X.Y.Z then X.Y (treat as X.Y.0).
         let threePart = #"(\d+)\.(\d+)\.(\d+)"#
@@ -122,7 +120,6 @@ struct SemVer: Comparable, Sendable {
     let minor: Int
     let patch: Int
 
-    /// Accepts 1, 2, or 3 numeric parts; normalizes to major.minor.patch (e.g. "1" → 1.0.0, "1.6" → 1.6.0).
     init?(_ s: String) {
         let parts = s.split(separator: ".").compactMap { Int($0) }
         guard !parts.isEmpty, parts.count <= 3 else { return nil }

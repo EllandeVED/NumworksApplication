@@ -57,7 +57,6 @@ struct AppUpdateChecker {
         )
     }
 
-    /// Builds a Report from version strings for testing/simulation (no network).
     static func reportForTesting(currentVersion: String, latestVersion: String, latestTag: String? = nil, zipURL: URL = URL(string: "https://example.com/app.zip")!) throws -> Report {
         guard let current = AppSemVer(currentVersion) else {
             throw Error.invalidCurrentVersion(currentVersion)

@@ -19,7 +19,6 @@ final class AppUpdater: ObservableObject {
     @Published var phase: Phase = .idle
 
     private var panel: NSPanel?
-    /// Kept so Retry can run after a failed attempt (phase does not carry URL).
     private var lastUpdateURL: URL?
 
     private let fileManager = FileManager.default
@@ -108,8 +107,6 @@ final class AppUpdater: ObservableObject {
         NSApp.terminate(nil)
     }
 
-    /// Finds the first .app bundle under the given directory (e.g. our dedicated extract folder).
-    /// Unzip often restores timestamps from the zip, so we do not filter by date.
     private func findExtractedApp(in directory: URL) throws -> URL {
         let fm = fileManager
         let keys: Set<URLResourceKey> = [.isDirectoryKey]
