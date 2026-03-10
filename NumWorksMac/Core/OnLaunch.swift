@@ -121,11 +121,11 @@ enum OnLaunch {
             return
         }
 
-        // 3) Let the app finish loading and settle
+        // give window time to show before dialogs
         print("[OnLaunch] updates found → waiting 5s")
         try? await Task.sleep(nanoseconds: 5_000_000_000)
 
-        // 4) Order: App update first, then Epsilon update
+        // app update first, then epsilon (and wait for dismiss so we don't stack panels)
         if appNeedsUpdate {
             if let u = appLatestURL, u.pathExtension.lowercased() == "zip" {
                 print("[OnLaunch] requesting AppUpdate UI")
@@ -175,7 +175,7 @@ enum OnLaunch {
 
     @MainActor
     private static func maybeMoveToApplications() async {
-        guard !ProcessInfo.processInfo.arguments.contains("-skipMoveToApplications") else { return }
+        guard !ProcessInfo.processInfo.arguments.contains("-skipMoveToApplications") else { return }  // UITests
         AppMover.moveIfNecessary()
     }
 }

@@ -31,8 +31,7 @@ struct CalculatorView: View {
         let h = size.height
         guard w > 0, h > 0 else { return }
 
-        // Convert the user-provided calibration values into ratios relative to the current window size.
-        // After this point, resizing stays proportional.
+        // lock ratios once so resize stays proportional
         extraRatioX = (overlayExtra + overlayExtraX) / w
         extraRatioY = (overlayExtra + overlayExtraY) / h
         offsetRatioX = overlayOffsetX / w

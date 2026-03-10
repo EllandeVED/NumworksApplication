@@ -397,7 +397,7 @@ final class SimulatorUpdater: NSObject, ObservableObject, URLSessionDownloadDele
         let appURL = Bundle.main.bundleURL
         let appPath = appURL.path
         let pid = ProcessInfo.processInfo.processIdentifier
-
+        // wait for us to exit then open again
         let escapedPath = appPath.replacingOccurrences(of: "\"", with: "\\\"")
         let script = "(while /bin/kill -0 \(pid) >/dev/null 2>&1; do /bin/sleep 0.1; done; /usr/bin/open \"\(escapedPath)\") &"
 

@@ -124,6 +124,7 @@ final class WindowManagement {
         reapplyCalculatorImageAspectRatio()
     }
 
+    // match window aspect to 3D vs flat image
     func reapplyCalculatorImageAspectRatio() {
         let ratio = Self.calculatorImageAspectRatio
         let imageAspectSize = CGSize(width: 1, height: 1 / ratio)

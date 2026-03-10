@@ -122,7 +122,7 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func onStatusItemAction() {
-        let isRight = NSApp.currentEvent?.type == .rightMouseUp
+        let isRight = NSApp.currentEvent?.type == .rightMouseUp  // right = menu, left = toggle
         if isRight {
             showMenu()
         } else {

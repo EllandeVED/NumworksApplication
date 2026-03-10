@@ -32,8 +32,7 @@ struct EpsilonUpdateChecker {
         )
     }
 
-    // Parses NumWorks' download page for cdn.numworks.com zip URLs (e.g. numworks-simulator-*.zip or numworks-graphing-emulator-*.zip).
-    // Picks the URL whose filename contains the highest X.Y.Z version.
+    // scrape download page, pick highest X.Y.Z zip from cdn
     static func fetchLatestRemoteURL() async throws -> URL {
         let page = URL(string: "https://www.numworks.com/simulator/download/")!
         var req = URLRequest(url: page)
@@ -49,7 +48,6 @@ struct EpsilonUpdateChecker {
             throw Error.invalidResponse
         }
 
-        // Match any cdn.numworks.com ... .zip URL (e.g. .../numworks-graphing-emulator-25.2.2.zip or .../26.1.zip).
         let urlPattern = #"https://cdn\.numworks\.com/[^"'\s<>]+\.zip"#
         let urlRegex = try NSRegularExpression(pattern: urlPattern)
         let range = NSRange(html.startIndex..<html.endIndex, in: html)

@@ -136,7 +136,7 @@ final class AppController: NSObject, NSWindowDelegate {
     }
 
     private func applyDockIconVisibility() {
-        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon
+        let show = settingsWindowOpen ? true : Preferences.shared.showDockIcon  // always show dock when settings open
         let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
 
         if NSApp.activationPolicy() != policy {

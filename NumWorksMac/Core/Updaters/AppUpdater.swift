@@ -54,7 +54,7 @@ final class AppUpdater: ObservableObject {
             return
         }
 
-        let extractDir = downloads.appendingPathComponent("NumWorksUpdate", isDirectory: true)
+        let extractDir = downloads.appendingPathComponent("NumWorksUpdate", isDirectory: true)  // don't scan whole Downloads
 
         do {
             let (tmpURL, response) = try await URLSession.shared.download(from: remoteURL)
@@ -107,6 +107,7 @@ final class AppUpdater: ObservableObject {
         NSApp.terminate(nil)
     }
 
+    // first .app under dir (zip layout varies)
     private func findExtractedApp(in directory: URL) throws -> URL {
         let fm = fileManager
         let keys: Set<URLResourceKey> = [.isDirectoryKey]
