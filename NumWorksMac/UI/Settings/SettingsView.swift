@@ -502,13 +502,13 @@ private struct AboutSettingsPane: View {
                 Text("Ellande VED")
             }
             
-            HStack(spacing: 8) {
+            HStack(spacing: 2) {
                 Text("See on GitHub:")
                 Link("NumworksApplication", destination: repoURL)
 
             }
             
-            HStack(spacing: 8) {
+            HStack(spacing: 2) {
                 Text("Report an issue/request:")
                 Link("Report", destination: issueURL)
             }
