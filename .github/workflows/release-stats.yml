@@ -2,7 +2,7 @@ name: Release download stats (NumWorks.zip)
 
 on:
   schedule:
-    - cron: "15 1 * * *"   # daily at 01:15 UTC
+    - cron: "0 2,14 * * *"   # 02:00 and 14:00 UTC
   workflow_dispatch:
 
 permissions:
