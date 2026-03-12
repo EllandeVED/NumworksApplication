@@ -26,7 +26,7 @@ enum EpsilonVersions {
         bestDetectedSimulator()?.url
     }
 
-    // MARK: - Detection
+    // MARK: - ver detection
 
     private static func bestDetectedSimulator() -> (version: SimulatorVersion, url: URL)? {
         let candidates = SimulatorPaths.simulatorHTMLCandidates()

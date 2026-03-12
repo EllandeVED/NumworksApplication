@@ -42,7 +42,7 @@ enum SimulatorPaths {
         }
     }
 
-    // MARK: - Ensure directories exist (for updater)
+    // MARK: -  Ensure directories exist (for updater)
 
     static func ensureDirectoriesExist() throws {
         let fm = FileManager.default
