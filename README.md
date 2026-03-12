@@ -30,7 +30,10 @@ The goal was just to make the emulator feel macos integrated.
 
 ## Preview
 
-<img width="265" height="479" alt="NumWorks App Preview" src="https://github.com/user-attachments/assets/c5fba75b-d4da-41e8-8c04-0a69f164ffa7" />
+<div align="center">
+  <img width="265" height="479" alt="NumWorks App Preview" src="https://github.com/user-attachments/assets/c5fba75b-d4da-41e8-8c04-0a69f164ffa7" />
+  <img width="420" height="435" alt="image" src="https://github.com/user-attachments/assets/74369c62-eb10-4cdd-ba53-83053fdc70d6" />
+</div>
 
 
 ---
