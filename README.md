@@ -49,10 +49,9 @@ The goal was just to make the emulator feel macos integrated.
 1. Go to the latest release:  
    [https://github.com/EllandeVED/NumworksApplication/releases/latest](https://github.com/EllandeVED/NumworksApplication/releases/latest)
 
-2. Download the `.zip` file.
+2. Download `NumWorks.zip` file or `NumWorks.dmg`
 
-3. Unzip it and open the app.  
-   Because the app is not signed with a paid Apple Developer ID macOS will display a security warning:
+3. Because the app is not signed with a paid Apple Developer ID macOS will display a security warning:
 
 <img width="220" height="200" alt="Security Warning" src="https://github.com/user-attachments/assets/12e0d587-f73c-43fb-a1dd-d413e34dacba" />
 
