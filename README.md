@@ -10,7 +10,12 @@ A native macOS application that embeds the official **NumWorks htlm simulator** 
 
 ---
 
-> This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.
+> **This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.**
+
+> The application does not bundle, modify, or redistribute the official NumWorks simulator.
+Simulator assets are handled dynamically by the app.
+
+> The purpose of this project is solely to provide a native macOS application experience around the official simulator, with improved desktop integration, offline support,  and update management.*
 
 ---
 
