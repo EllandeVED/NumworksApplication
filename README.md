@@ -110,6 +110,10 @@ If you want to use a custom NumWorks framework (not the official simulator provi
 
 
 ---
+## Known issues
+- [ ] Shortcut cmd+, to open settings isn't always working. Workaround: execute the shortcut after opening the menu bar icon or just open the settings window from the menu bar icon dropdown menu
+
+---
 
 ## License
 
