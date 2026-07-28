@@ -34,9 +34,14 @@ final class AppController: NSObject {
     func start() {
         guard bridgeObserver == nil else { return }
 
-        shortcutController = ShortcutController(preferences: preferences) { [weak self] in
-            self?.toggleCalculator()
-        }
+        shortcutController = ShortcutController(
+            preferences: preferences,
+            toggleCalculator: { [weak self] in
+                self?.toggleCalculator()
+            },
+            toggleAlwaysOnTop: { [weak self] in
+                self?.togglePin()
+            })
         subscribeToPreferenceChanges()
 
         bridgeObserver = NotificationCenter.default.addObserver(
@@ -113,12 +118,21 @@ final class AppController: NSObject {
         // SDL has finished launching the application.
         MenuBar.installSettingsItem(target: self, action: #selector(openSettingsAction(_:)))
         installReopenHandler()
+        applyDockIconPolicy(preferences.showDockIcon)
 
         if preferences.launchWindowVisible {
             calculatorWindow.show()
         } else {
             calculatorWindow.hide()
         }
+
+#if DEBUG
+        // Debug aid: `NumWorks --show-settings` opens the Settings window
+        // immediately, which is handy for automated UI verification.
+        if ProcessInfo.processInfo.arguments.contains("--show-settings") {
+            openSettings()
+        }
+#endif
     }
 
     // MARK: - Preference observation
@@ -149,6 +163,34 @@ final class AppController: NSObject {
                 self?.calculatorWindow.applyWindowStyle()
             }
             .store(in: &cancellables)
+
+        preferences.$showDockIcon
+            .dropFirst()
+            .sink { [weak self] show in
+                self?.applyDockIconPolicy(show)
+            }
+            .store(in: &cancellables)
+    }
+
+    // MARK: - Dock icon
+
+    /// .regular shows the Dock icon; .accessory hides it while global
+    /// shortcuts and the reopen handler keep working. macOS limitation:
+    /// accessory apps have no menu bar, so Command-comma only works through
+    /// the menu while the Dock icon is shown.
+    private func applyDockIconPolicy(_ show: Bool) {
+        let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
+        guard NSApp.activationPolicy() != policy else { return }
+        NSApp.setActivationPolicy(policy)
+
+        // Changing the policy deactivates the app; reactivate so whichever
+        // window the user was interacting with stays usable.
+        NSApp.activate(ignoringOtherApps: true)
+        if let settingsWindow = settingsWindowController?.window, settingsWindow.isVisible {
+            settingsWindow.makeKeyAndOrderFront(nil)
+        } else {
+            calculatorWindow.restoreCalculatorFocus()
+        }
     }
 
     // MARK: - Settings plumbing
@@ -168,12 +210,11 @@ final class AppController: NSObject {
             resetWindowPosition: { [weak self] in
                 self?.calculatorWindow.resetPosition()
             },
-            resetShortcut: { [weak self] in
-                self?.shortcutController?.resetShortcutToDefault()
-            },
-            resetAllSettings: { [weak self] in
+            restoreDefaultSettings: { [weak self] in
+                // Preference sinks apply the changed behaviour immediately;
+                // the saved window frame is intentionally left untouched.
                 self?.preferences.resetToDefaults()
-                self?.shortcutController?.resetShortcutToDefault()
+                self?.shortcutController?.resetShortcutsToDefaults()
             })
     }
 

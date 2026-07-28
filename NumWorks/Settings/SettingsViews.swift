@@ -8,26 +8,58 @@ struct SettingsActions {
     let centreWindow: () -> Void
     let resetWindowSize: () -> Void
     let resetWindowPosition: () -> Void
-    let resetShortcut: () -> Void
-    let resetAllSettings: () -> Void
+    let restoreDefaultSettings: () -> Void
+}
+
+enum SettingsTab: String {
+    case general, toolbar, window, shortcuts, advanced, about
 }
 
 struct SettingsRootView: View {
     @ObservedObject var preferences: Preferences
     let actions: SettingsActions
 
+    @State private var selection = SettingsRootView.initialTab()
+
     var body: some View {
-        TabView {
+        TabView(selection: $selection) {
             GeneralSettingsView(preferences: preferences)
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
+            ToolbarSettingsView(preferences: preferences)
+                .tabItem { Label("Toolbar", systemImage: "menubar.rectangle") }
+                .tag(SettingsTab.toolbar)
             WindowSettingsView(preferences: preferences, actions: actions)
                 .tabItem { Label("Window", systemImage: "macwindow") }
-            ShortcutSettingsView(preferences: preferences, actions: actions)
+                .tag(SettingsTab.window)
+            ShortcutSettingsView(preferences: preferences)
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
+                .tag(SettingsTab.shortcuts)
             AdvancedSettingsView(actions: actions)
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
+                .tag(SettingsTab.advanced)
+            AboutView()
+                .tabItem { Label("About", systemImage: "info.circle") }
+                .tag(SettingsTab.about)
         }
-        .frame(width: 440)
+        // Grouped forms have no intrinsic height inside a TabView, so the
+        // window needs a fixed content size; forms scroll if they overflow.
+        .frame(width: 460, height: 480)
+    }
+
+    /// Debug aid: `NumWorks --show-settings --settings-tab=<name>` opens
+    /// Settings on a specific tab for automated UI verification.
+    private static func initialTab() -> SettingsTab {
+#if DEBUG
+        for argument in ProcessInfo.processInfo.arguments {
+            if argument.hasPrefix("--settings-tab="),
+               let tab = SettingsTab(rawValue:
+                   String(argument.dropFirst("--settings-tab=".count))) {
+                return tab
+            }
+        }
+#endif
+        return .general
     }
 }
 
@@ -39,31 +71,63 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
+                Toggle("Launch NumWorks at login", isOn: $preferences.launchAtLogin)
+                    .disabled(!Preferences.isLaunchAtLoginAvailable)
                 Toggle("Show calculator when NumWorks launches",
                        isOn: $preferences.launchWindowVisible)
-            }
-            Section("Top Bar") {
-                Toggle("Show top bar", isOn: $preferences.showTopBar)
-                Toggle("Show pin button", isOn: $preferences.showPinButton)
-                    .disabled(!preferences.showTopBar)
-                Toggle("Show settings button", isOn: $preferences.showSettingsButton)
-                    .disabled(!preferences.showTopBar)
+            } footer: {
+                if !Preferences.isLaunchAtLoginAvailable {
+                    Text("Launch at login requires the LaunchAtLogin package, "
+                         + "which is missing from this build.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Section {
-                Picker("Window appearance", selection: $preferences.windowStyle) {
-                    ForEach(WindowStyle.allCases) { style in
-                        if style.isAvailable {
-                            Text(style.displayName).tag(style)
-                        } else {
-                            Text("\(style.displayName) (coming later)").tag(style)
-                        }
-                    }
-                }
-                .pickerStyle(.menu)
+                Toggle("Show Dock icon", isOn: $preferences.showDockIcon)
             } footer: {
-                Text("Minimal mode is not available yet.")
+                Text("Without a Dock icon, NumWorks keeps running in the "
+                     + "background and stays reachable through its keyboard "
+                     + "shortcuts. macOS hides the menu bar for apps without "
+                     + "a Dock icon.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Toolbar
+
+struct ToolbarSettingsView: View {
+    @ObservedObject var preferences: Preferences
+
+    private var toolbarControlsEnabled: Bool {
+        preferences.windowStyle == .toolbar
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                // Minimal stays hidden until it has a safe implementation.
+                Picker("Toolbar style", selection: $preferences.windowStyle) {
+                    Text("Standard macOS Window").tag(WindowStyle.native)
+                    Text("Native Toolbar").tag(WindowStyle.toolbar)
+                }
+                .pickerStyle(.radioGroup)
+            } footer: {
+                Text("Changes apply immediately.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section {
+                Toggle("Show top toolbar", isOn: $preferences.showTopBar)
+                    .disabled(!toolbarControlsEnabled)
+                Toggle("Show pin button", isOn: $preferences.showPinButton)
+                    .disabled(!toolbarControlsEnabled || !preferences.showTopBar)
+                Toggle("Show settings button", isOn: $preferences.showSettingsButton)
+                    .disabled(!toolbarControlsEnabled || !preferences.showTopBar)
             }
         }
         .formStyle(.grouped)
@@ -92,9 +156,9 @@ struct WindowSettingsView: View {
             Section {
                 LabeledContent("Position and size") {
                     HStack {
-                        Button("Centre Window", action: actions.centreWindow)
-                        Button("Reset Size", action: actions.resetWindowSize)
+                        Button("Center Window", action: actions.centreWindow)
                         Button("Reset Position", action: actions.resetWindowPosition)
+                        Button("Reset Size", action: actions.resetWindowSize)
                     }
                 }
             }
@@ -107,28 +171,29 @@ struct WindowSettingsView: View {
 
 struct ShortcutSettingsView: View {
     @ObservedObject var preferences: Preferences
-    let actions: SettingsActions
 
     var body: some View {
         Form {
             Section {
-                Toggle("Enable show/hide shortcut",
-                       isOn: $preferences.hideShowShortcutEnabled)
+                Toggle("Enable shortcuts", isOn: $preferences.shortcutsEnabled)
+            }
+            Section {
 #if canImport(KeyboardShortcuts)
                 KeyboardShortcuts.Recorder(
                     "Show or hide calculator", name: .toggleCalculator)
-                    .disabled(!preferences.hideShowShortcutEnabled)
-                Button("Reset to Default Shortcut", action: actions.resetShortcut)
-                    .disabled(!preferences.hideShowShortcutEnabled)
+                    .disabled(!preferences.shortcutsEnabled)
+                KeyboardShortcuts.Recorder(
+                    "Toggle always on top", name: .toggleAlwaysOnTop)
+                    .disabled(!preferences.shortcutsEnabled)
 #else
-                LabeledContent("Show or hide calculator") {
+                LabeledContent("Shortcuts") {
                     Text("Requires the KeyboardShortcuts package")
                         .foregroundStyle(.secondary)
                 }
 #endif
             } footer: {
-                Text("The shortcut works from any application. Invoking it "
-                     + "from another desktop brings the calculator to that desktop.")
+                Text("The shortcuts work from any application. Showing the "
+                     + "calculator from another desktop brings it to that desktop.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -147,8 +212,14 @@ struct AdvancedSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("NumWorks app", value: AppInfo.appVersion)
+                LabeledContent("NumWorks", value: AppInfo.bundleVersion)
+                LabeledContent("Build", value: AppInfo.bundleBuild)
                 LabeledContent("Epsilon", value: AppInfo.epsilonVersion)
+                if let buildDate = AppInfo.buildDate {
+                    LabeledContent("Build date", value: buildDate)
+                }
+            } header: {
+                Text("Versions")
             } footer: {
                 Text("The Epsilon simulator is compiled into NumWorks and "
                      + "runs inside this same app process. No separate "
@@ -157,21 +228,25 @@ struct AdvancedSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section {
-                Button("Reset All Settings…", role: .destructive) {
+                Button("Restore Default Settings…") {
                     isConfirmingReset = true
                 }
-                Button("Open Diagnostics") {}
-                    .disabled(true)
-                    .help("Diagnostics will be available in a later version")
+            } footer: {
+                Text("Window position and size are not affected; they have "
+                     + "their own reset buttons in the Window tab.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
-        .alert("Reset all settings?", isPresented: $isConfirmingReset) {
-            Button("Reset", role: .destructive, action: actions.resetAllSettings)
+        .alert("Restore all settings to their default values?",
+               isPresented: $isConfirmingReset) {
             Button("Cancel", role: .cancel) {}
+            Button("Restore Defaults", action: actions.restoreDefaultSettings)
         } message: {
-            Text("All NumWorks preferences, including the keyboard shortcut "
-                 + "and the saved window frame, will return to their defaults.")
+            Text("Every preference and both keyboard shortcuts will return "
+                 + "to their defaults. The calculator window keeps its "
+                 + "current position and size.")
         }
     }
 }

@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		1E0390D930191907001CD48C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0390D830191907001CD48C /* LaunchAtLogin */; };
+		1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1EAA000930190009001CD48C /* KeyboardShortcuts */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		1E03B1423018F5D0001CD48C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,10 +34,6 @@
 			remoteInfo = EpsilonLib;
 		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXBuildFile section */
-		1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1EAA000930190009001CD48C /* KeyboardShortcuts */; };
-/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1E03B1333018F5CE001CD48C /* NumWorks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumWorks.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,6 +84,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E0390D930191907001CD48C /* LaunchAtLogin in Frameworks */,
 				1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -164,6 +166,7 @@
 			name = NumWorks;
 			packageProductDependencies = (
 				1EAA000930190009001CD48C /* KeyboardShortcuts */,
+				1E0390D830191907001CD48C /* LaunchAtLogin */,
 			);
 			productName = NumWorks;
 			productReference = 1E03B1333018F5CE001CD48C /* NumWorks.app */;
@@ -249,6 +252,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1E03B1343018F5CE001CD48C /* Products */;
@@ -724,6 +728,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.0;
+			};
+		};
 		1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
@@ -735,6 +747,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1E0390D830191907001CD48C /* LaunchAtLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin" */;
+			productName = LaunchAtLogin;
+		};
 		1EAA000930190009001CD48C /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;

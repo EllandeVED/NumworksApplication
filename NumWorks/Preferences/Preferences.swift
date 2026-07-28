@@ -1,5 +1,8 @@
 import AppKit
 import Combine
+#if canImport(LaunchAtLogin)
+import LaunchAtLogin
+#endif
 
 /// Central preferences model. This is the only type in the app that reads or
 /// writes UserDefaults; every other feature goes through it.
@@ -13,7 +16,8 @@ final class Preferences: ObservableObject {
         static let showSettingsButton = "showSettingsButton"
         static let rememberWindowPosition = "rememberWindowPosition"
         static let rememberWindowSize = "rememberWindowSize"
-        static let hideShowShortcutEnabled = "hideShowShortcutEnabled"
+        static let shortcutsEnabled = "shortcutsEnabled"
+        static let showDockIcon = "showDockIcon"
         static let windowStyle = "windowStyle"
         static let launchWindowVisible = "launchWindowVisible"
         static let moveWindowToCurrentSpaceWhenShown = "moveWindowToCurrentSpaceWhenShown"
@@ -27,7 +31,8 @@ final class Preferences: ObservableObject {
         Key.showSettingsButton: true,
         Key.rememberWindowPosition: true,
         Key.rememberWindowSize: true,
-        Key.hideShowShortcutEnabled: true,
+        Key.shortcutsEnabled: true,
+        Key.showDockIcon: true,
         Key.windowStyle: WindowStyle.toolbar.rawValue,
         Key.launchWindowVisible: true,
         Key.moveWindowToCurrentSpaceWhenShown: true,
@@ -45,9 +50,14 @@ final class Preferences: ObservableObject {
         showSettingsButton = defaults.bool(forKey: Key.showSettingsButton)
         rememberWindowPosition = defaults.bool(forKey: Key.rememberWindowPosition)
         rememberWindowSize = defaults.bool(forKey: Key.rememberWindowSize)
-        hideShowShortcutEnabled = defaults.bool(forKey: Key.hideShowShortcutEnabled)
-        windowStyle = defaults.string(forKey: Key.windowStyle)
+        shortcutsEnabled = defaults.bool(forKey: Key.shortcutsEnabled)
+        showDockIcon = defaults.bool(forKey: Key.showDockIcon)
+        launchAtLogin = Self.systemLaunchAtLogin
+        // Coerce unavailable styles (minimal) so the Settings picker, which
+        // only offers the available styles, never shows an empty selection.
+        let storedStyle = defaults.string(forKey: Key.windowStyle)
             .flatMap(WindowStyle.init(rawValue:)) ?? .toolbar
+        windowStyle = storedStyle.isAvailable ? storedStyle : .toolbar
         launchWindowVisible = defaults.bool(forKey: Key.launchWindowVisible)
         moveWindowToCurrentSpaceWhenShown =
             defaults.bool(forKey: Key.moveWindowToCurrentSpaceWhenShown)
@@ -80,8 +90,46 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(rememberWindowSize, forKey: Key.rememberWindowSize) }
     }
 
-    @Published var hideShowShortcutEnabled: Bool {
-        didSet { defaults.set(hideShowShortcutEnabled, forKey: Key.hideShowShortcutEnabled) }
+    /// Master switch for both global keyboard shortcuts.
+    @Published var shortcutsEnabled: Bool {
+        didSet { defaults.set(shortcutsEnabled, forKey: Key.shortcutsEnabled) }
+    }
+
+    /// Whether the app appears in the Dock (NSApp activation policy .regular
+    /// vs .accessory). Applied by AppController.
+    @Published var showDockIcon: Bool {
+        didSet { defaults.set(showDockIcon, forKey: Key.showDockIcon) }
+    }
+
+    /// Login-item registration. The system (via the LaunchAtLogin package /
+    /// SMAppService) is the source of truth, so this is deliberately not
+    /// persisted in UserDefaults; the value is read back from the system at
+    /// startup and written through on change.
+    @Published var launchAtLogin: Bool {
+        didSet { Self.systemLaunchAtLogin = launchAtLogin }
+    }
+
+    static var isLaunchAtLoginAvailable: Bool {
+#if canImport(LaunchAtLogin)
+        return true
+#else
+        return false
+#endif
+    }
+
+    private static var systemLaunchAtLogin: Bool {
+        get {
+#if canImport(LaunchAtLogin)
+            return LaunchAtLogin.isEnabled
+#else
+            return false
+#endif
+        }
+        set {
+#if canImport(LaunchAtLogin)
+            LaunchAtLogin.isEnabled = newValue
+#endif
+        }
     }
 
     @Published var windowStyle: WindowStyle {
@@ -110,6 +158,9 @@ final class Preferences: ObservableObject {
 
     // MARK: - Reset
 
+    /// Restores every application preference to its default value. The saved
+    /// window frame is deliberately left untouched: window position and size
+    /// have their own dedicated reset buttons in Settings.
     func resetToDefaults() {
         showTopBar = true
         alwaysOnTop = false
@@ -117,10 +168,11 @@ final class Preferences: ObservableObject {
         showSettingsButton = true
         rememberWindowPosition = true
         rememberWindowSize = true
-        hideShowShortcutEnabled = true
+        shortcutsEnabled = true
+        showDockIcon = true
+        launchAtLogin = false
         windowStyle = .toolbar
         launchWindowVisible = true
         moveWindowToCurrentSpaceWhenShown = true
-        savedWindowFrame = nil
     }
 }
