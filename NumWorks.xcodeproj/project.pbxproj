@@ -1,0 +1,556 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		1E03B1423018F5D0001CD48C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E03B12B3018F5CE001CD48C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E03B1323018F5CE001CD48C;
+			remoteInfo = NumWorks;
+		};
+		1E03B14C3018F5D0001CD48C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E03B12B3018F5CE001CD48C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E03B1323018F5CE001CD48C;
+			remoteInfo = NumWorks;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1E03B1333018F5CE001CD48C /* NumWorks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumWorks.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E03B1413018F5D0001CD48C /* NumWorksTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumWorksTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E03B14B3018F5D0001CD48C /* NumWorksUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumWorksUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1E03B1353018F5CE001CD48C /* NumWorks */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = NumWorks;
+			sourceTree = "<group>";
+		};
+		1E03B1443018F5D0001CD48C /* NumWorksTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = NumWorksTests;
+			sourceTree = "<group>";
+		};
+		1E03B14E3018F5D0001CD48C /* NumWorksUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = NumWorksUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1E03B1303018F5CE001CD48C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E03B13E3018F5D0001CD48C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E03B1483018F5D0001CD48C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1E03B12A3018F5CE001CD48C = {
+			isa = PBXGroup;
+			children = (
+				1E03B1353018F5CE001CD48C /* NumWorks */,
+				1E03B1443018F5D0001CD48C /* NumWorksTests */,
+				1E03B14E3018F5D0001CD48C /* NumWorksUITests */,
+				1E03B1343018F5CE001CD48C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1E03B1343018F5CE001CD48C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1E03B1333018F5CE001CD48C /* NumWorks.app */,
+				1E03B1413018F5D0001CD48C /* NumWorksTests.xctest */,
+				1E03B14B3018F5D0001CD48C /* NumWorksUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1E03B1323018F5CE001CD48C /* NumWorks */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E03B1553018F5D0001CD48C /* Build configuration list for PBXNativeTarget "NumWorks" */;
+			buildPhases = (
+				1E03B12F3018F5CE001CD48C /* Sources */,
+				1E03B1303018F5CE001CD48C /* Frameworks */,
+				1E03B1313018F5CE001CD48C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1E03B1353018F5CE001CD48C /* NumWorks */,
+			);
+			name = NumWorks;
+			packageProductDependencies = (
+			);
+			productName = NumWorks;
+			productReference = 1E03B1333018F5CE001CD48C /* NumWorks.app */;
+			productType = "com.apple.product-type.application";
+		};
+		1E03B1403018F5D0001CD48C /* NumWorksTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E03B1583018F5D0001CD48C /* Build configuration list for PBXNativeTarget "NumWorksTests" */;
+			buildPhases = (
+				1E03B13D3018F5D0001CD48C /* Sources */,
+				1E03B13E3018F5D0001CD48C /* Frameworks */,
+				1E03B13F3018F5D0001CD48C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1E03B1433018F5D0001CD48C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1E03B1443018F5D0001CD48C /* NumWorksTests */,
+			);
+			name = NumWorksTests;
+			packageProductDependencies = (
+			);
+			productName = NumWorksTests;
+			productReference = 1E03B1413018F5D0001CD48C /* NumWorksTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		1E03B14A3018F5D0001CD48C /* NumWorksUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E03B15B3018F5D0001CD48C /* Build configuration list for PBXNativeTarget "NumWorksUITests" */;
+			buildPhases = (
+				1E03B1473018F5D0001CD48C /* Sources */,
+				1E03B1483018F5D0001CD48C /* Frameworks */,
+				1E03B1493018F5D0001CD48C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1E03B14D3018F5D0001CD48C /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1E03B14E3018F5D0001CD48C /* NumWorksUITests */,
+			);
+			name = NumWorksUITests;
+			packageProductDependencies = (
+			);
+			productName = NumWorksUITests;
+			productReference = 1E03B14B3018F5D0001CD48C /* NumWorksUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1E03B12B3018F5CE001CD48C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					1E03B1323018F5CE001CD48C = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					1E03B1403018F5D0001CD48C = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 1E03B1323018F5CE001CD48C;
+					};
+					1E03B14A3018F5D0001CD48C = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 1E03B1323018F5CE001CD48C;
+					};
+				};
+			};
+			buildConfigurationList = 1E03B12E3018F5CE001CD48C /* Build configuration list for PBXProject "NumWorks" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 1E03B12A3018F5CE001CD48C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1E03B1343018F5CE001CD48C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1E03B1323018F5CE001CD48C /* NumWorks */,
+				1E03B1403018F5D0001CD48C /* NumWorksTests */,
+				1E03B14A3018F5D0001CD48C /* NumWorksUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1E03B1313018F5CE001CD48C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E03B13F3018F5D0001CD48C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E03B1493018F5D0001CD48C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1E03B12F3018F5CE001CD48C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E03B13D3018F5D0001CD48C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E03B1473018F5D0001CD48C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1E03B1433018F5D0001CD48C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E03B1323018F5CE001CD48C /* NumWorks */;
+			targetProxy = 1E03B1423018F5D0001CD48C /* PBXContainerItemProxy */;
+		};
+		1E03B14D3018F5D0001CD48C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E03B1323018F5CE001CD48C /* NumWorks */;
+			targetProxy = 1E03B14C3018F5D0001CD48C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1E03B1533018F5D0001CD48C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		1E03B1543018F5D0001CD48C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		1E03B1563018F5D0001CD48C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorks;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		1E03B1573018F5D0001CD48C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorks;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		1E03B1593018F5D0001CD48C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorksTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NumWorks.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NumWorks";
+			};
+			name = Debug;
+		};
+		1E03B15A3018F5D0001CD48C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorksTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NumWorks.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NumWorks";
+			};
+			name = Release;
+		};
+		1E03B15C3018F5D0001CD48C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorksUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = NumWorks;
+			};
+			name = Debug;
+		};
+		1E03B15D3018F5D0001CD48C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6C2PG6C5FF;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorksUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = NumWorks;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1E03B12E3018F5CE001CD48C /* Build configuration list for PBXProject "NumWorks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E03B1533018F5D0001CD48C /* Debug */,
+				1E03B1543018F5D0001CD48C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E03B1553018F5D0001CD48C /* Build configuration list for PBXNativeTarget "NumWorks" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E03B1563018F5D0001CD48C /* Debug */,
+				1E03B1573018F5D0001CD48C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E03B1583018F5D0001CD48C /* Build configuration list for PBXNativeTarget "NumWorksTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E03B1593018F5D0001CD48C /* Debug */,
+				1E03B15A3018F5D0001CD48C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E03B15B3018F5D0001CD48C /* Build configuration list for PBXNativeTarget "NumWorksUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E03B15C3018F5D0001CD48C /* Debug */,
+				1E03B15D3018F5D0001CD48C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1E03B12B3018F5CE001CD48C /* Project object */;
+}
