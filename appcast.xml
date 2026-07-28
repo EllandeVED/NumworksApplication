@@ -3,6 +3,21 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.5</title>
+            <pubDate>Wed, 29 Jul 2026 01:28:40 +0200</pubDate>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>2.0.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's New in 2.0.5
+
+-test notes
+-[hey](httpw://www.example.com)
+-
+]]></description>
+            <enclosure url="https://ellandeved.github.io/NumworksApplication/NumWorks-2.0.5.zip" length="3952657" type="application/octet-stream" sparkle:edSignature="lo4ECqeM0Z9ViWxP3qooK8ve0bKvNIzsAZ9i3XQqTppqVrVB0zgtG/pEodudrlL8O/htOtu7eV6a8g4yvH5ZDA=="/>
+        </item>
+        <item>
             <title>2.0.3</title>
             <pubDate>Wed, 29 Jul 2026 00:53:27 +0200</pubDate>
             <sparkle:version>6</sparkle:version>
