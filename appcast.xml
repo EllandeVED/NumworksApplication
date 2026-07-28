@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>NumWorks</title>
+        <item>
+            <title>2.0.1</title>
+            <pubDate>Tue, 28 Jul 2026 23:58:05 +0200</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>2.0.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://ellandeved.github.io/NumworksApplication/NumWorks-2.0.1.zip" length="4305161" type="application/octet-stream" sparkle:edSignature="4RlGAwbBC0kqI1vHF3lXpgrpfFXZUlYrLfOdIxS7B0lEt/iAwYP5tmM5Of84cHJjL/DaZXjqh1khNpZRG/P5CA=="/>
+        </item>
+    </channel>
+</rss>
