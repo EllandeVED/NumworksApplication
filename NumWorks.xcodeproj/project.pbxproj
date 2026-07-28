@@ -21,7 +21,18 @@
 			remoteGlobalIDString = 1E03B1323018F5CE001CD48C;
 			remoteInfo = NumWorks;
 		};
+		1EAA000630190006001CD48C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E03B12B3018F5CE001CD48C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EAA000230190002001CD48C;
+			remoteInfo = EpsilonLib;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXBuildFile section */
+		1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1EAA000930190009001CD48C /* KeyboardShortcuts */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1E03B1333018F5CE001CD48C /* NumWorks.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NumWorks.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -29,9 +40,29 @@
 		1E03B14B3018F5D0001CD48C /* NumWorksUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NumWorksUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1EAA000130190001001CD48C /* Exceptions for "NumWorks" folder in "NumWorks" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Patches,
+				Scripts,
+				Vendor,
+			);
+			target = 1E03B1323018F5CE001CD48C /* NumWorks */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1E03B1353018F5CE001CD48C /* NumWorks */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1EAA000130190001001CD48C /* Exceptions for "NumWorks" folder in "NumWorks" target */,
+			);
+			explicitFolders = (
+				Patches,
+				Scripts,
+				Vendor,
+			);
 			path = NumWorks;
 			sourceTree = "<group>";
 		};
@@ -52,6 +83,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,6 +126,23 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXLegacyTarget section */
+		1EAA000230190002001CD48C /* EpsilonLib */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "\"$(SRCROOT)/NumWorks/Scripts/build-epsilon-lib.sh\" $(ACTION)";
+			buildConfigurationList = 1EAA000330190003001CD48C /* Build configuration list for PBXLegacyTarget "EpsilonLib" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/bash;
+			buildWorkingDirectory = "$(SRCROOT)";
+			dependencies = (
+			);
+			name = EpsilonLib;
+			passBuildSettingsInEnvironment = 1;
+			productName = EpsilonLib;
+		};
+/* End PBXLegacyTarget section */
+
 /* Begin PBXNativeTarget section */
 		1E03B1323018F5CE001CD48C /* NumWorks */ = {
 			isa = PBXNativeTarget;
@@ -102,16 +151,19 @@
 				1E03B12F3018F5CE001CD48C /* Sources */,
 				1E03B1303018F5CE001CD48C /* Frameworks */,
 				1E03B1313018F5CE001CD48C /* Resources */,
+				1EAA000830190008001CD48C /* Copy Epsilon Assets */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				1EAA000730190007001CD48C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				1E03B1353018F5CE001CD48C /* NumWorks */,
 			);
 			name = NumWorks;
 			packageProductDependencies = (
+				1EAA000930190009001CD48C /* KeyboardShortcuts */,
 			);
 			productName = NumWorks;
 			productReference = 1E03B1333018F5CE001CD48C /* NumWorks.app */;
@@ -195,12 +247,16 @@
 			);
 			mainGroup = 1E03B12A3018F5CE001CD48C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1E03B1343018F5CE001CD48C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				1E03B1323018F5CE001CD48C /* NumWorks */,
+				1EAA000230190002001CD48C /* EpsilonLib */,
 				1E03B1403018F5D0001CD48C /* NumWorksTests */,
 				1E03B14A3018F5D0001CD48C /* NumWorksUITests */,
 			);
@@ -230,6 +286,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1EAA000830190008001CD48C /* Copy Epsilon Assets */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy Epsilon Assets";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/NumWorks/Scripts/copy-epsilon-assets.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1E03B12F3018F5CE001CD48C /* Sources */ = {
@@ -265,6 +338,11 @@
 			isa = PBXTargetDependency;
 			target = 1E03B1323018F5CE001CD48C /* NumWorks */;
 			targetProxy = 1E03B14C3018F5D0001CD48C /* PBXContainerItemProxy */;
+		};
+		1EAA000730190007001CD48C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EAA000230190002001CD48C /* EpsilonLib */;
+			targetProxy = 1EAA000630190006001CD48C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -401,17 +479,52 @@
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/NumWorks/Integration",
+				);
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
+					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
+				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
+					"-lc++",
+					"-framework",
+					CoreAudio,
+					"-framework",
+					CoreVideo,
+					"-framework",
+					Cocoa,
+					"-framework",
+					IOKit,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					ForceFeedback,
+					"-framework",
+					AudioToolbox,
+					"-weak_framework",
+					Metal,
+					"-weak_framework",
+					QuartzCore,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorks;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "NumWorks/Integration/NumWorks-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -428,17 +541,52 @@
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/NumWorks/Integration",
+				);
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
+					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
+				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
+					"-lc++",
+					"-framework",
+					CoreAudio,
+					"-framework",
+					CoreVideo,
+					"-framework",
+					Cocoa,
+					"-framework",
+					IOKit,
+					"-framework",
+					CoreFoundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					ForceFeedback,
+					"-framework",
+					AudioToolbox,
+					"-weak_framework",
+					Metal,
+					"-weak_framework",
+					QuartzCore,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.ellandeved.NumWorks;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "NumWorks/Integration/NumWorks-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -511,6 +659,20 @@
 			};
 			name = Release;
 		};
+		1EAA000430190004001CD48C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		1EAA000530190005001CD48C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -550,7 +712,35 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		1EAA000330190003001CD48C /* Build configuration list for PBXLegacyTarget "EpsilonLib" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EAA000430190004001CD48C /* Debug */,
+				1EAA000530190005001CD48C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1EAA000930190009001CD48C /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 1E03B12B3018F5CE001CD48C /* Project object */;
 }

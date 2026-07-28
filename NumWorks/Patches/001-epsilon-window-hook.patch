@@ -1,0 +1,33 @@
+diff --git a/ion/src/simulator/macos/window.mm b/ion/src/simulator/macos/window.mm
+index 9e0bf13a..729ce556 100644
+--- a/ion/src/simulator/macos/window.mm
++++ b/ion/src/simulator/macos/window.mm
+@@ -3,6 +3,7 @@
+ #include "../external/sdl/src/video/cocoa/SDL_cocoawindow.h"
+ #include "../shared/window.h"
+ #import <Cocoa/Cocoa.h>
++#import "EpsilonBridge.h"
+ 
+ namespace Ion {
+ namespace Simulator {
+@@ -10,6 +11,7 @@
+ 
+ void didInit(SDL_Window * window) {
+   NSWindow * nswindow = reinterpret_cast<SDL_WindowData *>(window->driverdata)->nswindow;
++  [EpsilonBridge registerCalculatorWindow:nswindow];
+   [nswindow setTitlebarAppearsTransparent:true];
+   [nswindow setStyleMask:(NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskFullSizeContentView|NSWindowStyleMaskResizable)];
+   [nswindow setTitle:@""];
+@@ -27,7 +29,11 @@ void didInit(SDL_Window * window) {
+   // [nswindow setMovableByWindowBackground:true];
+ }
+ 
+-void willShutdown(SDL_Window *) {
++void willShutdown(SDL_Window * window) {
++  if (window != nullptr) {
++    NSWindow * nswindow = reinterpret_cast<SDL_WindowData *>(window->driverdata)->nswindow;
++    [EpsilonBridge unregisterCalculatorWindow:nswindow];
++  }
+ }
+ 
+ }
