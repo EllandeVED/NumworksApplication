@@ -129,11 +129,20 @@ jobs:
           # shellcheck disable=SC1091
           source build/releases/release-meta.env
           set +a
-          tag="pending-${VERSION}-epsilon-${EPSILON_REF}"
-          gh release delete "$tag" --yes 2>/dev/null || true
+          tag="${VERSION}"
+          # Replace a previous draft for this version if re-running
+          if gh release view "$tag" >/dev/null 2>&1; then
+            draft="$(gh release view "$tag" --json isDraft --jq .isDraft)"
+            if [[ "$draft" == "true" ]]; then
+              gh release delete "$tag" --yes
+            else
+              echo "Release $tag already exists and is published — refusing to overwrite."
+              exit 1
+            fi
+          fi
           gh release create "$tag" \
             --draft \
-            --title "Test: NumWorks ${VERSION} (Epsilon ${EPSILON_REF})" \
+            --title "${VERSION}" \
             --notes-file "build/releases/NumWorks-${VERSION}.md" \
             "build/releases/NumWorks-${VERSION}.zip"
 
@@ -263,10 +272,10 @@ jobs:
             git push
           fi
 
-          # Promote draft release to published
-          tag="pending-${VERSION}-epsilon-${EPSILON_REF}"
+          # Publish the draft GitHub Release (tag + title = marketing version only)
+          tag="${VERSION}"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --draft=false --title "NumWorks ${VERSION} (Epsilon ${EPSILON_REF})"
+            gh release edit "$tag" --draft=false --title "${VERSION}"
           fi
 
           echo "Shipped NumWorks ${VERSION} → https://ellandeved.github.io/NumworksApplication/appcast.xml"
