@@ -1,18 +1,13 @@
 name: Epsilon update
 
-# 1) Daily (or manual): if a new Epsilon tag exists, prepare + build a testable app.
-# 2) You download the artifact, test locally.
-# 3) Click Approve on the "sparkle-ship" environment → Sparkle-signed publish to gh-pages
-#    with notes = "New Epsilon version" + upstream Epsilon release notes.
+# Daily/manual: build a testable app when Epsilon is newer than the pin.
+# Ship job waits for environment "sparkle-ship" approval, then publishes Sparkle.
 #
-# One-time setup:
-#   • Repo Settings → Environments → New: sparkle-ship
-#     → Required reviewers: you  ← this is the Accept button
-#   • Secret SPARKLE_ED_KEY = Sparkle private key string:
-#       path/to/Sparkle/bin/generate_keys -x /tmp/sparkle.key
-#       paste the file contents into the secret (never commit the file)
+# Setup: Environment sparkle-ship (required reviewers) + secret SPARKLE_ED_KEY
+#   generate_keys -x /tmp/sparkle.key  -> paste into SPARKLE_ED_KEY, delete file
 
-on:
+# Quote "on" so YAML 1.1 does not treat it as a boolean.
+"on":
   schedule:
     - cron: "15 7 * * *"
   workflow_dispatch:
