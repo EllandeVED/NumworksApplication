@@ -24,9 +24,10 @@
 #   --skip-publish       Dry run: build + Sparkle-sign locally only; restore
 #                        project files afterward (no GitHub Release, no gh-pages)
 #
-# Artifacts (zip, notes, local appcast) go to:
-#   ~/Library/Caches/NumWorks/releases
-# Override with NUMWORKS_RELEASES_DIR if needed.
+# Artifacts (zip, notes, local appcast):
+#   Dry run (--skip-publish): ~/Downloads/NumWorks
+#   Real publish:             ~/Library/Caches/NumWorks/releases
+# Override either with NUMWORKS_RELEASES_DIR.
 #
 # On a real publish (without --skip-publish), also creates/updates a GitHub
 # Release whose tag and title are exactly the marketing version (e.g. 2.0.7).
@@ -44,8 +45,6 @@ FEED_PREFIX="https://ellandeved.github.io/NumworksApplication/"
 GITHUB_REPO="EllandeVED/NumworksApplication"
 PAGES_BRANCH="gh-pages"
 DERIVED="${TMPDIR:-/tmp}/NumWorks-release-derived"
-# Outside the git work tree so zips/appcasts cannot be committed by accident.
-RELEASES="${NUMWORKS_RELEASES_DIR:-$HOME/Library/Caches/NumWorks/releases}"
 CONFIGURATION="Release"
 SKIP_PUBLISH=0
 NOTES_FILE=""
@@ -119,6 +118,16 @@ done
 [[ -n "$VERSION" ]] || die "marketing version required (e.g. 2.0.5). Try --help."
 [[ -f "$PBXPROJ" ]] || die "project not found at $PBXPROJ"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] || die "invalid version: $VERSION"
+
+# Outside the git work tree so zips/appcasts cannot be committed by accident.
+if [[ -n "${NUMWORKS_RELEASES_DIR:-}" ]]; then
+  RELEASES="$NUMWORKS_RELEASES_DIR"
+elif [[ "$SKIP_PUBLISH" -eq 1 ]]; then
+  RELEASES="$HOME/Downloads/NumWorks"
+else
+  RELEASES="$HOME/Library/Caches/NumWorks/releases"
+fi
+export NUMWORKS_RELEASES_DIR="$RELEASES"
 
 PIN_FILE="$ROOT/NumWorks/Support/epsilon-pinned-ref.txt"
 DRY_RUN_PBX_BACKUP=""
