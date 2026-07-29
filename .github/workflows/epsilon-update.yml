@@ -89,16 +89,15 @@ jobs:
               : > "$LOG"
             fi
             tail -120 "$LOG" > "${RUNNER_TEMP}/excerpt.txt"
-            python3 - "$ref" "${RUNNER_TEMP}/excerpt.txt" "${RUNNER_TEMP}/epsilon-agent-prompt-filled.md" <<'PY'
-from pathlib import Path
-import sys
-ref, excerpt_path, out = sys.argv[1], sys.argv[2], sys.argv[3]
-tmpl = Path("NumWorks/Scripts/epsilon-agent-prompt.md").read_text()
-excerpt = Path(excerpt_path).read_text()
-Path(out).write_text(
-    tmpl.replace("{{EPSILON_REF}}", ref).replace("{{LOG_EXCERPT}}", excerpt)
-)
-PY
+            python3 -c "
+            from pathlib import Path
+            ref = '''${ref}'''
+            tmpl = Path('NumWorks/Scripts/epsilon-agent-prompt.md').read_text()
+            excerpt = Path('${RUNNER_TEMP}/excerpt.txt').read_text()
+            Path('${RUNNER_TEMP}/epsilon-agent-prompt-filled.md').write_text(
+                tmpl.replace('{{EPSILON_REF}}', ref).replace('{{LOG_EXCERPT}}', excerpt)
+            )
+            "
             exit 1
           fi
           exit 0
