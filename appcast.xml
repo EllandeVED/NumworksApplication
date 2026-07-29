@@ -3,6 +3,26 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.6</title>
+            <pubDate>Wed, 29 Jul 2026 01:01:54 +0000</pubDate>
+            <sparkle:version>9</sparkle:version>
+            <sparkle:shortVersionString>2.0.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## New Epsilon version
+
+NumWorks now embeds **Epsilon 23.2.3**.
+
+## Epsilon 23.2.3 release notes
+
+Official notes were not published as a GitHub Release for this tag.
+
+See: https://github.com/numworks/epsilon/releases/tag/23.2.3
+or the changelog: https://github.com/numworks/epsilon/releases
+]]></description>
+            <enclosure url="https://ellandeved.github.io/NumworksApplication/NumWorks-2.0.6.zip" length="3858278" type="application/octet-stream" sparkle:edSignature="8jXZvQUGWHNIgJ8IkCjAWAPC6oBnx0dQx7rgYDQpawea329zQPuEIoqugoItgxJXvZAGMK24JskwgFU6OWMLDA=="/>
+        </item>
+        <item>
             <title>2.0.5</title>
             <pubDate>Wed, 29 Jul 2026 01:28:40 +0200</pubDate>
             <sparkle:version>8</sparkle:version>
