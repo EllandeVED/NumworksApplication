@@ -155,8 +155,6 @@ jobs:
       # IMPORTANT: only update stats files — never wipe Sparkle zips / appcast.
       - name: Publish stats to gh-pages
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git clone --branch gh-pages --single-branch \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${OWNER}/${REPO}.git" pages
           cp site/stats.json site/history.json pages/
@@ -168,6 +166,8 @@ jobs:
           cp site/stats_r1.csv pages/site/ 2>/dev/null || true
           touch pages/.nojekyll
           cd pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add stats.json history.json stats_r0.csv stats_r1.csv site .nojekyll
           if git diff --cached --quiet; then
             echo "No stats changes"
