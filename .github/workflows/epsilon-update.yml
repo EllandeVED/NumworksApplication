@@ -46,7 +46,11 @@ jobs:
       - name: Install Epsilon build deps
         run: |
           brew install pkg-config freetype || true
-          python3 -m pip install --user lz4 pyelftools pypng stringcase
+          python3 -m venv "$HOME/epsilon-venv"
+          # shellcheck disable=SC1091
+          source "$HOME/epsilon-venv/bin/activate"
+          pip install lz4 pyelftools pypng stringcase
+          echo "$HOME/epsilon-venv/bin" >> "$GITHUB_PATH"
 
       - name: Decide whether to build
         id: decide
