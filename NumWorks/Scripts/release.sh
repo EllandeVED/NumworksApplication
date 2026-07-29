@@ -21,11 +21,18 @@
 #   --build <n>          CFBundleVersion (default: current + 1)
 #   --notes-file <path>  Use this Markdown file as release notes
 #   --configuration <c>  Debug or Release (default: Release)
-#   --skip-publish       Build + sign only; do not push to gh-pages
-#   -h, --help           Show help
+#   --skip-publish       Dry run: build + Sparkle-sign locally only; restore
+#                        project files afterward (no GitHub Release, no gh-pages)
+#
+# Artifacts (zip, notes, local appcast) go to:
+#   ~/Library/Caches/NumWorks/releases
+# Override with NUMWORKS_RELEASES_DIR if needed.
+#
+# On a real publish (without --skip-publish), also creates/updates a GitHub
+# Release whose tag and title are exactly the marketing version (e.g. 2.0.7).
 #
 # Requires: Xcode, Keychain Sparkle private key (generate_keys), git access to
-# EllandeVED/NumworksApplication (gh-pages branch).
+# EllandeVED/NumworksApplication (gh-pages branch), and `gh` for GitHub Releases.
 
 set -euo pipefail
 
@@ -37,7 +44,8 @@ FEED_PREFIX="https://ellandeved.github.io/NumworksApplication/"
 GITHUB_REPO="EllandeVED/NumworksApplication"
 PAGES_BRANCH="gh-pages"
 DERIVED="${TMPDIR:-/tmp}/NumWorks-release-derived"
-RELEASES="$ROOT/build/releases"
+# Outside the git work tree so zips/appcasts cannot be committed by accident.
+RELEASES="${NUMWORKS_RELEASES_DIR:-$HOME/Library/Caches/NumWorks/releases}"
 CONFIGURATION="Release"
 SKIP_PUBLISH=0
 NOTES_FILE=""
@@ -47,6 +55,35 @@ EPSILON_REF=""
 
 die() { echo "error: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
+
+# --- Progress bar (hashtags) -------------------------------------------------
+PROGRESS_WIDTH=24
+PROGRESS_STEP=0
+PROGRESS_TOTAL=1
+PROGRESS_STARTED_AT=0
+
+progress_init() {
+  PROGRESS_TOTAL="$1"
+  PROGRESS_STEP=0
+  PROGRESS_STARTED_AT=$SECONDS
+  echo
+  echo "Release progress (${PROGRESS_TOTAL} steps)"
+}
+
+progress() {
+  local label="${1:-}"
+  PROGRESS_STEP=$((PROGRESS_STEP + 1))
+  if (( PROGRESS_STEP > PROGRESS_TOTAL )); then
+    PROGRESS_STEP=$PROGRESS_TOTAL
+  fi
+  local filled=$(( PROGRESS_STEP * PROGRESS_WIDTH / PROGRESS_TOTAL ))
+  local empty=$(( PROGRESS_WIDTH - filled ))
+  local bar
+  bar="$(printf '%*s' "$filled" '' | tr ' ' '#')"
+  bar+="$(printf '%*s' "$empty" '' | tr ' ' '-')"
+  local elapsed=$((SECONDS - PROGRESS_STARTED_AT))
+  printf '[%s] %d/%d  %s  (%ds)\n' "$bar" "$PROGRESS_STEP" "$PROGRESS_TOTAL" "$label" "$elapsed"
+}
 
 usage() {
   awk '
@@ -83,6 +120,46 @@ done
 [[ -f "$PBXPROJ" ]] || die "project not found at $PBXPROJ"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] || die "invalid version: $VERSION"
 
+PIN_FILE="$ROOT/NumWorks/Support/epsilon-pinned-ref.txt"
+DRY_RUN_PBX_BACKUP=""
+DRY_RUN_PIN_BACKUP=""
+DRY_RUN_PIN_EXISTED=0
+
+restore_dry_run_state() {
+  [[ "$SKIP_PUBLISH" -eq 1 ]] || return 0
+  info "Dry run: restoring project so a later publish is unchanged by this run"
+  if [[ -n "$DRY_RUN_PBX_BACKUP" && -f "$DRY_RUN_PBX_BACKUP" ]]; then
+    cp "$DRY_RUN_PBX_BACKUP" "$PBXPROJ"
+  fi
+  if [[ "$DRY_RUN_PIN_EXISTED" -eq 1 ]]; then
+    if [[ -n "$DRY_RUN_PIN_BACKUP" && -f "$DRY_RUN_PIN_BACKUP" ]]; then
+      mkdir -p "$(dirname "$PIN_FILE")"
+      cp "$DRY_RUN_PIN_BACKUP" "$PIN_FILE"
+    fi
+  else
+    rm -f "$PIN_FILE"
+  fi
+  rm -f "$DRY_RUN_PBX_BACKUP" "$DRY_RUN_PIN_BACKUP"
+}
+
+if [[ "$SKIP_PUBLISH" -eq 1 ]]; then
+  info "Dry run (--skip-publish): will not create a GitHub Release or push gh-pages"
+  DRY_RUN_PBX_BACKUP="$(mktemp -t numworks-pbx)"
+  cp "$PBXPROJ" "$DRY_RUN_PBX_BACKUP"
+  if [[ -f "$PIN_FILE" ]]; then
+    DRY_RUN_PIN_EXISTED=1
+    DRY_RUN_PIN_BACKUP="$(mktemp -t numworks-pin)"
+    cp "$PIN_FILE" "$DRY_RUN_PIN_BACKUP"
+  fi
+  trap restore_dry_run_state EXIT
+fi
+
+# Steps: bump, notes, [epsilon], build, zip, sign/publish, [wait pages]
+PROGRESS_TOTAL=5
+[[ -n "$EPSILON_REF" ]] && PROGRESS_TOTAL=$((PROGRESS_TOTAL + 1))
+[[ "$SKIP_PUBLISH" -eq 0 ]] && PROGRESS_TOTAL=$((PROGRESS_TOTAL + 1))
+progress_init "$PROGRESS_TOTAL"
+
 # --- Resolve current build number (NumWorks app target only) -----------------
 
 current_build="$(
@@ -109,6 +186,7 @@ info "Version $VERSION (build $BUILD_NUMBER)  [was build $current_build]"
 
 # --- Bump versions in project.pbxproj ----------------------------------------
 
+progress "Bump version → ${VERSION} (${BUILD_NUMBER})"
 info "Updating MARKETING_VERSION / CURRENT_PROJECT_VERSION"
 python3 - <<PY
 from pathlib import Path
@@ -142,6 +220,7 @@ PY
 
 # --- Release notes -----------------------------------------------------------
 
+progress "Release notes"
 mkdir -p "$RELEASES"
 NOTES_OUT="$RELEASES/NumWorks-${VERSION}.md"
 
@@ -177,6 +256,7 @@ echo
 # --- Optional Epsilon upgrade ------------------------------------------------
 
 if [[ -n "$EPSILON_REF" ]]; then
+  progress "Prepare & build Epsilon"
   if [[ "$EPSILON_REF" == "latest" ]]; then
     info "Resolving latest numworks/epsilon version tag"
     EPSILON_REF="$("$ROOT/NumWorks/Scripts/latest-epsilon-tag.sh")"
@@ -194,6 +274,7 @@ fi
 
 # --- Build -------------------------------------------------------------------
 
+progress "Xcode build (${CONFIGURATION})"
 info "Building $SCHEME ($CONFIGURATION)"
 rm -rf "$DERIVED"
 mkdir -p "$ROOT/build"
@@ -232,6 +313,7 @@ info "Built NumWorks $got_version ($got_build)"
 
 # --- Zip ---------------------------------------------------------------------
 
+progress "Zip app"
 ZIP="$RELEASES/NumWorks-${VERSION}.zip"
 rm -f "$ZIP"
 info "Zipping → $ZIP"
@@ -239,6 +321,7 @@ ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
 
 # --- Sparkle generate_appcast ------------------------------------------------
 
+progress "Sign & publish (Sparkle)"
 SPARKLE_BIN="$(
   find "$DERIVED" ~/Library/Developer/Xcode/DerivedData \
     -path '*/Sparkle/bin/generate_appcast' \
@@ -256,26 +339,37 @@ PUBLISH_ARGS=(
 if [[ "$SKIP_PUBLISH" -eq 1 ]]; then
   PUBLISH_ARGS+=(--skip-publish)
 else
-  # GitHub Release must exist (public) before Sparkle points at its download URL.
-  if command -v gh >/dev/null 2>&1; then
-    info "Creating GitHub Release ${VERSION}"
-    if gh release view "$VERSION" >/dev/null 2>&1; then
-      gh release upload "$VERSION" "$ZIP" --clobber 2>/dev/null || true
-      gh release edit "$VERSION" --title "$VERSION" --notes-file "$NOTES_OUT"
-    else
-      gh release create "$VERSION" --title "$VERSION" --notes-file "$NOTES_OUT" "$ZIP"
-    fi
+  # GitHub Release (tag + title = marketing version) must exist before Sparkle
+  # enclosure URLs under …/releases/download/<version>/… work and get counted.
+  command -v gh >/dev/null 2>&1 || die "gh is required to create GitHub Release ${VERSION}"
+  info "Creating GitHub Release tag/title ${VERSION}"
+  if gh release view "$VERSION" >/dev/null 2>&1; then
+    gh release upload "$VERSION" "$ZIP" --clobber
+    gh release edit "$VERSION" --title "$VERSION" --notes-file "$NOTES_OUT" --latest
   else
-    info "gh not found — Sparkle will still publish; Widgy counts need a GitHub Release asset"
+    gh release create "$VERSION" \
+      --title "$VERSION" \
+      --notes-file "$NOTES_OUT" \
+      --latest \
+      "$ZIP"
   fi
 fi
 "$ROOT/NumWorks/Scripts/publish-sparkle.sh" "${PUBLISH_ARGS[@]}"
 
 if [[ "$SKIP_PUBLISH" -eq 1 ]]; then
-  info "Skipping publish (--skip-publish). Artifacts in $RELEASES"
+  info "Dry-run artifacts kept in $RELEASES (zip / local appcast) for you to inspect"
+  if [[ -f "$ZIP" ]]; then
+    open -R "$ZIP"
+  elif [[ -d "$RELEASES" ]]; then
+    open "$RELEASES"
+  fi
+  echo
+  echo "Done in $((SECONDS - PROGRESS_STARTED_AT))s (dry run — project files restored on exit)."
+  # EXIT trap restores pbxproj + epsilon pin
   exit 0
 fi
 
+progress "Wait for GitHub Pages"
 info "Waiting for GitHub Pages…"
 for i in $(seq 1 12); do
   if curl -fsSL "${FEED_PREFIX}appcast.xml" 2>/dev/null | grep -q "<title>${VERSION}</title>"; then
@@ -283,7 +377,7 @@ for i in $(seq 1 12); do
     info "Live: ${FEED_PREFIX}appcast.xml"
     info "Zip:  ${FEED_PREFIX}NumWorks-${VERSION}.zip"
     echo
-    echo "Done. Installed apps in /Applications can Check for Updates to ${VERSION}."
+    echo "Done in $((SECONDS - PROGRESS_STARTED_AT))s. Installed apps in /Applications can Check for Updates to ${VERSION}."
     exit 0
   fi
   sleep 5
@@ -292,4 +386,5 @@ done
 echo
 info "Pushed, but Pages has not shown ${VERSION} yet — check again in a minute:"
 echo "  ${FEED_PREFIX}appcast.xml"
+echo "Elapsed: $((SECONDS - PROGRESS_STARTED_AT))s"
 exit 0

@@ -21,7 +21,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 FEED_PREFIX="https://ellandeved.github.io/NumworksApplication/"
 GITHUB_REPO="${GITHUB_REPO:-EllandeVED/NumworksApplication}"
 PAGES_BRANCH="${PAGES_BRANCH:-gh-pages}"
-RELEASES="$ROOT/build/releases"
+RELEASES="${NUMWORKS_RELEASES_DIR:-$HOME/Library/Caches/NumWorks/releases}"
 SKIP_PUBLISH="${SKIP_PUBLISH:-0}"
 
 VERSION=""
@@ -91,8 +91,11 @@ fi
 
 [[ -f "$STAGE/appcast.xml" ]] || die "appcast.xml was not generated"
 cp "$STAGE/appcast.xml" "$RELEASES/appcast.xml"
-cp "$STAGE/NumWorks-${VERSION}.zip" "$RELEASES/NumWorks-${VERSION}.zip"
-cp "$NOTES" "$RELEASES/NumWorks-${VERSION}.md"
+# Avoid macOS `cp: … are identical` (non-zero exit) when paths already match.
+[[ "$STAGE/NumWorks-${VERSION}.zip" -ef "$RELEASES/NumWorks-${VERSION}.zip" ]] \
+  || cp "$STAGE/NumWorks-${VERSION}.zip" "$RELEASES/NumWorks-${VERSION}.zip"
+[[ "$NOTES" -ef "$RELEASES/NumWorks-${VERSION}.md" ]] \
+  || cp "$NOTES" "$RELEASES/NumWorks-${VERSION}.md"
 info "Appcast ready at $RELEASES/appcast.xml"
 
 if [[ "$SKIP_PUBLISH" -eq 1 ]]; then

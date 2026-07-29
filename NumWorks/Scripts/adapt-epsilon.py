@@ -219,9 +219,10 @@ def adapt_shared_events_cpp(root: Path) -> None:
   /* As pressing keys on the simulator does not generate interruptions, we need
    * to poll the keyboard more regularly than on the device. */
   // >>> NUMWORKS_PAUSE
-  /* When the macOS shell hides/occludes the window, sleep much longer to cut
-   * idle CPU/energy. Visible: ~100 Hz. Hidden: ~2 Hz. */
-  const int simulatorDelay = NumWorksSimulatorIsActive() ? 10 : 500;
+  /* When the macOS shell hides the window (orderOut), poll less often.
+   * Keep the sleep short: epsilon_main runs on the AppKit main thread, so a
+   * long msleep would delay show/hide shortcuts and clicks. */
+  const int simulatorDelay = NumWorksSimulatorIsActive() ? 10 : 50;
   // <<< NUMWORKS_PAUSE
   maximumDelay = std::min(simulatorDelay, maximumDelay);"""
         if old not in text:

@@ -2,6 +2,7 @@ name: Release download stats
 
 # Builds stats.json / CSVs on gh-pages for a Widgy (or similar) widget.
 # Counts GitHub Release asset downloads for NumWorks-*.zip (and legacy NumWorks.zip).
+# Deploys to gh-pages only when download data actually changed (not on every cron).
 #
 # Widgy JSON URL:
 #   https://ellandeved.github.io/NumworksApplication/stats.json
@@ -21,13 +22,17 @@ jobs:
       OWNER: EllandeVED
       REPO: NumworksApplication
     steps:
-      - name: Fetch existing history from gh-pages
+      - name: Fetch existing stats from gh-pages
         run: |
           mkdir -p site
-          curl -sfL "https://${OWNER}.github.io/${REPO}/history.json" -o site/history.json \
-            || echo '{"releases":{}}' > site/history.json
+          curl -sfL "https://${OWNER}.github.io/${REPO}/history.json" -o site/history.prev.json \
+            || echo '{"releases":{}}' > site/history.prev.json
+          cp site/history.prev.json site/history.json
+          curl -sfL "https://${OWNER}.github.io/${REPO}/stats.json" -o site/stats.prev.json \
+            || echo '{}' > site/stats.prev.json
 
       - name: Build stats.json for Widgy
+        id: stats
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -37,6 +42,7 @@ jobs:
           owner = os.environ["OWNER"]
           repo = os.environ["REPO"]
           token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
+          github_output = os.environ.get("GITHUB_OUTPUT")
 
           api = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=20"
           headers = {
@@ -60,7 +66,6 @@ jobs:
               return f"{dd}/{m}/{y[2:]}"
 
           def asset_downloads(release) -> int:
-              """Prefer NumWorks-<tag>.zip, else any NumWorks*.zip, else NumWorks.zip."""
               tag = release.get("tag_name") or ""
               assets = release.get("assets") or []
               preferred = f"NumWorks-{tag}.zip"
@@ -76,15 +81,23 @@ jobs:
                       matched = True
               return total if matched else 0
 
+          def meaningful(payload: dict, hist: dict) -> dict:
+              """Fingerprint without the always-changing 'updated' field."""
+              return {
+                  "asset": payload.get("asset"),
+                  "days": payload.get("days"),
+                  "latest2": payload.get("latest2"),
+                  "downloads_total_latest": payload.get("downloads_total_latest"),
+                  "history": hist,
+              }
+
           today = datetime.date.today()
           days = [(today - datetime.timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
           today_key = days[-1]
 
           out_dir = pathlib.Path("site")
-          out_dir.mkdir(parents=True, exist_ok=True)
-
-          hist_path = out_dir / "history.json"
-          hist = json.loads(hist_path.read_text(encoding="utf-8")) if hist_path.exists() else {"releases": {}}
+          prev_hist = json.loads((out_dir / "history.prev.json").read_text(encoding="utf-8"))
+          hist = json.loads(json.dumps(prev_hist))  # deep copy
 
           for rel in hist.get("releases", {}).values():
               totals = rel.get("totals", {})
@@ -133,27 +146,43 @@ jobs:
               "downloads_total_latest": latest2[0]["downloads_total"] if latest2 else 0,
           }
 
+          prev_payload = json.loads((out_dir / "stats.prev.json").read_text(encoding="utf-8"))
+          changed = meaningful(payload, hist) != meaningful(prev_payload, prev_hist)
+
+          def set_output(key: str, value: str) -> None:
+              if not github_output:
+                  return
+              with open(github_output, "a", encoding="utf-8") as fh:
+                  fh.write(f"{key}={value}\n")
+
+          if not changed:
+              print("No meaningful stats change — skip deploy")
+              set_output("changed", "false")
+              raise SystemExit(0)
+
           def day2(iso_day: str) -> str:
               return datetime.date.fromisoformat(iso_day).strftime("%a")[:2]
 
-          def write_csv(filename: str, release_obj: dict):
+          def write_csv(filename: str, release_obj: dict) -> None:
               lines = ["day,value"]
               for iso_day, val in zip(days, release_obj["downloads_per_day_last7"]):
                   lines.append(f"{day2(iso_day)},{int(val)}")
-              (out_dir / filename).write_text("\n".join(lines), encoding="utf-8")
+              (out_dir / filename).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
           if len(latest2) > 0:
               write_csv("stats_r0.csv", latest2[0])
           if len(latest2) > 1:
               write_csv("stats_r1.csv", latest2[1])
 
-          hist_path.write_text(json.dumps(hist, indent=2), encoding="utf-8")
-          (out_dir / "stats.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+          (out_dir / "history.json").write_text(json.dumps(hist, indent=2) + "\n", encoding="utf-8")
+          (out_dir / "stats.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+          set_output("changed", "true")
           print(json.dumps(payload, indent=2))
           PY
 
       # IMPORTANT: only update stats files — never wipe Sparkle zips / appcast.
       - name: Publish stats to gh-pages
+        if: steps.stats.outputs.changed == 'true'
         run: |
           git clone --branch gh-pages --single-branch \
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${OWNER}/${REPO}.git" pages
@@ -170,8 +199,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add stats.json history.json stats_r0.csv stats_r1.csv site .nojekyll
           if git diff --cached --quiet; then
-            echo "No stats changes"
+            echo "No file-level diff after copy — skip push"
           else
             git commit -m "Update download stats"
             git push origin gh-pages
           fi
+
+      - name: Skip deploy notice
+        if: steps.stats.outputs.changed != 'true'
+        run: echo "Stats unchanged — no gh-pages deploy."

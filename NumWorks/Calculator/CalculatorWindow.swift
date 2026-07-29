@@ -66,19 +66,19 @@ final class CalculatorWindow {
             window.collectionBehavior.remove(.moveToActiveSpace)
         }
 
-        // Keep / refresh chrome before ordering front so a launch in native
-        // style that later switches to toolbar is reflected immediately.
-        applyWindowStyle()
-
-        window.alphaValue = 1
+        // Wake the simulator before ordering front so the next main-thread
+        // iteration presents promptly (epsilon_main shares this thread).
         EpsilonBridge.isSimulatorActive = true
+        window.alphaValue = 1
+
+        // Always activate — including .accessory (menu-bar-only) mode. Skipping
+        // activate left the previously focused app’s window above ours.
+        NSApp.activate(ignoringOtherApps: true)
         window.orderFrontRegardless()
-        if NSApp.activationPolicy() != .accessory {
-            NSApp.activate(ignoringOtherApps: true)
-        }
         window.makeKeyAndOrderFront(nil)
-        restoreCalculatorFocus()
-        syncSimulatorActivity()
+        if let contentView = window.contentView {
+            window.makeFirstResponder(contentView)
+        }
     }
 
     func hide() {
@@ -89,16 +89,25 @@ final class CalculatorWindow {
     }
 
     func toggleVisibility() {
-        if isVisibleOnActiveSpace {
+        guard let window else { return }
+        // If already on-screen but behind something else, bring forward instead
+        // of hiding — matches menu-bar calculator expectations.
+        if window.isVisible && window.isOnActiveSpace && isFrontmostCalculator(window) {
             hide()
         } else {
             show()
         }
     }
 
+    /// True when the calculator is the focused front window (safe to hide).
+    private func isFrontmostCalculator(_ window: NSWindow) -> Bool {
+        NSApp.isActive && window.isKeyWindow
+    }
+
     func bringToFront() {
         guard let window else { return }
         NSApp.activate(ignoringOtherApps: true)
+        window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
     }
 
@@ -220,24 +229,9 @@ final class CalculatorWindow {
                 WindowSizing.applyConstraints(to: window)
             }
         })
-        windowObservers.append(center.addObserver(
-            forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.syncSimulatorActivity()
-            }
-        })
-        syncSimulatorActivity()
-    }
-
-    /// Pause Epsilon when ordered out or fully covered (another Space, full-screen app).
-    private func syncSimulatorActivity() {
-        guard let window else {
-            EpsilonBridge.isSimulatorActive = false
-            return
-        }
-        let visible = window.isVisible && window.occlusionState.contains(.visible)
-        EpsilonBridge.isSimulatorActive = visible
+        // Do not pause on occlusion: covering the calculator with another
+        // window must not freeze the main thread / feel like a hide glitch.
+        // Pause only via show()/hide() (orderOut).
     }
 
     private func detachObservers() {
