@@ -16,6 +16,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Appcast feed stays on Pages; new zip enclosures point at GitHub Releases so
+# download_count (and the Widgy stats widget) includes Sparkle updates.
 FEED_PREFIX="https://ellandeved.github.io/NumworksApplication/"
 GITHUB_REPO="${GITHUB_REPO:-EllandeVED/NumworksApplication}"
 PAGES_BRANCH="${PAGES_BRANCH:-gh-pages}"
@@ -72,16 +74,17 @@ else
 fi
 
 info "Signing update + writing appcast"
+# Enclosure URL: GitHub Releases CDN (counted) — filename is appended by Sparkle.
+DOWNLOAD_PREFIX="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/"
 if [[ -n "${SPARKLE_ED_KEY:-}" ]]; then
-  # CI: private key from secret, never Keychain
   printf '%s' "$SPARKLE_ED_KEY" | "$SPARKLE_BIN" \
     --ed-key-file - \
-    --download-url-prefix "$FEED_PREFIX" \
+    --download-url-prefix "$DOWNLOAD_PREFIX" \
     --embed-release-notes \
     "$STAGE"
 else
   "$SPARKLE_BIN" \
-    --download-url-prefix "$FEED_PREFIX" \
+    --download-url-prefix "$DOWNLOAD_PREFIX" \
     --embed-release-notes \
     "$STAGE"
 fi

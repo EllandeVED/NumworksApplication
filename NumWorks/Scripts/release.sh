@@ -255,6 +255,19 @@ PUBLISH_ARGS=(
 )
 if [[ "$SKIP_PUBLISH" -eq 1 ]]; then
   PUBLISH_ARGS+=(--skip-publish)
+else
+  # GitHub Release must exist (public) before Sparkle points at its download URL.
+  if command -v gh >/dev/null 2>&1; then
+    info "Creating GitHub Release ${VERSION}"
+    if gh release view "$VERSION" >/dev/null 2>&1; then
+      gh release upload "$VERSION" "$ZIP" --clobber 2>/dev/null || true
+      gh release edit "$VERSION" --title "$VERSION" --notes-file "$NOTES_OUT"
+    else
+      gh release create "$VERSION" --title "$VERSION" --notes-file "$NOTES_OUT" "$ZIP"
+    fi
+  else
+    info "gh not found — Sparkle will still publish; Widgy counts need a GitHub Release asset"
+  fi
 fi
 "$ROOT/NumWorks/Scripts/publish-sparkle.sh" "${PUBLISH_ARGS[@]}"
 

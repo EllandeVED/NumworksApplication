@@ -251,6 +251,19 @@ jobs:
             exit 1
           }
           chmod +x "$GEN"
+
+          # Publish GitHub Release first so Sparkle enclosure URLs
+          # (…/releases/download/<version>/…) are publicly downloadable and counted.
+          tag="${VERSION}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --draft=false --title "${VERSION}" --notes-file "$NOTES"
+          else
+            gh release create "$tag" \
+              --title "${VERSION}" \
+              --notes-file "$NOTES" \
+              "$ZIP"
+          fi
+
           ./NumWorks/Scripts/publish-sparkle.sh \
             --version "$VERSION" \
             --zip "$ZIP" \
@@ -270,12 +283,6 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "Release NumWorks ${VERSION} (Epsilon ${EPSILON_REF})"
             git push
-          fi
-
-          # Publish the draft GitHub Release (tag + title = marketing version only)
-          tag="${VERSION}"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release edit "$tag" --draft=false --title "${VERSION}"
           fi
 
           echo "Shipped NumWorks ${VERSION} → https://ellandeved.github.io/NumworksApplication/appcast.xml"
