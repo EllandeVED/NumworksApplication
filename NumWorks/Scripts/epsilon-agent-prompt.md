@@ -30,12 +30,20 @@ Old line-exact patches in `NumWorks/Patches/legacy/` are historical only. Prefer
     `[EpsilonBridge registerCalculatorWindow:…]` and `setAlphaValue:0.0`
   - soften / clear `setFrameAutosaveName` and prefer `setRestorable:NO`
   - `willShutdown` unregisters the bridge
+- `ion/src/simulator/shared/events.cpp`:
+  - include `NumWorksSimulatorActive.h`
+  - in `waitForInterruptingEvent`, use a long poll delay (~500 ms) when
+    `!NumWorksSimulatorIsActive()`, else ~10 ms
+- `ion/src/simulator/shared/window.cpp`:
+  - include `NumWorksSimulatorActive.h`
+  - in `refresh()`, return early (keep dirty flag) when inactive — no present
 - `build/targets.simulator.macos.mak` (or similar):
   - marked block `# >>> NUMWORKS_INTEGRATION` … `# <<< NUMWORKS_INTEGRATION`
   - with `NUMWORKS_INTEGRATION_DIR`, `-Dmain=epsilon_main` on simulator `main.cpp`,
     and a `libepsilon.a` libtool rule over `$(epsilon_src)`
 
-Headers live in `NumWorks/Integration/EpsilonBridge.h` (passed via `NUMWORKS_INTEGRATION_DIR`).
+Headers live in `NumWorks/Integration/` (passed via `NUMWORKS_INTEGRATION_DIR`),
+including `EpsilonBridge.h` and `NumWorksSimulatorActive.h`.
 
 ## Reproduce locally
 ```bash

@@ -1,7 +1,10 @@
 #import "EpsilonBridge.h"
 
 #import <objc/runtime.h>
+#include <stdatomic.h>
 #include <stdlib.h>
+
+#include "NumWorksSimulatorActive.h"
 
 /* Epsilon's main() is renamed to epsilon_main by the build-system patch
  * (Patches/002-static-library-target.patch). Declared here with C++ linkage,
@@ -18,6 +21,13 @@ NSNotificationName const EpsilonWindowDidBecomeAvailableNotification =
     @"EpsilonWindowDidBecomeAvailableNotification";
 
 static IMP NumWorksOriginalTerminate = NULL;
+/* Start paused: AppController shows or hides after attach. Avoids ~100 Hz
+ * polling while the window is still alpha-0 / ordered out. */
+static atomic_bool sSimulatorActive = false;
+
+bool NumWorksSimulatorIsActive(void) {
+  return atomic_load_explicit(&sSimulatorActive, memory_order_relaxed);
+}
 
 static void NumWorksTerminate(id self, SEL _cmd, id sender) {
   if (NumWorksOriginalTerminate != NULL) {
@@ -44,6 +54,15 @@ static __weak NSWindow *sCalculatorWindow = nil;
 
 + (NSWindow *)calculatorWindow {
   return sCalculatorWindow;
+}
+
++ (BOOL)isSimulatorActive {
+  return NumWorksSimulatorIsActive();
+}
+
++ (void)setSimulatorActive:(BOOL)active {
+  atomic_store_explicit(&sSimulatorActive, active ? true : false,
+                        memory_order_relaxed);
 }
 
 + (void)installProcessExitOnTerminate {
@@ -92,6 +111,7 @@ static __weak NSWindow *sCalculatorWindow = nil;
   // Only clear the bridge when Epsilon shuts down the same window instance.
   if (window != nil && sCalculatorWindow == window) {
     sCalculatorWindow = nil;
+    [self setSimulatorActive:NO];
   }
 }
 

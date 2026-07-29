@@ -71,17 +71,20 @@ final class CalculatorWindow {
         applyWindowStyle()
 
         window.alphaValue = 1
+        EpsilonBridge.isSimulatorActive = true
         window.orderFrontRegardless()
         if NSApp.activationPolicy() != .accessory {
             NSApp.activate(ignoringOtherApps: true)
         }
         window.makeKeyAndOrderFront(nil)
         restoreCalculatorFocus()
+        syncSimulatorActivity()
     }
 
     func hide() {
         // Leave the AppKit toolbar accessory attached. Creating/destroying it
         // on every toggle was unnecessary once SwiftUI/ViewBridge was removed.
+        EpsilonBridge.isSimulatorActive = false
         window?.orderOut(nil)
     }
 
@@ -217,6 +220,24 @@ final class CalculatorWindow {
                 WindowSizing.applyConstraints(to: window)
             }
         })
+        windowObservers.append(center.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.syncSimulatorActivity()
+            }
+        })
+        syncSimulatorActivity()
+    }
+
+    /// Pause Epsilon when ordered out or fully covered (another Space, full-screen app).
+    private func syncSimulatorActivity() {
+        guard let window else {
+            EpsilonBridge.isSimulatorActive = false
+            return
+        }
+        let visible = window.isVisible && window.occlusionState.contains(.visible)
+        EpsilonBridge.isSimulatorActive = visible
     }
 
     private func detachObservers() {

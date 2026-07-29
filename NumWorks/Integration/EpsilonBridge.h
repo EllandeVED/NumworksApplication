@@ -11,6 +11,10 @@ FOUNDATION_EXPORT NSNotificationName const EpsilonWindowDidBecomeAvailableNotifi
 + (void)registerCalculatorWindow:(NSWindow *)window;
 + (void)unregisterCalculatorWindow:(NSWindow *)window;
 
+/* When NO, Epsilon sleeps longer between polls and skips SDL presents.
+ * Drive from CalculatorWindow show/hide / occlusion. */
+@property(class, nonatomic, getter=isSimulatorActive) BOOL simulatorActive;
+
 /* Runs the Epsilon simulator on the current thread. This wraps
  * epsilon_main(), the renamed Epsilon entry point (see
  * Patches/002-static-library-target.patch). It must be called from the main

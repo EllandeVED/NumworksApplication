@@ -184,6 +184,104 @@ def adapt_window_mm(root: Path) -> None:
         info("window.mm already adapted")
 
 
+PAUSE_INCLUDE = '#include "NumWorksSimulatorActive.h"'
+PAUSE_MARKER = "// >>> NUMWORKS_PAUSE"
+
+
+def adapt_shared_events_cpp(root: Path) -> None:
+    """Slow the ~100 Hz poll when the calculator window is hidden/occluded."""
+    path = root / "ion/src/simulator/shared/events.cpp"
+    if not path.is_file():
+        die(f"missing {path.relative_to(root)}")
+    info(f"adapting {path.relative_to(root)}")
+    original = path.read_text()
+    text = original
+
+    if PAUSE_INCLUDE not in text:
+        # After the last local include in the preamble
+        m = re.search(r'(#include "screenshot.h"\n)', text)
+        if m:
+            text = text[: m.end()] + PAUSE_INCLUDE + "\n" + text[m.end() :]
+        else:
+            text = PAUSE_INCLUDE + "\n" + text
+
+    if PAUSE_MARKER in text:
+        info("events.cpp pause hook already present")
+    else:
+        old = """bool waitForInterruptingEvent(int maximumDelay, int *timeout) {
+  Keyboard::scan();
+  /* As pressing keys on the simulator does not generate interruptions, we need
+   * to poll the keyboard more regularly than on the device. */
+  constexpr int simulatorDelay = 10;
+  maximumDelay = std::min(simulatorDelay, maximumDelay);"""
+        new = """bool waitForInterruptingEvent(int maximumDelay, int *timeout) {
+  Keyboard::scan();
+  /* As pressing keys on the simulator does not generate interruptions, we need
+   * to poll the keyboard more regularly than on the device. */
+  // >>> NUMWORKS_PAUSE
+  /* When the macOS shell hides/occludes the window, sleep much longer to cut
+   * idle CPU/energy. Visible: ~100 Hz. Hidden: ~2 Hz. */
+  const int simulatorDelay = NumWorksSimulatorIsActive() ? 10 : 500;
+  // <<< NUMWORKS_PAUSE
+  maximumDelay = std::min(simulatorDelay, maximumDelay);"""
+        if old not in text:
+            die("events.cpp waitForInterruptingEvent pattern not found — upstream changed?")
+        text = text.replace(old, new, 1)
+
+    if text != original:
+        path.write_text(text)
+        info("events.cpp updated")
+    else:
+        info("events.cpp already adapted")
+
+
+def adapt_shared_window_cpp(root: Path) -> None:
+    """Skip SDL_RenderPresent while the calculator is hidden (keep dirty flag)."""
+    path = root / "ion/src/simulator/shared/window.cpp"
+    if not path.is_file():
+        die(f"missing {path.relative_to(root)}")
+    info(f"adapting {path.relative_to(root)}")
+    original = path.read_text()
+    text = original
+
+    if PAUSE_INCLUDE not in text:
+        # Prefer after window.h include
+        m = re.search(r'(#include "window.h"\n)', text)
+        if m:
+            text = text[: m.end()] + PAUSE_INCLUDE + "\n" + text[m.end() :]
+        else:
+            text = PAUSE_INCLUDE + "\n" + text
+
+    if PAUSE_MARKER in text and "NumWorksSimulatorIsActive" in text:
+        info("window.cpp pause hook already present")
+    else:
+        old = """void refresh() {
+  if (!sNeedsRefresh || isHeadless()) {
+    return;
+  }
+  sNeedsRefresh = false;"""
+        new = """void refresh() {
+  if (!sNeedsRefresh || isHeadless()) {
+    return;
+  }
+  // >>> NUMWORKS_PAUSE
+  /* Do not present (or clear the dirty flag) while hidden — redraw on show. */
+  if (!NumWorksSimulatorIsActive()) {
+    return;
+  }
+  // <<< NUMWORKS_PAUSE
+  sNeedsRefresh = false;"""
+        if old not in text:
+            die("window.cpp refresh() pattern not found — upstream changed?")
+        text = text.replace(old, new, 1)
+
+    if text != original:
+        path.write_text(text)
+        info("window.cpp updated")
+    else:
+        info("window.cpp already adapted")
+
+
 def find_macos_simulator_mak(root: Path) -> Path:
     candidates = [
         root / "build/targets.simulator.macos.mak",
@@ -292,6 +390,8 @@ def main() -> None:
         die(f"does not look like an Epsilon tree (no ion/): {root}")
 
     adapt_window_mm(root)
+    adapt_shared_events_cpp(root)
+    adapt_shared_window_cpp(root)
     adapt_makefile(root)
     info("done")
 

@@ -78,18 +78,36 @@ private struct ExternalLink: View {
 private struct LicencePlaceholderView: View {
     @Environment(\.dismiss) private var dismiss
 
+    private static let gplURL = URL(string: "https://www.gnu.org/licenses/gpl-3.0.html")
+
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Licence")
                 .font(.headline)
-            Text("Licence information will be available in a future release.")
-                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+
+            Text("NumWorks for Mac is free software licensed under the GNU General Public License v3.0 (GPLv3).")
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Copyright © 2025–2026 EllandeVED.")
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: 280)
-            Button("Close") { dismiss() }
-                .keyboardShortcut(.defaultAction)
+
+            Text("It embeds Epsilon (NumWorks), also under GPLv3. You may redistribute and modify this software under the terms of the GPL; derivative works must remain under GPLv3.")
+                .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(.secondary)
+
+            if let url = Self.gplURL {
+                Link("Read the full GPLv3 text", destination: url)
+            }
+
+            HStack {
+                Spacer()
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.top, 8)
         }
         .padding(24)
-        .frame(width: 340, height: 160)
+        .frame(width: 400)
     }
 }
