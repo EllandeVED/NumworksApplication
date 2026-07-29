@@ -158,11 +158,22 @@ final class AppController: NSObject {
         // Reveal only after the saved frame and chrome are applied.
         window.alphaValue = 1
 
+        // After the window is up, offer AppMover’s confirmation once on first launch.
+        DispatchQueue.main.async { [weak self] in
+            self?.offerMoveToApplicationsIfNeeded()
+        }
+
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--show-settings") {
             openSettings()
         }
 #endif
+    }
+
+    private func offerMoveToApplicationsIfNeeded() {
+        guard !preferences.didOfferMoveToApplications else { return }
+        preferences.didOfferMoveToApplications = true
+        AppMover.moveIfNecessary(prompt: true)
     }
 
     private func installStatusItem() {

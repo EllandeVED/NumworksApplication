@@ -58,17 +58,8 @@ struct SettingsRootView: View {
 
 struct GeneralSettingsView: View {
     @ObservedObject var preferences: Preferences
+    @ObservedObject private var updates = UpdateController.shared
     let actions: SettingsActions
-
-    private var isInApplicationsFolder: Bool {
-        Bundle.main.isInstalled
-    }
-
-    private var automaticUpdates: Binding<Bool> {
-        Binding(
-            get: { UpdateController.shared.automaticallyChecksForUpdates },
-            set: { UpdateController.shared.automaticallyChecksForUpdates = $0 })
-    }
 
     var body: some View {
         Form {
@@ -107,11 +98,14 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle("Check for updates automatically", isOn: automaticUpdates)
-                    .disabled(!isInApplicationsFolder)
+                Toggle(
+                    "Check for updates automatically",
+                    isOn: $updates.automaticallyChecksForUpdates)
+                    .disabled(!updates.isInstalledInApplications)
                 Button("Check for Updates…", action: actions.checkForUpdates)
-                    .disabled(!isInApplicationsFolder)
-                if !isInApplicationsFolder {
+                    .disabled(
+                        !updates.isInstalledInApplications || !updates.canCheckForUpdates)
+                if !updates.isInstalledInApplications {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
@@ -124,7 +118,7 @@ struct GeneralSettingsView: View {
                     }
                 }
             } footer: {
-                if isInApplicationsFolder {
+                if updates.isInstalledInApplications {
                     Text("Updates install only while NumWorks lives in the Applications folder.")
                         .font(.caption)
                         .foregroundStyle(.secondary)

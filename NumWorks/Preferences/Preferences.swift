@@ -21,6 +21,7 @@ final class Preferences: ObservableObject {
         static let launchWindowVisible = "launchWindowVisible"
         static let moveWindowToCurrentSpaceWhenShown = "moveWindowToCurrentSpaceWhenShown"
         static let savedWindowFrame = "savedWindowFrame"
+        static let didOfferMoveToApplications = "didOfferMoveToApplications"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -137,6 +138,13 @@ final class Preferences: ObservableObject {
 
     var savedWindowFrame: String? {
         didSet { defaults.set(savedWindowFrame, forKey: Key.savedWindowFrame) }
+    }
+
+    /// One-shot flag for the first-launch “Move to Applications” prompt.
+    /// Not reset by `resetToDefaults` so Settings reset does not re-prompt.
+    var didOfferMoveToApplications: Bool {
+        get { defaults.bool(forKey: Key.didOfferMoveToApplications) }
+        set { defaults.set(newValue, forKey: Key.didOfferMoveToApplications) }
     }
 
     // MARK: - Reset
