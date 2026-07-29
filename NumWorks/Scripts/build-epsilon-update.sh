@@ -124,6 +124,23 @@ fi
 APP="$DERIVED/Build/Products/${CONFIGURATION}/NumWorks.app"
 [[ -d "$APP" ]] || die "app not found at $APP"
 
+# CI ad-hoc builds leave Sparkle with its original Team ID while the main
+# binary is unsigned/ad-hoc → dyld: "different Team IDs". Re-sign the whole
+# bundle so the app and embedded frameworks share one signature.
+if [[ "${CI:-}" == "true" || -n "${GITHUB_ACTIONS:-}" ]]; then
+  if [[ -z "${APPLE_CERTIFICATE_BASE64:-}" ]]; then
+    info "Deep ad-hoc re-sign (app + Sparkle) so Team IDs match"
+    codesign --force --deep --sign - "$APP"
+    codesign --verify --deep --strict "$APP" || die "ad-hoc codesign verify failed"
+  fi
+fi
+
+got_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
+got_build="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
+[[ "$got_version" == "$VERSION" ]] || die "built marketing version is $got_version, expected $VERSION"
+[[ "$got_build" == "$BUILD_NUMBER" ]] || die "built build number is $got_build, expected $BUILD_NUMBER"
+info "Built NumWorks $got_version ($got_build)"
+
 ZIP="$RELEASES/NumWorks-${VERSION}.zip"
 rm -f "$ZIP"
 info "Zipping → $ZIP"
