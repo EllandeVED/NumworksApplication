@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// Version information displayed in Settings (Advanced and About).
@@ -31,6 +32,18 @@ enum AppInfo {
                   forKeys: [.contentModificationDateKey]))?.contentModificationDate
         else { return nil }
         return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    /// Application icon from the asset catalog.
+    static var applicationIcon: NSImage {
+        if let icon = NSImage(named: NSImage.Name("AppIcon")), icon.isValid, icon.size != .zero {
+            return icon
+        }
+        if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let icon = NSImage(contentsOf: url) {
+            return icon
+        }
+        return NSApp.applicationIconImage
     }
 
     private static func info(_ key: String) -> String {

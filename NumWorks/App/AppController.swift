@@ -13,6 +13,7 @@ final class AppController: NSObject {
 
     private var shortcutController: ShortcutController?
     private var settingsWindowController: SettingsWindowController?
+    private var statusItemController: StatusItemController?
     private var bridgeObserver: NSObjectProtocol?
     private var hasAttached = false
     private var cancellables = Set<AnyCancellable>()
@@ -33,6 +34,12 @@ final class AppController: NSObject {
     /// Safe to call once only; guarded to avoid duplicate observers.
     func start() {
         guard bridgeObserver == nil else { return }
+
+        // Always start unpinned; the user can enable Always on Top during the session.
+        preferences.alwaysOnTop = false
+
+        // Keep Sparkle alive for the whole process (weak delegates inside).
+        _ = UpdateController.shared
 
         shortcutController = ShortcutController(
             preferences: preferences,
@@ -55,7 +62,6 @@ final class AppController: NSObject {
             }
         }
 
-        // The bridge may already hold the window if Epsilon started first.
         if let window = EpsilonBridge.calculatorWindow {
             attach(to: window)
         }
@@ -71,18 +77,33 @@ final class AppController: NSObject {
         preferences.alwaysOnTop.toggle()
     }
 
+    func quit() {
+        // EpsilonBridge swizzles SDLApplication.terminate: so this actually
+        // exits after SDL_QUIT (needed for Quit and Sparkle).
+        NSApp.terminate(nil)
+    }
+
     func openSettings() {
         if settingsWindowController == nil {
             settingsWindowController = SettingsWindowController(
                 preferences: preferences,
                 actions: makeSettingsActions(),
                 onClose: { [weak self] in
-                    // Hand keyboard focus back to the calculator so Epsilon
-                    // input keeps working after Settings closes.
-                    self?.calculatorWindow.restoreCalculatorFocus()
+                    self?.handleSettingsClosed()
                 })
         }
         settingsWindowController?.show()
+        // Keep the Dock icon while Settings is open so the user never loses it.
+        applyDockIconPolicy(effectiveShowDockIcon: true)
+    }
+
+    private func handleSettingsClosed() {
+        calculatorWindow.restoreCalculatorFocus()
+        applyDockIconPolicy(effectiveShowDockIcon: preferences.showDockIcon)
+    }
+
+    private var isSettingsVisible: Bool {
+        settingsWindowController?.window?.isVisible == true
     }
 
     // MARK: - Attach
@@ -91,10 +112,12 @@ final class AppController: NSObject {
         guard !hasAttached else { return }
         hasAttached = true
 
-        // The bridge notification fires at the start of Epsilon's didInit(),
-        // which then keeps configuring the window (style mask, title, aspect
-        // ratio, frame autosave). Defer our setup one run-loop turn so it is
-        // applied after Epsilon's and not overwritten by it.
+        // Keep invisible until performAttach restores the frame. Epsilon also
+        // sets alpha to 0 in didInit; this covers the race before that runs.
+        window.alphaValue = 0
+        window.isRestorable = false
+        window.setFrameAutosaveName("")
+
         DispatchQueue.main.async { [self] in
             performAttach(to: window)
         }
@@ -114,52 +137,67 @@ final class AppController: NSObject {
             })
         calculatorWindow.attach(to: window, toolbarActions: toolbarActions)
 
-        // The main menu and NSApp's Apple event handlers exist by now, since
-        // SDL has finished launching the application.
+        // Ensure Dock / app switcher use the asset-catalog AppIcon (About
+        // already did; the Dock sometimes kept a stale generic template).
+        NSApp.applicationIconImage = AppInfo.applicationIcon
+
         MenuBar.installSettingsItem(target: self, action: #selector(openSettingsAction(_:)))
+        MenuBar.installCheckForUpdatesItem(
+            target: UpdateController.shared,
+            action: #selector(UpdateController.checkForUpdates(_:)))
+        MenuBar.installQuitItem(target: self, action: #selector(quitAction(_:)))
         installReopenHandler()
-        applyDockIconPolicy(preferences.showDockIcon)
+        installStatusItem()
+        applyDockIconPolicy(effectiveShowDockIcon: preferences.showDockIcon)
 
         if preferences.launchWindowVisible {
             calculatorWindow.show()
         } else {
             calculatorWindow.hide()
         }
+        // Reveal only after the saved frame and chrome are applied.
+        window.alphaValue = 1
 
 #if DEBUG
-        // Debug aid: `NumWorks --show-settings` opens the Settings window
-        // immediately, which is handy for automated UI verification.
         if ProcessInfo.processInfo.arguments.contains("--show-settings") {
             openSettings()
         }
 #endif
     }
 
+    private func installStatusItem() {
+        guard statusItemController == nil else { return }
+        statusItemController = StatusItemController(
+            preferences: preferences,
+            actions: .init(
+                togglePin: { [weak self] in self?.togglePin() },
+                toggleVisibility: { [weak self] in self?.toggleCalculator() },
+                openSettings: { [weak self] in self?.openSettings() },
+                quit: { [weak self] in self?.quit() },
+                isPinned: { [weak self] in self?.preferences.alwaysOnTop ?? false },
+                isVisible: { [weak self] in
+                    self?.calculatorWindow.isVisibleOnActiveSpace ?? false
+                }))
+    }
+
     // MARK: - Preference observation
 
-    /// Forwards preference changes to the window immediately. The toolbar's
-    /// SwiftUI view observes Preferences directly for button-level changes.
     private func subscribeToPreferenceChanges() {
         preferences.$alwaysOnTop
             .dropFirst()
             .sink { [weak self] pinned in
                 self?.calculatorWindow.setAlwaysOnTop(pinned)
-                // The pin button must not keep keyboard focus away from the
-                // calculator content.
                 self?.calculatorWindow.restoreCalculatorFocus()
-            }
-            .store(in: &cancellables)
-
-        preferences.$showTopBar
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.calculatorWindow.updateToolbarVisibility()
             }
             .store(in: &cancellables)
 
         preferences.$windowStyle
             .dropFirst()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                // Apply chrome + toolbar immediately, even if the calculator
+                // is currently hidden, so switching Native ↔ Toolbar never
+                // waits for the next show.
                 self?.calculatorWindow.applyWindowStyle()
             }
             .store(in: &cancellables)
@@ -167,24 +205,35 @@ final class AppController: NSObject {
         preferences.$showDockIcon
             .dropFirst()
             .sink { [weak self] show in
-                self?.applyDockIconPolicy(show)
+                guard let self else { return }
+                // Defer hiding while Settings is open / key.
+                if !show && self.isSettingsVisible {
+                    self.applyDockIconPolicy(effectiveShowDockIcon: true)
+                } else {
+                    self.applyDockIconPolicy(effectiveShowDockIcon: show)
+                }
             }
             .store(in: &cancellables)
     }
 
     // MARK: - Dock icon
 
-    /// .regular shows the Dock icon; .accessory hides it while global
-    /// shortcuts and the reopen handler keep working. macOS limitation:
-    /// accessory apps have no menu bar, so Command-comma only works through
-    /// the menu while the Dock icon is shown.
-    private func applyDockIconPolicy(_ show: Bool) {
+    /// .regular shows the Dock icon; .accessory hides it. While Settings is
+    /// open the Dock icon is forced visible so the user never loses access.
+    private func applyDockIconPolicy(effectiveShowDockIcon show: Bool) {
         let policy: NSApplication.ActivationPolicy = show ? .regular : .accessory
-        guard NSApp.activationPolicy() != policy else { return }
-        NSApp.setActivationPolicy(policy)
+        if NSApp.activationPolicy() != policy {
+            NSApp.setActivationPolicy(policy)
+        }
 
-        // Changing the policy deactivates the app; reactivate so whichever
-        // window the user was interacting with stays usable.
+        // Switching activation policy can reset the Dock tile to a generic
+        // template. Always re-apply the asset-catalog AppIcon whenever the
+        // Dock icon is (or becomes) visible — including the temporary show
+        // while Settings is open with “Show Dock icon” disabled.
+        if show {
+            NSApp.applicationIconImage = AppInfo.applicationIcon
+        }
+
         NSApp.activate(ignoringOtherApps: true)
         if let settingsWindow = settingsWindowController?.window, settingsWindow.isVisible {
             settingsWindow.makeKeyAndOrderFront(nil)
@@ -199,31 +248,24 @@ final class AppController: NSObject {
         openSettings()
     }
 
+    @objc private func quitAction(_ sender: Any?) {
+        quit()
+    }
+
     private func makeSettingsActions() -> SettingsActions {
         SettingsActions(
-            centreWindow: { [weak self] in
-                self?.calculatorWindow.centre()
-            },
-            resetWindowSize: { [weak self] in
-                self?.calculatorWindow.resetSize()
-            },
-            resetWindowPosition: { [weak self] in
-                self?.calculatorWindow.resetPosition()
-            },
             restoreDefaultSettings: { [weak self] in
-                // Preference sinks apply the changed behaviour immediately;
-                // the saved window frame is intentionally left untouched.
                 self?.preferences.resetToDefaults()
                 self?.shortcutController?.resetShortcutsToDefaults()
+                UpdateController.shared.automaticallyChecksForUpdates = true
+            },
+            checkForUpdates: {
+                UpdateController.shared.checkForUpdates(nil)
             })
     }
 
     // MARK: - Dock reopen
 
-    /// SDL owns the NSApplication delegate, so the Dock-icon "reopen" event
-    /// is handled through NSAppleEventManager instead of the delegate. Must
-    /// be installed after NSApplication finishes launching, or NSApp would
-    /// overwrite the handler with its own.
     private func installReopenHandler() {
         NSAppleEventManager.shared().setEventHandler(
             self,

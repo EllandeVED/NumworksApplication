@@ -10,14 +10,13 @@ import LaunchAtLogin
 final class Preferences: ObservableObject {
 
     private enum Key {
-        static let showTopBar = "showTopBar"
         static let alwaysOnTop = "alwaysOnTop"
         static let showPinButton = "showPinButton"
         static let showSettingsButton = "showSettingsButton"
-        static let rememberWindowPosition = "rememberWindowPosition"
-        static let rememberWindowSize = "rememberWindowSize"
         static let shortcutsEnabled = "shortcutsEnabled"
         static let showDockIcon = "showDockIcon"
+        static let showMenuBarIcon = "showMenuBarIcon"
+        static let menuBarIconStyle = "menuBarIconStyle"
         static let windowStyle = "windowStyle"
         static let launchWindowVisible = "launchWindowVisible"
         static let moveWindowToCurrentSpaceWhenShown = "moveWindowToCurrentSpaceWhenShown"
@@ -25,16 +24,15 @@ final class Preferences: ObservableObject {
     }
 
     private static let defaultValues: [String: Any] = [
-        Key.showTopBar: true,
         Key.alwaysOnTop: false,
         Key.showPinButton: true,
         Key.showSettingsButton: true,
-        Key.rememberWindowPosition: true,
-        Key.rememberWindowSize: true,
         Key.shortcutsEnabled: true,
         Key.showDockIcon: true,
+        Key.showMenuBarIcon: true,
+        Key.menuBarIconStyle: MenuBarIconStyle.filled.rawValue,
         Key.windowStyle: WindowStyle.toolbar.rawValue,
-        Key.launchWindowVisible: true,
+        Key.launchWindowVisible: false,
         Key.moveWindowToCurrentSpaceWhenShown: true,
     ]
 
@@ -44,17 +42,15 @@ final class Preferences: ObservableObject {
         self.defaults = defaults
         defaults.register(defaults: Self.defaultValues)
 
-        showTopBar = defaults.bool(forKey: Key.showTopBar)
         alwaysOnTop = defaults.bool(forKey: Key.alwaysOnTop)
         showPinButton = defaults.bool(forKey: Key.showPinButton)
         showSettingsButton = defaults.bool(forKey: Key.showSettingsButton)
-        rememberWindowPosition = defaults.bool(forKey: Key.rememberWindowPosition)
-        rememberWindowSize = defaults.bool(forKey: Key.rememberWindowSize)
         shortcutsEnabled = defaults.bool(forKey: Key.shortcutsEnabled)
         showDockIcon = defaults.bool(forKey: Key.showDockIcon)
+        showMenuBarIcon = defaults.bool(forKey: Key.showMenuBarIcon)
+        menuBarIconStyle = defaults.string(forKey: Key.menuBarIconStyle)
+            .flatMap(MenuBarIconStyle.init(rawValue:)) ?? .filled
         launchAtLogin = Self.systemLaunchAtLogin
-        // Coerce unavailable styles (minimal) so the Settings picker, which
-        // only offers the available styles, never shows an empty selection.
         let storedStyle = defaults.string(forKey: Key.windowStyle)
             .flatMap(WindowStyle.init(rawValue:)) ?? .toolbar
         windowStyle = storedStyle.isAvailable ? storedStyle : .toolbar
@@ -65,10 +61,6 @@ final class Preferences: ObservableObject {
     }
 
     // MARK: - Settings
-
-    @Published var showTopBar: Bool {
-        didSet { defaults.set(showTopBar, forKey: Key.showTopBar) }
-    }
 
     @Published var alwaysOnTop: Bool {
         didSet { defaults.set(alwaysOnTop, forKey: Key.alwaysOnTop) }
@@ -82,29 +74,22 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(showSettingsButton, forKey: Key.showSettingsButton) }
     }
 
-    @Published var rememberWindowPosition: Bool {
-        didSet { defaults.set(rememberWindowPosition, forKey: Key.rememberWindowPosition) }
-    }
-
-    @Published var rememberWindowSize: Bool {
-        didSet { defaults.set(rememberWindowSize, forKey: Key.rememberWindowSize) }
-    }
-
-    /// Master switch for both global keyboard shortcuts.
     @Published var shortcutsEnabled: Bool {
         didSet { defaults.set(shortcutsEnabled, forKey: Key.shortcutsEnabled) }
     }
 
-    /// Whether the app appears in the Dock (NSApp activation policy .regular
-    /// vs .accessory). Applied by AppController.
     @Published var showDockIcon: Bool {
         didSet { defaults.set(showDockIcon, forKey: Key.showDockIcon) }
     }
 
-    /// Login-item registration. The system (via the LaunchAtLogin package /
-    /// SMAppService) is the source of truth, so this is deliberately not
-    /// persisted in UserDefaults; the value is read back from the system at
-    /// startup and written through on change.
+    @Published var showMenuBarIcon: Bool {
+        didSet { defaults.set(showMenuBarIcon, forKey: Key.showMenuBarIcon) }
+    }
+
+    @Published var menuBarIconStyle: MenuBarIconStyle {
+        didSet { defaults.set(menuBarIconStyle.rawValue, forKey: Key.menuBarIconStyle) }
+    }
+
     @Published var launchAtLogin: Bool {
         didSet { Self.systemLaunchAtLogin = launchAtLogin }
     }
@@ -150,29 +135,44 @@ final class Preferences: ObservableObject {
 
     // MARK: - Window frame persistence (not shown in the Settings UI)
 
-    /// The last saved calculator window frame, encoded with NSStringFromRect.
-    /// Managed by CalculatorWindow; not user-facing.
     var savedWindowFrame: String? {
         didSet { defaults.set(savedWindowFrame, forKey: Key.savedWindowFrame) }
     }
 
     // MARK: - Reset
 
-    /// Restores every application preference to its default value. The saved
-    /// window frame is deliberately left untouched: window position and size
-    /// have their own dedicated reset buttons in Settings.
     func resetToDefaults() {
-        showTopBar = true
         alwaysOnTop = false
         showPinButton = true
         showSettingsButton = true
-        rememberWindowPosition = true
-        rememberWindowSize = true
         shortcutsEnabled = true
         showDockIcon = true
+        showMenuBarIcon = true
+        menuBarIconStyle = .filled
         launchAtLogin = false
         windowStyle = .toolbar
-        launchWindowVisible = true
+        launchWindowVisible = false
         moveWindowToCurrentSpaceWhenShown = true
+    }
+}
+
+enum MenuBarIconStyle: String, CaseIterable, Identifiable {
+    case outline
+    case filled
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .outline: return "Outline"
+        case .filled: return "Filled"
+        }
+    }
+
+    var imageName: String {
+        switch self {
+        case .outline: return "MenuBarIconOutline"
+        case .filled: return "MenuBarIconFilled"
+        }
     }
 }

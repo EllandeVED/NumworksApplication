@@ -1,0 +1,274 @@
+name: Epsilon update
+
+# 1) Daily (or manual): if a new Epsilon tag exists, prepare + build a testable app.
+# 2) You download the artifact, test locally.
+# 3) Click Approve on the "sparkle-ship" environment → Sparkle-signed publish to gh-pages
+#    with notes = "New Epsilon version" + upstream Epsilon release notes.
+#
+# One-time setup:
+#   • Repo Settings → Environments → New: sparkle-ship
+#     → Required reviewers: you  ← this is the Accept button
+#   • Secret SPARKLE_ED_KEY = Sparkle private key string:
+#       path/to/Sparkle/bin/generate_keys -x /tmp/sparkle.key
+#       paste the file contents into the secret (never commit the file)
+
+on:
+  schedule:
+    - cron: "15 7 * * *"
+  workflow_dispatch:
+    inputs:
+      epsilon_ref:
+        description: "Epsilon tag (empty = latest if newer than pin)"
+        required: false
+        default: ""
+      force:
+        description: "Build even if pin already matches"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: epsilon-update
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build testable update
+    runs-on: macos-15
+    outputs:
+      should_ship: ${{ steps.meta.outputs.should_ship }}
+      version: ${{ steps.meta.outputs.version }}
+      epsilon_ref: ${{ steps.meta.outputs.epsilon_ref }}
+      build_number: ${{ steps.meta.outputs.build_number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Epsilon build deps
+        run: |
+          brew install pkg-config freetype || true
+          python3 -m pip install --user lz4 pyelftools pypng stringcase
+
+      - name: Decide whether to build
+        id: decide
+        run: |
+          chmod +x NumWorks/Scripts/*.sh NumWorks/Scripts/*.py
+          latest="$(./NumWorks/Scripts/latest-epsilon-tag.sh)"
+          pinned=""
+          if [[ -f NumWorks/Support/epsilon-pinned-ref.txt ]]; then
+            pinned="$(tr -d '[:space:]' < NumWorks/Support/epsilon-pinned-ref.txt)"
+          fi
+          ref="${{ github.event.inputs.epsilon_ref }}"
+          force="${{ github.event.inputs.force }}"
+          if [[ -z "$ref" ]]; then
+            ref="$latest"
+          fi
+          echo "pinned=$pinned latest=$latest ref=$ref force=$force"
+          if [[ "$force" != "true" && -n "$pinned" && "$pinned" == "$ref" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Already on Epsilon $ref — nothing to build."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build update package
+        id: build
+        if: steps.decide.outputs.skip != 'true'
+        continue-on-error: true
+        run: |
+          set +e
+          ./NumWorks/Scripts/build-epsilon-update.sh "${{ steps.decide.outputs.ref }}"
+          status=$?
+          set -e
+          if [[ $status -ne 0 ]]; then
+            ref="${{ steps.decide.outputs.ref }}"
+            LOG="${RUNNER_TEMP}/epsilon-watch-build.log"
+            if [[ -f build/xcodebuild.log ]]; then
+              cp build/xcodebuild.log "$LOG"
+            else
+              : > "$LOG"
+            fi
+            tail -120 "$LOG" > "${RUNNER_TEMP}/excerpt.txt"
+            python3 - "$ref" "${RUNNER_TEMP}/excerpt.txt" "${RUNNER_TEMP}/epsilon-agent-prompt-filled.md" <<'PY'
+from pathlib import Path
+import sys
+ref, excerpt_path, out = sys.argv[1], sys.argv[2], sys.argv[3]
+tmpl = Path("NumWorks/Scripts/epsilon-agent-prompt.md").read_text()
+excerpt = Path(excerpt_path).read_text()
+Path(out).write_text(
+    tmpl.replace("{{EPSILON_REF}}", ref).replace("{{LOG_EXCERPT}}", excerpt)
+)
+PY
+            exit 1
+          fi
+          exit 0
+
+      - name: Upload testable app
+        if: steps.decide.outputs.skip != 'true' && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: numworks-epsilon-update
+          path: |
+            build/releases/NumWorks-*.zip
+            build/releases/NumWorks-*.md
+            build/releases/release-meta.env
+            build/releases/generate_appcast
+            NumWorks/Support/epsilon-pinned-ref.txt
+            NumWorks.xcodeproj/project.pbxproj
+          if-no-files-found: error
+
+      - name: Create draft GitHub Release (easy download)
+        if: steps.decide.outputs.skip != 'true' && steps.build.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -a
+          # shellcheck disable=SC1091
+          source build/releases/release-meta.env
+          set +a
+          tag="pending-${VERSION}-epsilon-${EPSILON_REF}"
+          gh release delete "$tag" --yes 2>/dev/null || true
+          gh release create "$tag" \
+            --draft \
+            --title "Test: NumWorks ${VERSION} (Epsilon ${EPSILON_REF})" \
+            --notes-file "build/releases/NumWorks-${VERSION}.md" \
+            "build/releases/NumWorks-${VERSION}.zip"
+
+      - name: Export meta for ship job
+        id: meta
+        run: |
+          if [[ "${{ steps.decide.outputs.skip }}" == "true" ]]; then
+            echo "should_ship=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "${{ steps.build.outcome }}" != "success" ]]; then
+            echo "should_ship=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          set -a
+          # shellcheck disable=SC1091
+          source build/releases/release-meta.env
+          set +a
+          echo "should_ship=true" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "epsilon_ref=${EPSILON_REF}" >> "$GITHUB_OUTPUT"
+          echo "build_number=${BUILD_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload failure logs
+        if: steps.decide.outputs.skip != 'true' && steps.build.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: epsilon-update-failure
+          path: |
+            build/xcodebuild.log
+            ${{ runner.temp }}/epsilon-agent-prompt-filled.md
+          if-no-files-found: ignore
+
+      - name: Open failure issue with agent prompt
+        if: steps.decide.outputs.skip != 'true' && steps.build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ref="${{ steps.decide.outputs.ref }}"
+          title="Epsilon ${ref} failed to compile for NumWorks"
+          gh label create epsilon-watch --description "Automated Epsilon watch failures" --color B60205 2>/dev/null || true
+          prompt_file="${RUNNER_TEMP}/epsilon-agent-prompt-filled.md"
+          body_file="$(mktemp)"
+          {
+            echo "Automated **Epsilon update** build failed for \`${ref}\`."
+            echo
+            echo "### Agent prompt"
+            echo
+            echo '```markdown'
+            if [[ -f "$prompt_file" ]]; then cat "$prompt_file"
+            else sed "s/{{EPSILON_REF}}/${ref}/g; s/{{LOG_EXCERPT}}/(see artifact)/g" NumWorks/Scripts/epsilon-agent-prompt.md
+            fi
+            echo '```'
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > "$body_file"
+          existing="$(gh issue list --label epsilon-watch --state open --json number,title --jq ".[] | select(.title==\"${title}\") | .number" | head -1)"
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --body-file "$body_file"
+          else
+            gh issue create --title "$title" --label "epsilon-watch" --body-file "$body_file"
+          fi
+
+      - name: Fail job on build error
+        if: steps.decide.outputs.skip != 'true' && steps.build.outcome == 'failure'
+        run: exit 1
+
+  ship:
+    name: Ship after you Accept
+    needs: build
+    if: needs.build.outputs.should_ship == 'true'
+    runs-on: macos-15
+    environment:
+      name: sparkle-ship
+      url: https://ellandeved.github.io/NumworksApplication/appcast.xml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: numworks-epsilon-update
+          path: artifact
+
+      - name: Publish Sparkle update
+        env:
+          SPARKLE_ED_KEY: ${{ secrets.SPARKLE_ED_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          chmod +x NumWorks/Scripts/*.sh artifact/generate_appcast 2>/dev/null || true
+          # Artifact layout may nest paths
+          META="$(find artifact -name release-meta.env | head -1)"
+          [[ -f "$META" ]] || { echo "release-meta.env missing"; exit 1; }
+          set -a
+          # shellcheck disable=SC1090
+          source "$META"
+          set +a
+          ZIP="$(find artifact -name "NumWorks-${VERSION}.zip" | head -1)"
+          NOTES="$(find artifact -name "NumWorks-${VERSION}.md" | head -1)"
+          GEN="$(find artifact -name generate_appcast | head -1)"
+          [[ -n "${SPARKLE_ED_KEY:-}" ]] || {
+            echo "Missing secret SPARKLE_ED_KEY — add your Sparkle EdDSA private key."
+            exit 1
+          }
+          chmod +x "$GEN"
+          ./NumWorks/Scripts/publish-sparkle.sh \
+            --version "$VERSION" \
+            --zip "$ZIP" \
+            --notes "$NOTES" \
+            --generate-appcast "$GEN"
+
+          # Commit version bump + Epsilon pin from the tested artifact
+          PBX="$(find artifact -path '*/project.pbxproj' | head -1)"
+          PIN="$(find artifact -name epsilon-pinned-ref.txt | head -1)"
+          cp "$PBX" NumWorks.xcodeproj/project.pbxproj
+          mkdir -p NumWorks/Support
+          cp "$PIN" NumWorks/Support/epsilon-pinned-ref.txt
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add NumWorks.xcodeproj/project.pbxproj NumWorks/Support/epsilon-pinned-ref.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Release NumWorks ${VERSION} (Epsilon ${EPSILON_REF})"
+            git push
+          fi
+
+          # Promote draft release to published
+          tag="pending-${VERSION}-epsilon-${EPSILON_REF}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --draft=false --title "NumWorks ${VERSION} (Epsilon ${EPSILON_REF})"
+          fi
+
+          echo "Shipped NumWorks ${VERSION} → https://ellandeved.github.io/NumworksApplication/appcast.xml"

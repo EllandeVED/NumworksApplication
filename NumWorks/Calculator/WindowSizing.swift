@@ -9,14 +9,22 @@ import AppKit
 /// calculator never depends on which chrome style is active.
 enum WindowSizing {
 
-    /// Epsilon's "perfect" content size (ion/src/simulator/shared/window.h).
-    static let defaultContentSize = NSSize(width: 458, height: 888)
+    /// Content size matching the calculator artwork aspect (background.jpg is
+    /// 1005×1975). Slightly taller than Epsilon’s historical 458×888 “perfect”
+    /// size so the body isn’t cropped at the top/bottom.
+    static let defaultContentSize = NSSize(width: 458, height: 900)
 
-    /// Half the perfect size; below this the calculator becomes unusable.
-    static let minimumContentSize = NSSize(width: 229, height: 444)
+    /// Half the default size; below this the calculator becomes unusable.
+    static let minimumContentSize = NSSize(width: 229, height: 450)
 
+    /// width / height
     static var aspectRatio: CGFloat {
         defaultContentSize.width / defaultContentSize.height
+    }
+
+    static func contentSize(forWidth width: CGFloat) -> NSSize {
+        let w = max(width, minimumContentSize.width)
+        return NSSize(width: w, height: w / aspectRatio)
     }
 
     /// Maximum content size derived from the visible frame of the given
@@ -28,7 +36,6 @@ enum WindowSizing {
                           height: defaultContentSize.height * 4)
         }
         let visible = screen.visibleFrame
-        // The title bar takes some of the visible height; keep a small margin.
         let availableHeight = visible.height - 40
         let height = max(availableHeight, minimumContentSize.height)
         return NSSize(width: height * aspectRatio, height: height)
@@ -37,6 +44,7 @@ enum WindowSizing {
     /// Applies min/max content constraints to the window. The aspect-ratio
     /// constraint itself is owned by Epsilon and left untouched.
     static func applyConstraints(to window: NSWindow) {
+        window.contentAspectRatio = defaultContentSize
         window.contentMinSize = minimumContentSize
         window.contentMaxSize = maximumContentSize(for: window.screen ?? NSScreen.main)
     }
@@ -102,16 +110,16 @@ enum WindowSizing {
     }
 
     private static func clampedSize(_ size: NSSize, window: NSWindow) -> NSSize {
-        let minFrame = window.frameRect(
-            forContentRect: NSRect(origin: .zero, size: minimumContentSize)).size
+        // Interpret the saved frame size as a frame, convert to content, then
+        // force the calculator aspect so a stale chrome-dependent frame can’t
+        // keep the window cropped.
+        let content = window.contentRect(forFrameRect: NSRect(origin: .zero, size: size)).size
+        let corrected = contentSize(forWidth: content.width)
+        let minContent = minimumContentSize
         let maxContent = maximumContentSize(for: window.screen ?? NSScreen.main)
-        let maxFrame = window.frameRect(
-            forContentRect: NSRect(origin: .zero, size: maxContent)).size
-        let height = min(max(size.height, minFrame.height), maxFrame.height)
-        // Width follows from the aspect ratio of the content; approximate by
-        // scaling proportionally, AppKit's aspect constraint corrects the rest.
-        let scale = height / size.height
-        return NSSize(width: size.width * scale, height: height)
+        let width = min(max(corrected.width, minContent.width), maxContent.width)
+        return window.frameRect(
+            forContentRect: NSRect(origin: .zero, size: contentSize(forWidth: width))).size
     }
 
     private static func centeredOrigin(for frameSize: NSSize, window: NSWindow) -> NSPoint {

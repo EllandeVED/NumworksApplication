@@ -10,7 +10,6 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NUMWORKS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 VENDOR_DIR="${NUMWORKS_DIR}/Vendor/EpsilonSource"
-PATCHES_DIR="${NUMWORKS_DIR}/Patches"
 REF="$1"
 
 "${SCRIPT_DIR}/fetch-epsilon.sh" "${REF}"
@@ -18,4 +17,4 @@ REF="$1"
 
 RESOLVED="$(git -C "${VENDOR_DIR}" rev-parse HEAD)"
 echo "Prepared Epsilon at commit: ${RESOLVED}"
-echo "Applied patches from: ${PATCHES_DIR}"
+echo "Adapted with: ${SCRIPT_DIR}/adapt-epsilon.py"

@@ -29,8 +29,19 @@ if [ ! -d "${VENDOR_DIR}/.git" ]; then
   exit 1
 fi
 
-if ! grep -q "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator/macos/window.mm"; then
-  echo "error: Epsilon patches are not applied." >&2
+if ! grep -q "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator/macos/window.mm" 2>/dev/null \
+  && ! grep -q "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator/mac/window.mm" 2>/dev/null; then
+  # Fall back: any adapted window.mm under the simulator tree.
+  if ! grep -Rql "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator" --include='window.mm' 2>/dev/null; then
+    echo "error: Epsilon has not been adapted for NumWorks." >&2
+    echo "error: Run NumWorks/Scripts/prepare-epsilon.sh <ref> first." >&2
+    exit 1
+  fi
+fi
+
+if ! grep -q "NUMWORKS_INTEGRATION" "${VENDOR_DIR}/build/targets.simulator.macos.mak" 2>/dev/null \
+  && ! grep -Rql "NUMWORKS_INTEGRATION" "${VENDOR_DIR}/build" --include='targets.simulator*mac*.mak' 2>/dev/null; then
+  echo "error: Epsilon macOS makefile is missing the NumWorks libepsilon.a rules." >&2
   echo "error: Run NumWorks/Scripts/prepare-epsilon.sh <ref> first." >&2
   exit 1
 fi

@@ -5,14 +5,12 @@ import KeyboardShortcuts
 
 /// Window/shortcut actions invoked from Settings, provided by AppController.
 struct SettingsActions {
-    let centreWindow: () -> Void
-    let resetWindowSize: () -> Void
-    let resetWindowPosition: () -> Void
     let restoreDefaultSettings: () -> Void
+    let checkForUpdates: () -> Void
 }
 
 enum SettingsTab: String {
-    case general, toolbar, window, shortcuts, advanced, about
+    case general, window, shortcuts, advanced, about
 }
 
 struct SettingsRootView: View {
@@ -23,13 +21,10 @@ struct SettingsRootView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            GeneralSettingsView(preferences: preferences)
+            GeneralSettingsView(preferences: preferences, actions: actions)
                 .tabItem { Label("General", systemImage: "gearshape") }
                 .tag(SettingsTab.general)
-            ToolbarSettingsView(preferences: preferences)
-                .tabItem { Label("Toolbar", systemImage: "menubar.rectangle") }
-                .tag(SettingsTab.toolbar)
-            WindowSettingsView(preferences: preferences, actions: actions)
+            WindowToolbarSettingsView(preferences: preferences)
                 .tabItem { Label("Window", systemImage: "macwindow") }
                 .tag(SettingsTab.window)
             ShortcutSettingsView(preferences: preferences)
@@ -42,13 +37,9 @@ struct SettingsRootView: View {
                 .tabItem { Label("About", systemImage: "info.circle") }
                 .tag(SettingsTab.about)
         }
-        // Grouped forms have no intrinsic height inside a TabView, so the
-        // window needs a fixed content size; forms scroll if they overflow.
-        .frame(width: 460, height: 480)
+        .frame(width: 460, height: 520)
     }
 
-    /// Debug aid: `NumWorks --show-settings --settings-tab=<name>` opens
-    /// Settings on a specific tab for automated UI verification.
     private static func initialTab() -> SettingsTab {
 #if DEBUG
         for argument in ProcessInfo.processInfo.arguments {
@@ -67,6 +58,17 @@ struct SettingsRootView: View {
 
 struct GeneralSettingsView: View {
     @ObservedObject var preferences: Preferences
+    let actions: SettingsActions
+
+    private var isInApplicationsFolder: Bool {
+        Bundle.main.isInstalled
+    }
+
+    private var automaticUpdates: Binding<Bool> {
+        Binding(
+            get: { UpdateController.shared.automaticallyChecksForUpdates },
+            set: { UpdateController.shared.automaticallyChecksForUpdates = $0 })
+    }
 
     var body: some View {
         Form {
@@ -88,57 +90,71 @@ struct GeneralSettingsView: View {
             } footer: {
                 Text("Without a Dock icon, NumWorks keeps running in the "
                      + "background and stays reachable through its keyboard "
-                     + "shortcuts. macOS hides the menu bar for apps without "
-                     + "a Dock icon.")
+                     + "shortcuts. The Dock icon stays visible while Settings "
+                     + "is open.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-        }
-        .formStyle(.grouped)
-    }
-}
-
-// MARK: - Toolbar
-
-struct ToolbarSettingsView: View {
-    @ObservedObject var preferences: Preferences
-
-    private var toolbarControlsEnabled: Bool {
-        preferences.windowStyle == .toolbar
-    }
-
-    var body: some View {
-        Form {
             Section {
-                // Minimal stays hidden until it has a safe implementation.
-                Picker("Toolbar style", selection: $preferences.windowStyle) {
-                    Text("Standard macOS Window").tag(WindowStyle.native)
-                    Text("Native Toolbar").tag(WindowStyle.toolbar)
+                Toggle("Enable menu bar icon", isOn: $preferences.showMenuBarIcon)
+                Picker("Menu bar icon style", selection: $preferences.menuBarIconStyle) {
+                    ForEach(MenuBarIconStyle.allCases) { style in
+                        Text(style.displayName).tag(style)
+                    }
                 }
                 .pickerStyle(.radioGroup)
-            } footer: {
-                Text("Changes apply immediately.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .disabled(!preferences.showMenuBarIcon)
             }
+
             Section {
-                Toggle("Show top toolbar", isOn: $preferences.showTopBar)
-                    .disabled(!toolbarControlsEnabled)
-                Toggle("Show pin button", isOn: $preferences.showPinButton)
-                    .disabled(!toolbarControlsEnabled || !preferences.showTopBar)
-                Toggle("Show settings button", isOn: $preferences.showSettingsButton)
-                    .disabled(!toolbarControlsEnabled || !preferences.showTopBar)
+                Toggle("Check for updates automatically", isOn: automaticUpdates)
+                    .disabled(!isInApplicationsFolder)
+                Button("Check for Updates…", action: actions.checkForUpdates)
+                    .disabled(!isInApplicationsFolder)
+                if !isInApplicationsFolder {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .imageScale(.small)
+                            .accessibilityHidden(true)
+                        Button("Move to Applications Folder") {
+                            AppMover.moveIfNecessary(prompt: false)
+                        }
+                        .controlSize(.small)
+                    }
+                }
+            } footer: {
+                if isInApplicationsFolder {
+                    Text("Updates install only while NumWorks lives in the Applications folder.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Label {
+                        Text("Updates are unavailable until NumWorks is in the Applications folder. "
+                             + "macOS blocks update installation from the Desktop or Downloads.")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .symbolRenderingMode(.hierarchical)
+                    .accessibilityLabel(
+                        "Warning: Updates are unavailable until NumWorks is in the Applications folder.")
+                }
             }
         }
         .formStyle(.grouped)
     }
 }
 
-// MARK: - Window
+// MARK: - Window (merged with Toolbar)
 
-struct WindowSettingsView: View {
+struct WindowToolbarSettingsView: View {
     @ObservedObject var preferences: Preferences
-    let actions: SettingsActions
+
+    private var isToolbarStyle: Bool {
+        preferences.windowStyle == .toolbar
+    }
 
     var body: some View {
         Form {
@@ -148,18 +164,16 @@ struct WindowSettingsView: View {
                        isOn: $preferences.moveWindowToCurrentSpaceWhenShown)
             }
             Section {
-                Toggle("Remember window position",
-                       isOn: $preferences.rememberWindowPosition)
-                Toggle("Remember window size",
-                       isOn: $preferences.rememberWindowSize)
+                Picker("Toolbar style", selection: $preferences.windowStyle) {
+                    Text("Native").tag(WindowStyle.native)
+                    Text("Toolbar").tag(WindowStyle.toolbar)
+                }
+                .pickerStyle(.radioGroup)
             }
-            Section {
-                LabeledContent("Position and size") {
-                    HStack {
-                        Button("Center Window", action: actions.centreWindow)
-                        Button("Reset Position", action: actions.resetWindowPosition)
-                        Button("Reset Size", action: actions.resetWindowSize)
-                    }
+            if isToolbarStyle {
+                Section {
+                    Toggle("Show pin button", isOn: $preferences.showPinButton)
+                    Toggle("Show settings button", isOn: $preferences.showSettingsButton)
                 }
             }
         }
@@ -212,30 +226,20 @@ struct AdvancedSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("NumWorks", value: AppInfo.bundleVersion)
-                LabeledContent("Build", value: AppInfo.bundleBuild)
-                LabeledContent("Epsilon", value: AppInfo.epsilonVersion)
-                if let buildDate = AppInfo.buildDate {
-                    LabeledContent("Build date", value: buildDate)
-                }
-            } header: {
-                Text("Versions")
-            } footer: {
-                Text("The Epsilon simulator is compiled into NumWorks and "
-                     + "runs inside this same app process. No separate "
-                     + "simulator app is launched.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section {
                 Button("Restore Default Settings…") {
                     isConfirmingReset = true
                 }
             } footer: {
-                Text("Window position and size are not affected; they have "
-                     + "their own reset buttons in the Window tab.")
+                Text("The calculator window keeps its current position and size.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+            Section {
+                LabeledContent("Custom Epsilon Framework") {
+                    Text("Coming in a future release.")
+                        .foregroundStyle(.secondary)
+                }
+                .disabled(true)
             }
         }
         .formStyle(.grouped)

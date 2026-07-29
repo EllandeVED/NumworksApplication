@@ -22,7 +22,6 @@ final class CalculatorWindow {
     }
 
     deinit {
-        // Tokens capture nothing, safe to clean up off the main actor.
         for observer in windowObservers {
             NotificationCenter.default.removeObserver(observer)
         }
@@ -31,7 +30,6 @@ final class CalculatorWindow {
     var isAttached: Bool { window != nil }
 
     /// Whether the calculator is currently visible on the active Space.
-    /// A window covered by other windows still counts as visible.
     var isVisibleOnActiveSpace: Bool {
         guard let window else { return false }
         return window.isVisible && window.isOnActiveSpace
@@ -39,58 +37,54 @@ final class CalculatorWindow {
 
     // MARK: - Attach
 
-    /// Called once the Epsilon NSWindow becomes available. Applies chrome,
-    /// constraints, the saved frame and all current preferences.
     func attach(to window: NSWindow, toolbarActions: ToolbarActions) {
         guard self.window !== window else { return }
         detachObservers()
         self.window = window
         self.toolbarActions = toolbarActions
 
-        // Epsilon enabled AppKit frame autosaving ("Calculator"); disable it
-        // so our preference-controlled persistence is the single authority.
+        window.isRestorable = false
         window.setFrameAutosaveName("")
+        UserDefaults.standard.removeObject(forKey: "NSWindow Frame Calculator")
 
         window.styleMask.insert(.resizable)
         window.isMovable = true
 
         WindowSizing.applyConstraints(to: window)
         restoreFrame()
-        // Keep AppKit's stored "Calculator" frame in sync with ours: Epsilon
-        // re-enables autosaving early in the next launch, and a stale value
-        // there would briefly restore the wrong frame before we take over.
-        window.saveFrame(usingName: "Calculator")
         applyPreferences()
         observeWindowNotifications(for: window)
     }
 
     // MARK: - Visibility
 
-    /// Shows the calculator on the active Space, activates NumWorks and
-    /// makes the window key so SDL keeps receiving keyboard events.
     func show() {
         guard let window else { return }
-        // moveToActiveSpace only takes effect while the window is being
-        // ordered in, so it can stay set permanently without the window
-        // appearing on every Space (unlike canJoinAllSpaces).
         if preferences.moveWindowToCurrentSpaceWhenShown {
             window.collectionBehavior.insert(.moveToActiveSpace)
         } else {
             window.collectionBehavior.remove(.moveToActiveSpace)
         }
-        NSApp.activate(ignoringOtherApps: true)
+
+        // Keep / refresh chrome before ordering front so a launch in native
+        // style that later switches to toolbar is reflected immediately.
+        applyWindowStyle()
+
+        window.alphaValue = 1
+        window.orderFrontRegardless()
+        if NSApp.activationPolicy() != .accessory {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         window.makeKeyAndOrderFront(nil)
         restoreCalculatorFocus()
     }
 
-    /// Hides the window without closing it: the SDL window and the Epsilon
-    /// loop keep running, only the on-screen presence goes away.
     func hide() {
+        // Leave the AppKit toolbar accessory attached. Creating/destroying it
+        // on every toggle was unnecessary once SwiftUI/ViewBridge was removed.
         window?.orderOut(nil)
     }
 
-    /// Hides when visible on the current Space; shows otherwise. A window
-    /// stranded on another Space therefore behaves as "show".
     func toggleVisibility() {
         if isVisibleOnActiveSpace {
             hide()
@@ -119,7 +113,6 @@ final class CalculatorWindow {
         var frame = window.frame
         let newSize = window.frameRect(forContentRect:
             NSRect(origin: .zero, size: WindowSizing.defaultContentSize)).size
-        // Keep the top-left corner in place while resizing.
         frame.origin.y += frame.height - newSize.height
         frame.size = newSize
         window.setFrame(frame, display: true, animate: true)
@@ -132,7 +125,6 @@ final class CalculatorWindow {
 
     // MARK: - Preferences
 
-    /// Applies every preference that maps onto window state.
     func applyPreferences() {
         setAlwaysOnTop(preferences.alwaysOnTop)
         applyWindowStyle()
@@ -140,35 +132,44 @@ final class CalculatorWindow {
 
     func setAlwaysOnTop(_ pinned: Bool) {
         window?.level = pinned ? .floating : .normal
+        toolbar.refresh()
     }
 
-    /// Applies the current window style and toolbar visibility.
+    /// Applies chrome + toolbar for the current style immediately.
     func applyWindowStyle() {
         guard let window else { return }
-        // Minimal is a placeholder; treat it as native (see WindowStyle).
         let style = preferences.windowStyle.isAvailable
             ? preferences.windowStyle : .native
+        let previousWidth = max(
+            window.contentLayoutRect.width,
+            WindowSizing.minimumContentSize.width)
+
         style.applyChrome(to: window)
         updateToolbarVisibility()
+        normalizeContentSize(of: window, width: previousWidth)
+        window.displayIfNeeded()
     }
 
     func updateToolbarVisibility() {
         guard let window else { return }
         let style = preferences.windowStyle.isAvailable
             ? preferences.windowStyle : .native
-        let wantsToolbar = style.usesAccessoryToolbar && preferences.showTopBar
-        if wantsToolbar, let toolbarActions {
+        if style.usesAccessoryToolbar, let toolbarActions {
             toolbar.attach(to: window, preferences: preferences, actions: toolbarActions)
         } else {
-            toolbar.detach()
+            toolbar.detach(from: window)
         }
+    }
+
+    private func normalizeContentSize(of window: NSWindow, width: CGFloat) {
+        let size = WindowSizing.contentSize(forWidth: width)
+        window.contentAspectRatio = WindowSizing.defaultContentSize
+        WindowSizing.applyConstraints(to: window)
+        window.setContentSize(size)
     }
 
     // MARK: - Focus
 
-    /// SDL listens for key events through the window's content view. Toolbar
-    /// buttons and the Settings window can move first-responder status away;
-    /// this hands it back so calculator keyboard input keeps working.
     func restoreCalculatorFocus() {
         guard let window, window.isVisible else { return }
         if !window.isKeyWindow {
@@ -186,27 +187,20 @@ final class CalculatorWindow {
         let saved = preferences.savedWindowFrame.flatMap(WindowSizing.decode(frameString:))
         let frame = WindowSizing.restorationFrame(
             savedFrame: saved,
-            rememberPosition: preferences.rememberWindowPosition,
-            rememberSize: preferences.rememberWindowSize,
+            rememberPosition: true,
+            rememberSize: true,
             window: window)
         window.setFrame(frame, display: true)
     }
 
     private func saveFrameIfEnabled() {
         guard let window else { return }
-        guard preferences.rememberWindowPosition || preferences.rememberWindowSize else {
-            return
-        }
         preferences.savedWindowFrame = WindowSizing.encode(frame: window.frame)
     }
 
     private func observeWindowNotifications(for window: NSWindow) {
         let center = NotificationCenter.default
-        let names: [Notification.Name] = [
-            NSWindow.didMoveNotification,
-            NSWindow.didEndLiveResizeNotification,
-        ]
-        for name in names {
+        for name in [NSWindow.didMoveNotification, NSWindow.didEndLiveResizeNotification] {
             windowObservers.append(center.addObserver(
                 forName: name, object: window, queue: .main
             ) { [weak self] _ in
@@ -215,7 +209,6 @@ final class CalculatorWindow {
                 }
             })
         }
-        // Recompute the maximum size when the window lands on another screen.
         windowObservers.append(center.addObserver(
             forName: NSWindow.didChangeScreenNotification, object: window, queue: .main
         ) { [weak self] _ in

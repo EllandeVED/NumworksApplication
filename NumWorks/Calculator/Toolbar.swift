@@ -1,5 +1,5 @@
 import AppKit
-import SwiftUI
+import Combine
 
 /// Actions the toolbar can trigger. Provided by AppController so the toolbar
 /// stays free of window-management logic.
@@ -8,94 +8,147 @@ struct ToolbarActions {
     let openSettings: () -> Void
 }
 
-/// Owns the NSTitlebarAccessoryViewController hosting the SwiftUI toolbar.
+/// Owns an AppKit titlebar accessory (no SwiftUI / ViewBridge).
 ///
-/// The accessory is placed at the trailing edge of the standard title bar, so
-/// the traffic lights and the centred window title keep their native
-/// positions and the calculator content below is never overlapped.
+/// Pure AppKit avoids the RemoteViewService cancellations that crashed the
+/// app when the calculator was shown and hidden from the status item.
 @MainActor
-final class CalculatorToolbarController {
+final class CalculatorToolbarController: NSObject {
 
     private var accessory: NSTitlebarAccessoryViewController?
+    private var pinButton: NSButton?
+    private var settingsButton: NSButton?
+    private var stack: NSStackView?
+    private var actions: ToolbarActions?
+    private weak var preferences: Preferences?
+    private var cancellables = Set<AnyCancellable>()
 
     var isAttached: Bool { accessory != nil }
 
     func attach(to window: NSWindow, preferences: Preferences, actions: ToolbarActions) {
-        guard accessory == nil else { return }
+        self.preferences = preferences
+        self.actions = actions
+        observePreferences(preferences)
 
-        let hostingView = NSHostingView(
-            rootView: CalculatorToolbarView(preferences: preferences, actions: actions))
-        hostingView.frame.size = hostingView.fittingSize
+        if accessory == nil {
+            let pin = makeIconButton(
+                toolTip: "Pin",
+                accessibilityLabel: "Pin calculator",
+                action: #selector(pinClicked(_:)))
+            let settings = makeIconButton(
+                toolTip: "Open NumWorks settings",
+                accessibilityLabel: "Open settings",
+                action: #selector(settingsClicked(_:)))
+            settings.image = NSImage(
+                systemSymbolName: "gearshape",
+                accessibilityDescription: "Settings")
 
-        let accessory = NSTitlebarAccessoryViewController()
-        accessory.view = hostingView
-        accessory.layoutAttribute = .trailing
+            let stack = NSStackView(views: [pin, settings])
+            stack.orientation = .horizontal
+            stack.alignment = .centerY
+            stack.spacing = 2
+            stack.edgeInsets = NSEdgeInsets(top: 0, left: 4, bottom: 0, right: 6)
+            stack.setHuggingPriority(.required, for: .horizontal)
+            stack.translatesAutoresizingMaskIntoConstraints = false
 
-        window.addTitlebarAccessoryViewController(accessory)
-        self.accessory = accessory
+            let container = NSView(frame: NSRect(x: 0, y: 0, width: 64, height: 28))
+            container.addSubview(stack)
+            // Left-align the icons inside the trailing titlebar accessory.
+            NSLayoutConstraint.activate([
+                stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                container.trailingAnchor.constraint(equalTo: stack.trailingAnchor),
+                container.heightAnchor.constraint(equalToConstant: 28),
+            ])
+
+            let accessory = NSTitlebarAccessoryViewController()
+            accessory.view = container
+            accessory.layoutAttribute = .trailing
+            window.addTitlebarAccessoryViewController(accessory)
+
+            self.accessory = accessory
+            self.pinButton = pin
+            self.settingsButton = settings
+            self.stack = stack
+        }
+
+        refresh()
     }
 
-    func detach() {
-        accessory?.removeFromParent()
+    func detach(from window: NSWindow) {
+        cancellables.removeAll()
+        if let accessory,
+           let index = window.titlebarAccessoryViewControllers.firstIndex(of: accessory) {
+            window.removeTitlebarAccessoryViewController(at: index)
+        }
         accessory = nil
+        pinButton = nil
+        settingsButton = nil
+        stack = nil
+        actions = nil
+        preferences = nil
     }
-}
 
-/// Compact trailing title bar controls: pin (always on top) and settings.
-struct CalculatorToolbarView: View {
-    @ObservedObject var preferences: Preferences
-    let actions: ToolbarActions
+    func refresh() {
+        guard let preferences, let stack else { return }
 
-    var body: some View {
-        HStack(spacing: 4) {
-            if preferences.showPinButton {
-                ToolbarIconButton(
-                    systemImage: preferences.alwaysOnTop ? "pin.fill" : "pin",
-                    help: preferences.alwaysOnTop
-                        ? "Unpin: stop keeping the calculator above other windows"
-                        : "Pin: keep the calculator above other windows",
-                    accessibilityLabel: preferences.alwaysOnTop
-                        ? "Unpin calculator" : "Pin calculator",
-                    isActive: preferences.alwaysOnTop,
-                    action: actions.togglePin)
-            }
-            if preferences.showSettingsButton {
-                ToolbarIconButton(
-                    systemImage: "gearshape",
-                    help: "Open NumWorks settings",
-                    accessibilityLabel: "Open settings",
-                    isActive: false,
-                    action: actions.openSettings)
-            }
-        }
-        .padding(.trailing, 6)
-        .frame(height: 28)
+        pinButton?.isHidden = !preferences.showPinButton
+        settingsButton?.isHidden = !preferences.showSettingsButton
+
+        let pinned = preferences.alwaysOnTop
+        pinButton?.image = NSImage(
+            systemSymbolName: pinned ? "pin.fill" : "pin",
+            accessibilityDescription: pinned ? "Unpin" : "Pin")
+        pinButton?.toolTip = pinned
+            ? "Unpin: stop keeping the calculator above other windows"
+            : "Pin: keep the calculator above other windows"
+        pinButton?.setAccessibilityLabel(
+            pinned ? "Unpin calculator" : "Pin calculator")
+        pinButton?.contentTintColor = pinned ? .controlAccentColor : .secondaryLabelColor
+
+        // Keep stack width tight when buttons are hidden.
+        stack.needsLayout = true
+        accessory?.view.needsLayout = true
     }
-}
 
-private struct ToolbarIconButton: View {
-    let systemImage: String
-    let help: String
-    let accessibilityLabel: String
-    let isActive: Bool
-    let action: () -> Void
+    private func observePreferences(_ preferences: Preferences) {
+        cancellables.removeAll()
+        preferences.$alwaysOnTop
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refresh() }
+            .store(in: &cancellables)
+        preferences.$showPinButton
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refresh() }
+            .store(in: &cancellables)
+        preferences.$showSettingsButton
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.refresh() }
+            .store(in: &cancellables)
+    }
 
-    @State private var isHovered = false
+    private func makeIconButton(
+        toolTip: String,
+        accessibilityLabel: String,
+        action: Selector
+    ) -> NSButton {
+        let button = NSButton(frame: NSRect(x: 0, y: 0, width: 28, height: 22))
+        button.bezelStyle = .inline
+        button.isBordered = false
+        button.imagePosition = .imageOnly
+        button.toolTip = toolTip
+        button.setAccessibilityLabel(accessibilityLabel)
+        button.target = self
+        button.action = action
+        button.refusesFirstResponder = true
+        return button
+    }
 
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
-                .frame(width: 24, height: 22)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(isHovered ? Color.primary.opacity(0.08) : Color.clear))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .help(help)
-        .accessibilityLabel(accessibilityLabel)
+    @objc private func pinClicked(_ sender: Any?) {
+        actions?.togglePin()
+    }
+
+    @objc private func settingsClicked(_ sender: Any?) {
+        actions?.openSettings()
     }
 }

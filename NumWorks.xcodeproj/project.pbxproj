@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1E0390D930191907001CD48C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0390D830191907001CD48C /* LaunchAtLogin */; };
+		1E0391AC301947F9001CD48C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0391AB301947F9001CD48C /* Sparkle */; };
 		1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1EAA000930190009001CD48C /* KeyboardShortcuts */; };
 /* End PBXBuildFile section */
 
@@ -47,6 +48,7 @@
 			membershipExceptions = (
 				Patches,
 				Scripts,
+				"Sparkle-Info.plist",
 				Vendor,
 			);
 			target = 1E03B1323018F5CE001CD48C /* NumWorks */;
@@ -84,6 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E0391AC301947F9001CD48C /* Sparkle in Frameworks */,
 				1E0390D930191907001CD48C /* LaunchAtLogin in Frameworks */,
 				1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */,
 			);
@@ -153,7 +156,9 @@
 				1E03B12F3018F5CE001CD48C /* Sources */,
 				1E03B1303018F5CE001CD48C /* Frameworks */,
 				1E03B1313018F5CE001CD48C /* Resources */,
+				1E0391AD30194988001CD48C /* ShellScript */,
 				1EAA000830190008001CD48C /* Copy Epsilon Assets */,
+				1EAA00AA301A0001001CD48C /* Strip Extended Attributes */,
 			);
 			buildRules = (
 			);
@@ -167,6 +172,7 @@
 			packageProductDependencies = (
 				1EAA000930190009001CD48C /* KeyboardShortcuts */,
 				1E0390D830191907001CD48C /* LaunchAtLogin */,
+				1E0391AB301947F9001CD48C /* Sparkle */,
 			);
 			productName = NumWorks;
 			productReference = 1E03B1333018F5CE001CD48C /* NumWorks.app */;
@@ -252,7 +258,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
-				1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin" */,
+				1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
+				1E0391AA301947F9001CD48C /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1E03B1343018F5CE001CD48C /* Products */;
@@ -292,8 +299,26 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		1E0391AD30194988001CD48C /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\n\n# Strip Sparkle XPC Services on archive/install builds.\n# Not needed when the app is not sandboxed (saves space).\nif [ \"$ACTION\" != \"install\" ]; then\n    exit 0\nfi\n\nAPP_PATH=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\"\nSPARKLE_FRAMEWORK=\"${APP_PATH}/Contents/Frameworks/Sparkle.framework\"\n\nPATHS_TO_REMOVE=(\n    \"${SPARKLE_FRAMEWORK}/Versions/B/XPCServices\"\n    \"${SPARKLE_FRAMEWORK}/XPCServices\"\n)\n\nfor p in \"${PATHS_TO_REMOVE[@]}\"; do\n    if [ -e \"$p\" ] || [ -L \"$p\" ]; then\n        rm -rf \"$p\"\n    fi\ndone\n\nif [ -n \"${EXPANDED_CODE_SIGN_IDENTITY:-}\" ] && [ \"${EXPANDED_CODE_SIGN_IDENTITY}\" != \"-\" ]; then\n    codesign --force --sign \"$EXPANDED_CODE_SIGN_IDENTITY\" --preserve-metadata \"$SPARKLE_FRAMEWORK\" || true\nfi\n\nexit 0\n";
+		};
 		1EAA000830190008001CD48C /* Copy Epsilon Assets */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -305,6 +330,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
 			shellScript = "\"$SRCROOT/NumWorks/Scripts/copy-epsilon-assets.sh\"\n";
+		};
+		1EAA00AA301A0001001CD48C /* Strip Extended Attributes */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Strip Extended Attributes";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/NumWorks/Scripts/strip-xattrs.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -479,9 +519,10 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_LIBRARY_VALIDATION = NO;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -489,6 +530,9 @@
 					"$(inherited)",
 					"$(SRCROOT)/NumWorks/Integration",
 				);
+				INFOPLIST_FILE = "NumWorks/Sparkle-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = NumWorks;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -499,7 +543,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0.5;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
@@ -541,7 +585,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -551,6 +595,9 @@
 					"$(inherited)",
 					"$(SRCROOT)/NumWorks/Integration",
 				);
+				INFOPLIST_FILE = "NumWorks/Sparkle-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = NumWorks;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -561,7 +608,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.0.5;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
@@ -728,12 +775,20 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin" */ = {
+		1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.1.0;
+			};
+		};
+		1E0391AA301947F9001CD48C /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.4;
 			};
 		};
 		1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
@@ -749,8 +804,13 @@
 /* Begin XCSwiftPackageProductDependency section */
 		1E0390D830191907001CD48C /* LaunchAtLogin */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin" */;
+			package = 1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
 			productName = LaunchAtLogin;
+		};
+		1E0391AB301947F9001CD48C /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E0391AA301947F9001CD48C /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 		1EAA000930190009001CD48C /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;

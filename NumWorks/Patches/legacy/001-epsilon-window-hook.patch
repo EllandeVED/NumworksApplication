@@ -1,5 +1,5 @@
 diff --git a/ion/src/simulator/macos/window.mm b/ion/src/simulator/macos/window.mm
-index 9e0bf13a..729ce556 100644
+index 9e0bf13a..a1b2c3d4 100644
 --- a/ion/src/simulator/macos/window.mm
 +++ b/ion/src/simulator/macos/window.mm
 @@ -3,6 +3,7 @@
@@ -10,15 +10,29 @@ index 9e0bf13a..729ce556 100644
  
  namespace Ion {
  namespace Simulator {
-@@ -10,6 +11,7 @@
+@@ -10,6 +11,10 @@
  
  void didInit(SDL_Window * window) {
    NSWindow * nswindow = reinterpret_cast<SDL_WindowData *>(window->driverdata)->nswindow;
 +  [EpsilonBridge registerCalculatorWindow:nswindow];
++  // Hide immediately so NumWorks can restore the saved frame before the
++  // window is ever shown (avoids a visible jump from the default position).
++  [nswindow setAlphaValue:0.0];
    [nswindow setTitlebarAppearsTransparent:true];
    [nswindow setStyleMask:(NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskFullSizeContentView|NSWindowStyleMaskResizable)];
    [nswindow setTitle:@""];
-@@ -27,7 +29,11 @@ void didInit(SDL_Window * window) {
+@@ -22,12 +27,20 @@ void didInit(SDL_Window * window) {
+   // Change the size to apply the aspect ratio without waiting for a resize
+   [nswindow setContentSize:NSMakeSize(perfectWidth, perfectHeight)];
+ 
+-  // Save position of the window using the OS-provided routine
+-  [nswindow setFrameAutosaveName:@"Calculator"];
++  // NumWorks owns frame persistence; AppKit autosave caused a visible jump
++  // and restoreWindowWithIdentifier className=(null) warnings.
++  [nswindow setFrameAutosaveName:@""];
++  [nswindow setRestorable:NO];
+ 
+   // TODO: This should be activated but it triggers assertions in SDL
    // [nswindow setMovableByWindowBackground:true];
  }
  

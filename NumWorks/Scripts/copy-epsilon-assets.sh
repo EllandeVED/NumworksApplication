@@ -14,6 +14,7 @@ mkdir -p "${DEST_DIR}"
 
 for asset in horizontal_arrow.png vertical_arrow.png round.png small_squircle.png large_squircle.png; do
   cp "${ASSETS_DIR}/${asset}" "${DEST_DIR}/"
+  xattr -c "${DEST_DIR}/${asset}" 2>/dev/null || true
 done
 
 # background.jpg is generated from the webp source (upstream does this with
@@ -24,5 +25,6 @@ if [ ! -f "${BACKGROUND_DEST}" ] || [ "${BACKGROUND_SOURCE}" -nt "${BACKGROUND_D
   xcrun -sdk macosx swift "${SCRIPT_DIR}/generate-background-asset.swift" \
     "${BACKGROUND_SOURCE}" "${BACKGROUND_DEST}"
 fi
+xattr -c "${BACKGROUND_DEST}" 2>/dev/null || true
 
 echo "Copied Epsilon assets to ${DEST_DIR}"
