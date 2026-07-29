@@ -1,4 +1,1 @@
-# Last Epsilon tag that successfully prepared + built for NumWorks.
-# Updated by `release.sh --epsilon …` and by `.github/workflows/epsilon-update.yml`.
-# Temporarily set below latest (23.2.3) to exercise the update automation.
-23.2.2
+23.2.3
