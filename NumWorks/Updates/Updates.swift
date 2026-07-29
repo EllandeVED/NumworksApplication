@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import Sparkle
 
 /// Owns the Sparkle updater for the lifetime of the app.
@@ -13,35 +12,26 @@ import Sparkle
 /// `exit` from `willInstallUpdate`, or Sparkle’s Installer XPC can die before
 /// Autoupdate is armed.
 @MainActor
-final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
+final class UpdateController: NSObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
 
     static let shared = UpdateController()
+
+    /// Local wall-clock time for the once-daily automatic check.
+    private static let dailyCheckHour = 12
+    private static let dailyCheckMinute = 0
+
+    /// Park Sparkle’s own timer far in the future so it does not also fire on
+    /// launch (often morning). We drive the real daily check at noon.
+    private static let parkedSparkleInterval: TimeInterval = 60 * 60 * 24 * 365
 
     /// Standard Sparkle controller: automatic background checks + UI.
     private(set) var updaterController: SPUStandardUpdaterController!
 
-    /// User preference for scheduled background checks. Kept as local published
-    /// state so Settings does not flicker when a manual check is in progress
-    /// (Sparkle temporarily clears `canCheckForUpdates` during a session).
-    @Published var automaticallyChecksForUpdates: Bool = true {
-        didSet {
-            guard !isApplyingSparkleValue else { return }
-            let updater = updaterController.updater
-            if updater.automaticallyChecksForUpdates != automaticallyChecksForUpdates {
-                updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
-            }
-        }
-    }
-
-    /// Whether Sparkle will accept a user-initiated check right now.
-    @Published private(set) var canCheckForUpdates = false
-
-    /// App is under an Applications directory (required for Sparkle installs).
-    @Published private(set) var isInstalledInApplications = false
-
-    private var isApplyingSparkleValue = false
-    private var canCheckObservation: NSKeyValueObservation?
-    private var automaticChecksObservation: NSKeyValueObservation?
+    private var dailyCheckTimer: Timer?
+    /// User tapped Check for Updates while outside Applications — we use the
+    /// background check path so we can show a move-required alert instead of
+    /// Sparkle’s install UI.
+    private var pendingNotInstalledUserCheck = false
 
     private override init() {
         super.init()
@@ -50,27 +40,33 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             updaterDelegate: self,
             userDriverDelegate: self)
 
-        isInstalledInApplications = Bundle.main.isInstalled
-        applySparkleAutomaticChecksToPublished()
-        refreshCanCheckForUpdates()
-
-        let updater = updaterController.updater
-        canCheckObservation = updater.observe(\.canCheckForUpdates, options: [.new]) { [weak self] _, _ in
-            Task { @MainActor in
-                self?.refreshCanCheckForUpdates()
-            }
-        }
-        automaticChecksObservation = updater.observe(\.automaticallyChecksForUpdates, options: [.new]) { [weak self] _, _ in
-            Task { @MainActor in
-                self?.applySparkleAutomaticChecksToPublished()
-            }
-        }
+        // Fresh installs: Info.plist SUEnableAutomaticChecks = true.
+        applyAutomaticCheckSchedule()
     }
 
     /// User-initiated “Check for Updates…” (menu / Settings).
     @objc func checkForUpdates(_ sender: Any?) {
-        guard isInstalledInApplications else { return }
-        updaterController.checkForUpdates(sender)
+        if Bundle.main.isInstalled {
+            pendingNotInstalledUserCheck = false
+            updaterController.checkForUpdates(sender)
+        } else {
+            // Still query the appcast; if an update exists, show move warning.
+            pendingNotInstalledUserCheck = true
+            updaterController.updater.checkForUpdatesInBackground()
+        }
+    }
+
+    var canCheckForUpdates: Bool {
+        updaterController.updater.canCheckForUpdates
+    }
+
+    /// Mirrors Sparkle’s `SUEnableAutomaticChecks` (default true via Info.plist).
+    var automaticallyChecksForUpdates: Bool {
+        get { updaterController.updater.automaticallyChecksForUpdates }
+        set {
+            updaterController.updater.automaticallyChecksForUpdates = newValue
+            applyAutomaticCheckSchedule()
+        }
     }
 
     @objc func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -80,20 +76,114 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         return true
     }
 
-    private func applySparkleAutomaticChecksToPublished() {
-        let value = updaterController.updater.automaticallyChecksForUpdates
-        guard automaticallyChecksForUpdates != value else { return }
-        isApplyingSparkleValue = true
-        automaticallyChecksForUpdates = value
-        isApplyingSparkleValue = false
+    // MARK: - Daily noon schedule
+
+    private func applyAutomaticCheckSchedule() {
+        dailyCheckTimer?.invalidate()
+        dailyCheckTimer = nil
+
+        let updater = updaterController.updater
+        updater.updateCheckInterval = Self.parkedSparkleInterval
+
+        guard updater.automaticallyChecksForUpdates else { return }
+        scheduleNextDailyCheck()
     }
 
-    private func refreshCanCheckForUpdates() {
-        canCheckForUpdates =
-            isInstalledInApplications && updaterController.updater.canCheckForUpdates
+    private func scheduleNextDailyCheck() {
+        dailyCheckTimer?.invalidate()
+
+        let fireDate = nextDailyCheckDate(after: Date())
+        let timer = Timer(fire: fireDate, interval: 0, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.performDailyCheck()
+            }
+        }
+        timer.tolerance = 60
+        RunLoop.main.add(timer, forMode: .common)
+        dailyCheckTimer = timer
+    }
+
+    private func performDailyCheck() {
+        guard automaticallyChecksForUpdates else {
+            applyAutomaticCheckSchedule()
+            return
+        }
+        if updaterController.updater.canCheckForUpdates {
+            updaterController.updater.checkForUpdatesInBackground()
+        }
+        scheduleNextDailyCheck()
+    }
+
+    private func nextDailyCheckDate(after date: Date) -> Date {
+        var calendar = Calendar.current
+        calendar.timeZone = .current
+        var components = calendar.dateComponents([.year, .month, .day], from: date)
+        components.hour = Self.dailyCheckHour
+        components.minute = Self.dailyCheckMinute
+        components.second = 0
+        guard let todayAtNoon = calendar.date(from: components) else {
+            return date.addingTimeInterval(60 * 60 * 24)
+        }
+        if todayAtNoon > date {
+            return todayAtNoon
+        }
+        return calendar.date(byAdding: .day, value: 1, to: todayAtNoon)
+            ?? todayAtNoon.addingTimeInterval(60 * 60 * 24)
+    }
+
+    private func presentMoveRequiredForUpdate(_ update: SUAppcastItem) {
+        if NSApp.activationPolicy() != .regular {
+            NSApp.setActivationPolicy(.regular)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Update Found"
+        alert.informativeText =
+            "NumWorks \(update.displayVersionString) is available, but updates can only be installed "
+            + "when the app lives in the Applications folder."
+        alert.addButton(withTitle: "Move to Applications Folder")
+        alert.addButton(withTitle: "Later")
+        let response = alert.runModal()
+        // End the Sparkle session we intercepted via gentle reminders.
+        updaterController.userDriver.dismissUpdateInstallation()
+        if response == .alertFirstButtonReturn {
+            AppMover.moveIfNecessary(prompt: false)
+        }
+    }
+
+    private func presentUpToDateWhileNotInstalled() {
+        if NSApp.activationPolicy() != .regular {
+            NSApp.setActivationPolicy(.regular)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.messageText = "You’re up to date"
+        alert.informativeText =
+            "NumWorks \(AppInfo.appVersion) is the latest version. "
+            + "Move the app to Applications so future updates can install automatically."
+        alert.addButton(withTitle: "Move to Applications Folder")
+        alert.addButton(withTitle: "OK")
+        if alert.runModal() == .alertFirstButtonReturn {
+            AppMover.moveIfNecessary(prompt: false)
+        }
     }
 
     // MARK: - SPUUpdaterDelegate
+
+    nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        // Handled in the user-driver callbacks when not installed.
+    }
+
+    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error?) {
+        DispatchQueue.main.async {
+            guard UpdateController.shared.pendingNotInstalledUserCheck else { return }
+            UpdateController.shared.pendingNotInstalledUserCheck = false
+            UpdateController.shared.presentUpToDateWhileNotInstalled()
+        }
+    }
 
     nonisolated func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
         NSLog(
@@ -101,9 +191,6 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             item.displayVersionString,
             item.versionString)
 
-        // Make the app easier for Sparkle’s progress agent to see/activate.
-        // Actual process exit comes from the SDL terminate: swizzle when the
-        // agent sends a soft quit.
         DispatchQueue.main.async {
             if NSApp.activationPolicy() != .regular {
                 NSApp.setActivationPolicy(.regular)
@@ -119,9 +206,22 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             return
         }
         NSLog("[NumWorks] Sparkle aborted: %@", nsError)
+        DispatchQueue.main.async {
+            UpdateController.shared.pendingNotInstalledUserCheck = false
+        }
     }
 
     // MARK: - SPUStandardUserDriverDelegate
+
+    nonisolated var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    nonisolated func standardUserDriverShouldHandleShowingScheduledUpdate(
+        _ update: SUAppcastItem,
+        andInImmediateFocus immediateFocus: Bool
+    ) -> Bool {
+        // Outside Applications we show our own “move required” alert instead.
+        Bundle.main.isInstalled
+    }
 
     nonisolated func standardUserDriverWillHandleShowingUpdate(
         _ handleShowingUpdate: Bool,
@@ -129,10 +229,19 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         state: SPUUserUpdateState
     ) {
         DispatchQueue.main.async {
-            if NSApp.activationPolicy() != .regular {
-                NSApp.setActivationPolicy(.regular)
+            if Bundle.main.isInstalled {
+                UpdateController.shared.pendingNotInstalledUserCheck = false
+                if NSApp.activationPolicy() != .regular {
+                    NSApp.setActivationPolicy(.regular)
+                }
+                NSApp.activate(ignoringOtherApps: true)
+                return
             }
-            NSApp.activate(ignoringOtherApps: true)
+
+            // Scheduled path (handleShowingUpdate == false) or background check
+            // after a user tap while not installed.
+            UpdateController.shared.pendingNotInstalledUserCheck = false
+            UpdateController.shared.presentMoveRequiredForUpdate(update)
         }
     }
 }

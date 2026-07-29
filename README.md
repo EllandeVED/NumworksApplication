@@ -35,9 +35,8 @@ No browser, no WebKit, no download of the official HTML simulator at runtime.
 ## Preview
 
 <div align="center">
-  <img width="474" height="852" alt="image" src="https://github.com/user-attachments/assets/aa8a198c-75e5-45af-ac4b-2332a24a0241" />
-  <img width="572" height="660" alt="image" src="https://github.com/user-attachments/assets/c87f360d-9999-45eb-ae91-176e58274f0a" />
-
+  <img width="265" height="479" alt="NumWorks App Preview" src="https://github.com/user-attachments/assets/c5fba75b-d4da-41e8-8c04-0a69f164ffa7" />
+  <img width="420" height="435" alt="Settings" src="https://github.com/user-attachments/assets/74369c62-eb10-4cdd-ba53-83053fdc70d6" />
 </div>
 
 ---

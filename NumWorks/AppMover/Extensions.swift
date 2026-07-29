@@ -33,9 +33,17 @@ extension Bundle {
     }
 
     var isInstalled: Bool {
-        NSSearchPathForDirectoriesInDomains(.applicationDirectory, .allDomainsMask, true)
-            .contains(where: { $0.hasPrefix(bundlePath) })
-            || bundlePath.split(separator: "/").contains("Applications")
+        let bundlePath = self.bundlePath
+        let parent = (bundlePath as NSString).deletingLastPathComponent
+        let applicationDirs = FileManager.default.urls(
+            for: .applicationDirectory, in: .allDomainsMask)
+        if applicationDirs.contains(where: { dir in
+            let path = dir.path
+            return parent == path || parent.hasPrefix(path + "/")
+        }) {
+            return true
+        }
+        return bundlePath.split(separator: "/").contains("Applications")
     }
 
     func copy(to url: URL) throws {

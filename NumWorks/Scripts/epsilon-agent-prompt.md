@@ -15,13 +15,13 @@ Make Epsilon `{{EPSILON_REF}}` prepare + compile as `libepsilon.a` and link into
 ## How this project integrates Epsilon (do not reinvent)
 1. `NumWorks/Scripts/prepare-epsilon.sh <ref>`
    - fetches `numworks/epsilon` into `NumWorks/Vendor/EpsilonSource` (gitignored)
-   - runs `NumWorks/Scripts/adapt-epsilon.py` (NOT brittle `.patch` files)
+   - runs `NumWorks/Scripts/adapt-epsilon.sh` → `adapt-epsilon.py` (structural hooks, not `.patch` files)
 2. `NumWorks/Scripts/build-epsilon-lib.sh`
    - `make PLATFORM=simulator TARGET=macos … libepsilon.a`
    - writes `NumWorks/Vendor/EpsilonSource/output/libepsilon.a`
 3. Xcode target `EpsilonLib` invokes that script; the app links the `.a`
 
-Old line-exact patches in `NumWorks/Patches/legacy/` are historical only. Prefer fixing **`adapt-epsilon.py`** so future Epsilon versions keep working.
+Prefer fixing **`adapt-epsilon.py`** so future Epsilon versions keep working.
 
 ## What adapt-epsilon.py must guarantee
 - `ion/src/simulator/**/window.mm` (macOS):

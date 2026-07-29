@@ -8,5 +8,8 @@
 	<string>Sg6Pkyhvjv5DPTOF50HTrLorRi3ZN/fONgI10UBBYFQ=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<!-- Preference default; actual once-daily fire is local 12:00 via UpdateController. -->
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

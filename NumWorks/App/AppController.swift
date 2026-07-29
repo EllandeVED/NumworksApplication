@@ -158,8 +158,9 @@ final class AppController: NSObject {
         // Reveal only after the saved frame and chrome are applied.
         window.alphaValue = 1
 
-        // After the window is up, offer AppMover’s confirmation once on first launch.
-        DispatchQueue.main.async { [weak self] in
+        // Offer AppMover on the first two launches per app version when outside Applications.
+        // Slight delay so the calculator window / activation settle first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.offerMoveToApplicationsIfNeeded()
         }
 
@@ -171,8 +172,9 @@ final class AppController: NSObject {
     }
 
     private func offerMoveToApplicationsIfNeeded() {
-        guard !preferences.didOfferMoveToApplications else { return }
-        preferences.didOfferMoveToApplications = true
+        guard !Bundle.main.isInstalled else { return }
+        guard preferences.shouldOfferAppMover else { return }
+        preferences.recordAppMoverOfferShown()
         AppMover.moveIfNecessary(prompt: true)
     }
 

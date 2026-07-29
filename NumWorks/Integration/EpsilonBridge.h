@@ -16,8 +16,8 @@ FOUNDATION_EXPORT NSNotificationName const EpsilonWindowDidBecomeAvailableNotifi
 @property(class, nonatomic, getter=isSimulatorActive) BOOL simulatorActive;
 
 /* Runs the Epsilon simulator on the current thread. This wraps
- * epsilon_main(), the renamed Epsilon entry point (see
- * Patches/002-static-library-target.patch). It must be called from the main
+ * epsilon_main(), the renamed Epsilon entry point (see adapt-epsilon.py /
+ * -Dmain=epsilon_main). It must be called from the main
  * thread and does not return until the simulator quits. */
 + (int)runSimulatorWithArgc:(int)argc
                        argv:(char *_Nullable *_Nonnull)argv;
