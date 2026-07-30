@@ -1,20 +1,20 @@
 {
-  "updated": "2026-07-29T15:52:36Z",
+  "updated": "2026-07-30T05:14:17Z",
   "asset": "NumWorks-*.zip",
   "days": [
-    "2026-07-23",
     "2026-07-24",
     "2026-07-25",
     "2026-07-26",
     "2026-07-27",
     "2026-07-28",
-    "2026-07-29"
+    "2026-07-29",
+    "2026-07-30"
   ],
   "latest2": [
     {
       "tag": "2.0.8",
       "date": "29/07/26",
-      "downloads_total": 3,
+      "downloads_total": 4,
       "downloads_per_day_last7": [
         0,
         0,
@@ -22,7 +22,7 @@
         0,
         0,
         0,
-        0
+        1
       ]
     },
     {
@@ -40,5 +40,5 @@
       ]
     }
   ],
-  "downloads_total_latest": 3
+  "downloads_total_latest": 4
 }
