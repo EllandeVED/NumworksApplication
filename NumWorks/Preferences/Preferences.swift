@@ -21,8 +21,12 @@ final class Preferences: ObservableObject {
         static let launchWindowVisible = "launchWindowVisible"
         static let moveWindowToCurrentSpaceWhenShown = "moveWindowToCurrentSpaceWhenShown"
         static let savedWindowFrame = "savedWindowFrame"
-        static let didOfferMoveToApplications = "didOfferMoveToApplications"
+        static let appMoverOfferVersion = "appMoverOfferVersion"
+        static let appMoverOfferCount = "appMoverOfferCount"
     }
+
+    /// How many AppMover prompts to show per app version when not in Applications.
+    static let appMoverOffersPerVersion = 2
 
     private static let defaultValues: [String: Any] = [
         Key.alwaysOnTop: false,
@@ -35,6 +39,7 @@ final class Preferences: ObservableObject {
         Key.windowStyle: WindowStyle.toolbar.rawValue,
         Key.launchWindowVisible: false,
         Key.moveWindowToCurrentSpaceWhenShown: true,
+        Key.appMoverOfferCount: 0,
     ]
 
     private let defaults: UserDefaults
@@ -140,11 +145,27 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(savedWindowFrame, forKey: Key.savedWindowFrame) }
     }
 
-    /// One-shot flag for the first-launch “Move to Applications” prompt.
-    /// Not reset by `resetToDefaults` so Settings reset does not re-prompt.
-    var didOfferMoveToApplications: Bool {
-        get { defaults.bool(forKey: Key.didOfferMoveToApplications) }
-        set { defaults.set(newValue, forKey: Key.didOfferMoveToApplications) }
+    // MARK: - AppMover (not shown in Settings)
+
+    /// Reset the two-launch offer counter when the marketing/build version changes
+    /// (including after Sparkle updates).
+    func synchronizeAppMoverOffers(withVersion version: String) {
+        let previous = defaults.string(forKey: Key.appMoverOfferVersion)
+        guard previous != version else { return }
+        defaults.set(version, forKey: Key.appMoverOfferVersion)
+        defaults.set(0, forKey: Key.appMoverOfferCount)
+    }
+
+    /// Whether we should still show the Move-to-Applications prompt this launch.
+    var shouldOfferAppMover: Bool {
+        synchronizeAppMoverOffers(withVersion: AppInfo.appVersion)
+        return defaults.integer(forKey: Key.appMoverOfferCount) < Self.appMoverOffersPerVersion
+    }
+
+    func recordAppMoverOfferShown() {
+        synchronizeAppMoverOffers(withVersion: AppInfo.appVersion)
+        let next = defaults.integer(forKey: Key.appMoverOfferCount) + 1
+        defaults.set(next, forKey: Key.appMoverOfferCount)
     }
 
     // MARK: - Reset

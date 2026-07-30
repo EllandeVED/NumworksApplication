@@ -13,7 +13,7 @@ VENDOR_DIR="${NUMWORKS_DIR}/Vendor/EpsilonSource"
 REF="$1"
 
 "${SCRIPT_DIR}/fetch-epsilon.sh" "${REF}"
-"${SCRIPT_DIR}/apply-epsilon-patches.sh"
+"${SCRIPT_DIR}/adapt-epsilon.sh"
 
 RESOLVED="$(git -C "${VENDOR_DIR}" rev-parse HEAD)"
 echo "Prepared Epsilon at commit: ${RESOLVED}"

@@ -6,8 +6,8 @@
 
 #include "NumWorksSimulatorActive.h"
 
-/* Epsilon's main() is renamed to epsilon_main by the build-system patch
- * (Patches/002-static-library-target.patch). Declared here with C++ linkage,
+/* Epsilon's main() is renamed to epsilon_main by adapt-epsilon.py
+ * (-Dmain=epsilon_main on the simulator main.cpp). Declared here with C++ linkage,
  * which matches the symbol produced when compiling Epsilon's main.cpp. */
 int epsilon_main(int argc, char *argv[]);
 

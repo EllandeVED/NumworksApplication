@@ -58,8 +58,17 @@ struct SettingsRootView: View {
 
 struct GeneralSettingsView: View {
     @ObservedObject var preferences: Preferences
-    @ObservedObject private var updates = UpdateController.shared
     let actions: SettingsActions
+
+    private var isInApplicationsFolder: Bool {
+        Bundle.main.isInstalled
+    }
+
+    private var automaticUpdates: Binding<Bool> {
+        Binding(
+            get: { UpdateController.shared.automaticallyChecksForUpdates },
+            set: { UpdateController.shared.automaticallyChecksForUpdates = $0 })
+    }
 
     var body: some View {
         Form {
@@ -98,14 +107,10 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle(
-                    "Check for updates automatically",
-                    isOn: $updates.automaticallyChecksForUpdates)
-                    .disabled(!updates.isInstalledInApplications)
+                Toggle("Check for updates automatically", isOn: automaticUpdates)
                 Button("Check for Updates…", action: actions.checkForUpdates)
-                    .disabled(
-                        !updates.isInstalledInApplications || !updates.canCheckForUpdates)
-                if !updates.isInstalledInApplications {
+                    .disabled(!UpdateController.shared.canCheckForUpdates)
+                if !isInApplicationsFolder {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
@@ -118,14 +123,14 @@ struct GeneralSettingsView: View {
                     }
                 }
             } footer: {
-                if updates.isInstalledInApplications {
-                    Text("Updates install only while NumWorks lives in the Applications folder.")
+                if isInApplicationsFolder {
+                    Text("Automatic checks run a few seconds after launch (at most once a day). Updates install only while NumWorks lives in the Applications folder.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     Label {
-                        Text("Updates are unavailable until NumWorks is in the Applications folder. "
-                             + "macOS blocks update installation from the Desktop or Downloads.")
+                        Text("NumWorks can check for updates here, but installation requires the Applications folder. "
+                             + "If an update is found, you’ll be asked to move the app first.")
                     } icon: {
                         Image(systemName: "exclamationmark.triangle.fill")
                     }
@@ -133,7 +138,7 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.orange)
                     .symbolRenderingMode(.hierarchical)
                     .accessibilityLabel(
-                        "Warning: Updates are unavailable until NumWorks is in the Applications folder.")
+                        "Warning: Updates can be checked, but installation requires the Applications folder.")
                 }
             }
         }

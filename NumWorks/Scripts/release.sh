@@ -20,6 +20,7 @@
 #   --epsilon latest     same, using the newest numworks/epsilon version tag
 #   --build <n>          CFBundleVersion (default: current + 1)
 #   --notes-file <path>  Use this Markdown file as release notes
+#                        (appends a Full Changelog compare link if missing)
 #   --configuration <c>  Debug or Release (default: Release)
 #   --skip-publish       Dry run: build + Sparkle-sign locally only; restore
 #                        project files afterward (no GitHub Release, no gh-pages)
@@ -233,27 +234,81 @@ progress "Release notes"
 mkdir -p "$RELEASES"
 NOTES_OUT="$RELEASES/NumWorks-${VERSION}.md"
 
+# Previous published tag → GitHub compare / “Full Changelog” link (same style as
+# GitHub’s auto-generated release notes).
+resolve_previous_release_tag() {
+  local prev=""
+  if command -v gh >/dev/null 2>&1; then
+    prev="$(
+      gh release list -R "$GITHUB_REPO" --limit 30 --json tagName,isDraft,isPrerelease \
+        --jq "[.[] | select(.isDraft == false and .isPrerelease == false) | .tagName] | map(select(. != \"${VERSION}\")) | .[0] // empty" \
+        2>/dev/null || true
+    )"
+  fi
+  if [[ -z "$prev" ]]; then
+    prev="$(
+      git -C "$ROOT" tag -l '[0-9]*' \
+        | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' \
+        | grep -vxF "$VERSION" \
+        | sort -t . -k1,1n -k2,2n -k3,3n \
+        | tail -1 || true
+    )"
+  fi
+  printf '%s' "$prev"
+}
+
+PREV_TAG="$(resolve_previous_release_tag)"
+if [[ -n "$PREV_TAG" ]]; then
+  CHANGELOG_LINK="**Full Changelog**: https://github.com/${GITHUB_REPO}/compare/${PREV_TAG}...${VERSION}"
+  info "Changelog range: ${PREV_TAG}...${VERSION}"
+else
+  CHANGELOG_LINK="**Commits**: https://github.com/${GITHUB_REPO}/commits/main"
+  info "No previous release tag found — using commits link"
+fi
+
+# Optional auto bullets from commits since the previous tag (editable in the editor).
+AUTO_BULLETS=""
+if [[ -n "$PREV_TAG" ]] && git -C "$ROOT" rev-parse "$PREV_TAG" >/dev/null 2>&1; then
+  AUTO_BULLETS="$(
+    git -C "$ROOT" log "${PREV_TAG}..HEAD" --pretty=format:'- %s' --no-merges 2>/dev/null \
+      | head -40 || true
+  )"
+fi
+if [[ -z "${AUTO_BULLETS//[[:space:]]/}" ]]; then
+  AUTO_BULLETS=$'-\n-\n-'
+fi
+
+append_changelog_link_if_missing() {
+  local file="$1"
+  if grep -Eqi '(Full Changelog|github\.com/.+/compare/|^\*\*Commits\*\*:)' "$file"; then
+    return 0
+  fi
+  printf '\n%s\n' "$CHANGELOG_LINK" >> "$file"
+}
+
 if [[ -n "$NOTES_FILE" ]]; then
   [[ -f "$NOTES_FILE" ]] || die "notes file not found: $NOTES_FILE"
   cp "$NOTES_FILE" "$NOTES_OUT"
+  append_changelog_link_if_missing "$NOTES_OUT"
 else
   TMP_NOTES="$(mktemp -t numworks-notes)"
   cat > "$TMP_NOTES" <<EOF
 ## What's New in ${VERSION}
 
--
--
--
+${AUTO_BULLETS}
+
+${CHANGELOG_LINK}
 EOF
   EDITOR_CMD="${EDITOR:-${VISUAL:-nano}}"
   info "Opening editor for release notes ($EDITOR_CMD)"
-  echo "    Save and quit when finished. First lines are a template."
+  echo "    Template includes auto commit bullets + a Full Changelog link."
+  echo "    Edit freely, then save and quit."
   "$EDITOR_CMD" "$TMP_NOTES"
-  # Drop trailing blank lines only; keep user content
   if ! grep -q '[^[:space:]]' "$TMP_NOTES"; then
     rm -f "$TMP_NOTES"
     die "release notes are empty"
   fi
+  append_changelog_link_if_missing "$TMP_NOTES"
   cp "$TMP_NOTES" "$NOTES_OUT"
   rm -f "$TMP_NOTES"
 fi

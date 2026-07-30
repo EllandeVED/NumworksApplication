@@ -158,9 +158,11 @@ final class AppController: NSObject {
         // Reveal only after the saved frame and chrome are applied.
         window.alphaValue = 1
 
-        // After the window is up, offer AppMover’s confirmation once on first launch.
-        DispatchQueue.main.async { [weak self] in
+        // Offer AppMover first (modal). Only after it returns, schedule the
+        // delayed automatic update check so the two alerts never overlap.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.offerMoveToApplicationsIfNeeded()
+            UpdateController.shared.schedulePostLaunchUpdateCheck(after: 3)
         }
 
 #if DEBUG
@@ -171,8 +173,9 @@ final class AppController: NSObject {
     }
 
     private func offerMoveToApplicationsIfNeeded() {
-        guard !preferences.didOfferMoveToApplications else { return }
-        preferences.didOfferMoveToApplications = true
+        guard !Bundle.main.isInstalled else { return }
+        guard preferences.shouldOfferAppMover else { return }
+        preferences.recordAppMoverOfferShown()
         AppMover.moveIfNecessary(prompt: true)
     }
 

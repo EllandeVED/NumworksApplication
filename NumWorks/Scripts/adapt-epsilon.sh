@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Adapt the Epsilon checkout for NumWorks (resilient hooks, not line-exact patches).
+# Adapt the Epsilon checkout for NumWorks (structural hooks via adapt-epsilon.py).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
