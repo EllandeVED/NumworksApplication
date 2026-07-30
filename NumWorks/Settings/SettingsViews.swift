@@ -124,7 +124,7 @@ struct GeneralSettingsView: View {
                 }
             } footer: {
                 if isInApplicationsFolder {
-                    Text("Automatic checks run once a day at 12:00. Updates install only while NumWorks lives in the Applications folder.")
+                    Text("Automatic checks run a few seconds after launch (at most once a day). Updates install only while NumWorks lives in the Applications folder.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {

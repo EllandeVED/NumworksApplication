@@ -158,10 +158,11 @@ final class AppController: NSObject {
         // Reveal only after the saved frame and chrome are applied.
         window.alphaValue = 1
 
-        // Offer AppMover on the first two launches per app version when outside Applications.
-        // Slight delay so the calculator window / activation settle first.
+        // Offer AppMover first (modal). Only after it returns, schedule the
+        // delayed automatic update check so the two alerts never overlap.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.offerMoveToApplicationsIfNeeded()
+            UpdateController.shared.schedulePostLaunchUpdateCheck(after: 3)
         }
 
 #if DEBUG

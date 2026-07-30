@@ -16,18 +16,20 @@ final class UpdateController: NSObject, SPUUpdaterDelegate, SPUStandardUserDrive
 
     static let shared = UpdateController()
 
-    /// Local wall-clock time for the once-daily automatic check.
-    private static let dailyCheckHour = 12
-    private static let dailyCheckMinute = 0
+    /// Minimum time between automatic launch checks.
+    private static let minimumAutomaticCheckInterval: TimeInterval = 60 * 60 * 24
 
-    /// Park Sparkle’s own timer far in the future so it does not also fire on
-    /// launch (often morning). We drive the real daily check at noon.
+    /// Park Sparkle’s own timer so it does not also fire on its schedule.
+    /// We drive automatic checks from `schedulePostLaunchUpdateCheck`.
     private static let parkedSparkleInterval: TimeInterval = 60 * 60 * 24 * 365
+
+    /// Default delay after AppMover (or attach) before an automatic check.
+    static let defaultPostLaunchCheckDelay: TimeInterval = 3
 
     /// Standard Sparkle controller: automatic background checks + UI.
     private(set) var updaterController: SPUStandardUpdaterController!
 
-    private var dailyCheckTimer: Timer?
+    private var postLaunchCheckTimer: Timer?
     /// User tapped Check for Updates while outside Applications — we use the
     /// background check path so we can show a move-required alert instead of
     /// Sparkle’s install UI.
@@ -40,12 +42,15 @@ final class UpdateController: NSObject, SPUUpdaterDelegate, SPUStandardUserDrive
             updaterDelegate: self,
             userDriverDelegate: self)
 
-        // Fresh installs: Info.plist SUEnableAutomaticChecks = true.
-        applyAutomaticCheckSchedule()
+        // Disable Sparkle’s built-in schedule; AppController triggers launch checks.
+        parkSparkleAutomaticSchedule()
     }
 
     /// User-initiated “Check for Updates…” (menu / Settings).
     @objc func checkForUpdates(_ sender: Any?) {
+        postLaunchCheckTimer?.invalidate()
+        postLaunchCheckTimer = nil
+
         if Bundle.main.isInstalled {
             pendingNotInstalledUserCheck = false
             updaterController.checkForUpdates(sender)
@@ -65,7 +70,11 @@ final class UpdateController: NSObject, SPUUpdaterDelegate, SPUStandardUserDrive
         get { updaterController.updater.automaticallyChecksForUpdates }
         set {
             updaterController.updater.automaticallyChecksForUpdates = newValue
-            applyAutomaticCheckSchedule()
+            parkSparkleAutomaticSchedule()
+            if !newValue {
+                postLaunchCheckTimer?.invalidate()
+                postLaunchCheckTimer = nil
+            }
         }
     }
 
@@ -76,59 +85,44 @@ final class UpdateController: NSObject, SPUUpdaterDelegate, SPUStandardUserDrive
         return true
     }
 
-    // MARK: - Daily noon schedule
+    // MARK: - Post-launch schedule
 
-    private func applyAutomaticCheckSchedule() {
-        dailyCheckTimer?.invalidate()
-        dailyCheckTimer = nil
+    /// Call after AppMover has finished (or been skipped) so alerts do not stack.
+    func schedulePostLaunchUpdateCheck(
+        after delay: TimeInterval = UpdateController.defaultPostLaunchCheckDelay
+    ) {
+        postLaunchCheckTimer?.invalidate()
+        postLaunchCheckTimer = nil
 
-        let updater = updaterController.updater
-        updater.updateCheckInterval = Self.parkedSparkleInterval
+        parkSparkleAutomaticSchedule()
+        guard automaticallyChecksForUpdates else { return }
 
-        guard updater.automaticallyChecksForUpdates else { return }
-        scheduleNextDailyCheck()
-    }
-
-    private func scheduleNextDailyCheck() {
-        dailyCheckTimer?.invalidate()
-
-        let fireDate = nextDailyCheckDate(after: Date())
-        let timer = Timer(fire: fireDate, interval: 0, repeats: false) { [weak self] _ in
+        let timer = Timer(timeInterval: max(delay, 0.5), repeats: false) { [weak self] _ in
             Task { @MainActor in
-                self?.performDailyCheck()
+                self?.performPostLaunchCheck()
             }
         }
-        timer.tolerance = 60
+        timer.tolerance = 0.5
         RunLoop.main.add(timer, forMode: .common)
-        dailyCheckTimer = timer
+        postLaunchCheckTimer = timer
     }
 
-    private func performDailyCheck() {
-        guard automaticallyChecksForUpdates else {
-            applyAutomaticCheckSchedule()
+    private func parkSparkleAutomaticSchedule() {
+        updaterController.updater.updateCheckInterval = Self.parkedSparkleInterval
+    }
+
+    private func performPostLaunchCheck() {
+        postLaunchCheckTimer = nil
+        guard automaticallyChecksForUpdates else { return }
+        guard updaterController.updater.canCheckForUpdates else { return }
+
+        if let last = updaterController.updater.lastUpdateCheckDate,
+           Date().timeIntervalSince(last) < Self.minimumAutomaticCheckInterval {
             return
         }
-        if updaterController.updater.canCheckForUpdates {
-            updaterController.updater.checkForUpdatesInBackground()
-        }
-        scheduleNextDailyCheck()
-    }
 
-    private func nextDailyCheckDate(after date: Date) -> Date {
-        var calendar = Calendar.current
-        calendar.timeZone = .current
-        var components = calendar.dateComponents([.year, .month, .day], from: date)
-        components.hour = Self.dailyCheckHour
-        components.minute = Self.dailyCheckMinute
-        components.second = 0
-        guard let todayAtNoon = calendar.date(from: components) else {
-            return date.addingTimeInterval(60 * 60 * 24)
-        }
-        if todayAtNoon > date {
-            return todayAtNoon
-        }
-        return calendar.date(byAdding: .day, value: 1, to: todayAtNoon)
-            ?? todayAtNoon.addingTimeInterval(60 * 60 * 24)
+        // Same path as a background check so not-in-Applications gets our warning UI.
+        updaterController.updater.checkForUpdatesInBackground()
     }
 
     private func presentMoveRequiredForUpdate(_ update: SUAppcastItem) {
