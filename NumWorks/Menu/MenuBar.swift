@@ -29,6 +29,7 @@ enum MenuBar {
         guard !appMenu.items.contains(where: { $0.action == action }) else { return }
 
         let item = NSMenuItem(title: "Settings…", action: action, keyEquivalent: ",")
+        item.keyEquivalentModifierMask = [.command]
         item.target = target
 
         let index = min(2, appMenu.items.count)
@@ -61,6 +62,11 @@ enum MenuBar {
 @MainActor
 final class StatusItemController: NSObject {
 
+    /// Width of the clickable status-item slot (points). Independent of icon art size.
+    private static let itemLength: CGFloat = 20
+    /// Drawn template size — keep this stable when tweaking `itemLength`.
+    private static let iconSize: CGFloat = 22
+
     private let preferences: Preferences
     private let actions: StatusItemActions
     private var statusItem: NSStatusItem?
@@ -90,8 +96,6 @@ final class StatusItemController: NSObject {
         preferences.$menuBarIconStyle
             .removeDuplicates()
             .sink { [weak self] _ in
-                // Apply on the current main-actor turn so the status item
-                // updates as soon as the Settings radio changes.
                 self?.applyIcon()
             }
             .store(in: &cancellables)
@@ -106,12 +110,14 @@ final class StatusItemController: NSObject {
             applyIcon()
             return
         }
-        let item = NSStatusBar.system.statusItem(withLength: 28)
+        let item = NSStatusBar.system.statusItem(withLength: Self.itemLength)
         statusItem = item
         if let button = item.button {
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            // Don’t scale the template down to the slot — hitbox and art stay independent.
+            button.imageScaling = .scaleNone
         }
         applyIcon()
     }
@@ -137,18 +143,20 @@ final class StatusItemController: NSObject {
         // the button (style changes otherwise only appeared after a click).
         button.image = nil
 
-        let image = NSImage(size: NSSize(width: 22, height: 22))
+        let side = Self.iconSize
+        let image = NSImage(size: NSSize(width: side, height: side))
         image.lockFocus()
         NSGraphicsContext.current?.imageInterpolation = .high
-        source.draw(in: NSRect(origin: .zero, size: image.size),
-                    from: .zero,
-                    operation: .sourceOver,
-                    fraction: 1.0)
+        source.draw(
+            in: NSRect(origin: .zero, size: image.size),
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1.0)
         image.unlockFocus()
         image.isTemplate = true
 
         button.image = image
-        button.imageScaling = .scaleProportionallyDown
+        button.imageScaling = .scaleNone
         button.needsDisplay = true
         button.displayIfNeeded()
     }

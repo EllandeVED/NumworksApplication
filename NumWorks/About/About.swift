@@ -24,7 +24,7 @@ struct AboutView: View {
             VStack(spacing: 2) {
                 Text("Version \(AppInfo.bundleVersion)")
                 Text("Build \(AppInfo.bundleBuild)")
-                Text("Epsilon \(AppInfo.epsilonVersion)")
+                Text("Epsilon v\(AppInfo.epsilonVersion)")
             }
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -48,6 +48,7 @@ struct AboutView: View {
                     showingLicence = true
                 }
                 .buttonStyle(.link)
+                .accessibilityIdentifier("licence-button")
             }
             .padding(.bottom, 20)
         }
@@ -104,10 +105,12 @@ private struct LicencePlaceholderView: View {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("licence-close-button")
             }
             .padding(.top, 8)
         }
         .padding(24)
         .frame(width: 400)
+        .accessibilityIdentifier("licence-sheet")
     }
 }

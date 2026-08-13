@@ -53,7 +53,6 @@ final class CalculatorToolbarController: NSObject {
 
             let container = NSView(frame: NSRect(x: 0, y: 0, width: 64, height: 28))
             container.addSubview(stack)
-            // Left-align the icons inside the trailing titlebar accessory.
             NSLayoutConstraint.activate([
                 stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
@@ -72,7 +71,14 @@ final class CalculatorToolbarController: NSObject {
             self.stack = stack
         }
 
+        // Keep the accessory installed across style flips; only hide it in Native.
+        accessory?.isHidden = false
         refresh()
+    }
+
+    /// Hides without removing — avoids title-bar rebuild jank when flipping styles.
+    func setVisible(_ visible: Bool) {
+        accessory?.isHidden = !visible
     }
 
     func detach(from window: NSWindow) {
@@ -103,6 +109,8 @@ final class CalculatorToolbarController: NSObject {
             ? "Unpin: stop keeping the calculator above other windows"
             : "Pin: keep the calculator above other windows"
         pinButton?.setAccessibilityLabel(
+            pinned ? "Unpin calculator" : "Pin calculator")
+        pinButton?.setAccessibilityIdentifier(
             pinned ? "Unpin calculator" : "Pin calculator")
         pinButton?.contentTintColor = pinned ? .controlAccentColor : .secondaryLabelColor
 
@@ -138,6 +146,7 @@ final class CalculatorToolbarController: NSObject {
         button.imagePosition = .imageOnly
         button.toolTip = toolTip
         button.setAccessibilityLabel(accessibilityLabel)
+        button.setAccessibilityIdentifier(accessibilityLabel)
         button.target = self
         button.action = action
         button.refusesFirstResponder = true

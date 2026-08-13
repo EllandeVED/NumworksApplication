@@ -370,6 +370,38 @@ def adapt_makefile(root: Path) -> None:
         info("makefile already adapted")
 
 
+def adapt_events_platform_cpp(root: Path) -> None:
+    """Keep epsilon_main running when the window close button posts SDL_QUIT.
+
+    Process exit for Quit / Sparkle still comes from EpsilonBridge's terminate
+    swizzle (exit after posting SDL_QUIT), not from Events::Termination.
+    """
+    path = root / "ion/src/simulator/shared/events_platform.cpp"
+    if not path.is_file():
+        die(f"missing {path.relative_to(root)}")
+    info(f"adapting {path.relative_to(root)}")
+    original = path.read_text()
+    if "NUMWORKS_QUIT" in original:
+        info("events_platform.cpp quit hook already present")
+        return
+
+    old = """    if (event.type == SDL_QUIT) {
+      result = Termination;
+      break;
+    }"""
+    new = """    if (event.type == SDL_QUIT) {
+      // >>> NUMWORKS_QUIT
+      /* Window close must not end the simulator loop. The macOS shell hides
+       * the window instead; Quit still kills the process via terminate:. */
+      continue;
+      // <<< NUMWORKS_QUIT
+    }"""
+    if old not in original:
+        die("events_platform.cpp SDL_QUIT pattern not found — upstream changed?")
+    path.write_text(original.replace(old, new, 1))
+    info("events_platform.cpp updated")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -393,6 +425,7 @@ def main() -> None:
     adapt_window_mm(root)
     adapt_shared_events_cpp(root)
     adapt_shared_window_cpp(root)
+    adapt_events_platform_cpp(root)
     adapt_makefile(root)
     info("done")
 

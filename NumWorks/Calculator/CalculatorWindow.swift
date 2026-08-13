@@ -1,12 +1,41 @@
 import AppKit
 import Combine
 
+/// Forwards `NSWindowDelegate` to SDL’s delegate, but maps close (red button /
+/// Cmd-W) to hide so the process keeps running for the menu bar and shortcuts.
+final class CalculatorCloseInterceptor: NSObject, NSWindowDelegate {
+    weak var previous: NSWindowDelegate?
+    var onRequestHide: (() -> Void)?
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        onRequestHide?()
+        return false
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        if aSelector == #selector(windowShouldClose(_:)) {
+            return true
+        }
+        if let previous, previous.responds(to: aSelector) {
+            return true
+        }
+        return super.responds(to: aSelector)
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        if let previous, previous.responds(to: aSelector) {
+            return previous
+        }
+        return super.forwardingTarget(for: aSelector)
+    }
+}
+
 /// Single owner of all behaviour applied to the Epsilon NSWindow.
 ///
 /// The window itself is created and owned by Epsilon's SDL backend; it is
 /// stored weakly here and must never be closed or destroyed by this class.
-/// SDL also installs its own NSWindowDelegate, which we must not replace, so
-/// all observation goes through NotificationCenter.
+/// SDL installs its own `NSWindowDelegate`; close is intercepted via
+/// `CalculatorCloseInterceptor` while other delegate messages are forwarded.
 @MainActor
 final class CalculatorWindow {
 
@@ -14,11 +43,16 @@ final class CalculatorWindow {
 
     private let preferences: Preferences
     private let toolbar = CalculatorToolbarController()
+    private let trafficLights = NativeTrafficLightsController()
     private var toolbarActions: ToolbarActions?
     private var windowObservers: [NSObjectProtocol] = []
+    private let closeInterceptor = CalculatorCloseInterceptor()
 
     init(preferences: Preferences) {
         self.preferences = preferences
+        closeInterceptor.onRequestHide = { [weak self] in
+            self?.hide()
+        }
     }
 
     deinit {
@@ -40,15 +74,20 @@ final class CalculatorWindow {
     func attach(to window: NSWindow, toolbarActions: ToolbarActions) {
         guard self.window !== window else { return }
         detachObservers()
+        trafficLights.invalidate()
         self.window = window
         self.toolbarActions = toolbarActions
 
         window.isRestorable = false
         window.setFrameAutosaveName("")
+        window.isReleasedWhenClosed = false
         UserDefaults.standard.removeObject(forKey: "NSWindow Frame Calculator")
+        window.setAccessibilityIdentifier("calculator-window")
 
         window.styleMask.insert(.resizable)
         window.isMovable = true
+
+        installCloseInterceptor(on: window)
 
         WindowSizing.applyConstraints(to: window)
         restoreFrame()
@@ -56,10 +95,20 @@ final class CalculatorWindow {
         observeWindowNotifications(for: window)
     }
 
+    private func installCloseInterceptor(on window: NSWindow) {
+        let current = window.delegate
+        if current !== closeInterceptor {
+            closeInterceptor.previous = current
+            window.delegate = closeInterceptor
+        }
+    }
+
     // MARK: - Visibility
 
     func show() {
         guard let window else { return }
+        installCloseInterceptor(on: window)
+
         if preferences.moveWindowToCurrentSpaceWhenShown {
             window.collectionBehavior.insert(.moveToActiveSpace)
         } else {
@@ -79,6 +128,10 @@ final class CalculatorWindow {
         if let contentView = window.contentView {
             window.makeFirstResponder(contentView)
         }
+        // AppKit can reset traffic-light alpha when re-ordering; re-apply style.
+        let style = preferences.windowStyle.isAvailable
+            ? preferences.windowStyle : .native
+        trafficLights.apply(hoverUntilPointerNearby: style == .native, to: window)
     }
 
     func hide() {
@@ -156,20 +209,29 @@ final class CalculatorWindow {
             window.contentLayoutRect.width,
             WindowSizing.minimumContentSize.width)
 
-        style.applyChrome(to: window)
-        updateToolbarVisibility()
-        normalizeContentSize(of: window, width: previousWidth)
-        window.displayIfNeeded()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0
+            style.applyChrome(to: window)
+            updateToolbarVisibility()
+            normalizeContentSize(of: window, width: previousWidth)
+            trafficLights.apply(
+                hoverUntilPointerNearby: style == .native,
+                to: window)
+            installCloseInterceptor(on: window)
+        }
     }
 
     func updateToolbarVisibility() {
-        guard let window else { return }
+        guard let window, let toolbarActions else { return }
         let style = preferences.windowStyle.isAvailable
             ? preferences.windowStyle : .native
-        if style.usesAccessoryToolbar, let toolbarActions {
+
+        if style.usesAccessoryToolbar {
             toolbar.attach(to: window, preferences: preferences, actions: toolbarActions)
-        } else {
-            toolbar.detach(from: window)
+            toolbar.setVisible(true)
+        } else if toolbar.isAttached {
+            // Keep installed; hiding avoids title-bar tear-down on the next flip.
+            toolbar.setVisible(false)
         }
     }
 
@@ -177,7 +239,11 @@ final class CalculatorWindow {
         let size = WindowSizing.contentSize(forWidth: width)
         window.contentAspectRatio = WindowSizing.defaultContentSize
         WindowSizing.applyConstraints(to: window)
-        window.setContentSize(size)
+        let current = window.contentLayoutRect.size
+        if abs(current.width - size.width) > 0.5
+            || abs(current.height - size.height) > 0.5 {
+            window.setContentSize(size)
+        }
     }
 
     // MARK: - Focus

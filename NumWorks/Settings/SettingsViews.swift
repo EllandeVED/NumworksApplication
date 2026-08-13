@@ -41,16 +41,7 @@ struct SettingsRootView: View {
     }
 
     private static func initialTab() -> SettingsTab {
-#if DEBUG
-        for argument in ProcessInfo.processInfo.arguments {
-            if argument.hasPrefix("--settings-tab="),
-               let tab = SettingsTab(rawValue:
-                   String(argument.dropFirst("--settings-tab=".count))) {
-                return tab
-            }
-        }
-#endif
-        return .general
+        UITesting.settingsTabArgument ?? .general
     }
 }
 
@@ -66,8 +57,14 @@ struct GeneralSettingsView: View {
 
     private var automaticUpdates: Binding<Bool> {
         Binding(
-            get: { UpdateController.shared.automaticallyChecksForUpdates },
-            set: { UpdateController.shared.automaticallyChecksForUpdates = $0 })
+            get: {
+                if UITesting.isEnabled { return true }
+                return UpdateController.shared.automaticallyChecksForUpdates
+            },
+            set: { newValue in
+                guard !UITesting.isEnabled else { return }
+                UpdateController.shared.automaticallyChecksForUpdates = newValue
+            })
     }
 
     var body: some View {
@@ -88,10 +85,7 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle("Show Dock icon", isOn: $preferences.showDockIcon)
             } footer: {
-                Text("Without a Dock icon, NumWorks keeps running in the "
-                     + "background and stays reachable through its keyboard "
-                     + "shortcuts. The Dock icon stays visible while Settings "
-                     + "is open.")
+                Text("The Dock icon will always stay visible while the app Settings window is open.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -108,8 +102,8 @@ struct GeneralSettingsView: View {
 
             Section {
                 Toggle("Check for updates automatically", isOn: automaticUpdates)
-                Button("Check for Updates…", action: actions.checkForUpdates)
-                    .disabled(!UpdateController.shared.canCheckForUpdates)
+                    .disabled(UITesting.isEnabled)
+                CheckForUpdatesButton(actions: actions)
                 if !isInApplicationsFolder {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -117,14 +111,17 @@ struct GeneralSettingsView: View {
                             .imageScale(.small)
                             .accessibilityHidden(true)
                         Button("Move to Applications Folder") {
+                            guard !UITesting.skipAppMover else { return }
                             AppMover.moveIfNecessary(prompt: false)
                         }
                         .controlSize(.small)
+                        .disabled(UITesting.skipAppMover)
                     }
                 }
             } footer: {
                 if isInApplicationsFolder {
-                    Text("Automatic checks run a few seconds after launch (at most once a day). Updates install only while NumWorks lives in the Applications folder.")
+                    Text("Automatic checks run shortly after launch (at most once a day). "
+                         + "Keep NumWorks in the Applications folder so updates can install.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -143,6 +140,44 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Observes `UpdateController` so the label swaps to a spinner while checking.
+private struct CheckForUpdatesButton: View {
+    let actions: SettingsActions
+
+    var body: some View {
+        if UITesting.isEnabled {
+            Button("Check for Updates…", action: {})
+                .disabled(true)
+        } else {
+            CheckForUpdatesButtonLive(actions: actions)
+        }
+    }
+}
+
+private struct CheckForUpdatesButtonLive: View {
+    @ObservedObject private var updates = UpdateController.shared
+    let actions: SettingsActions
+
+    var body: some View {
+        HStack {
+            Button {
+                actions.checkForUpdates()
+            } label: {
+                if updates.isCheckingForUpdates {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel("Checking for updates")
+                } else {
+                    Text("Check for Updates…")
+                }
+            }
+            .disabled(!updates.canCheckForUpdates || updates.isCheckingForUpdates)
+            .accessibilityValue(updates.isCheckingForUpdates ? "Checking" : "Idle")
+            Spacer(minLength: 0)
+        }
     }
 }
 
@@ -228,10 +263,7 @@ struct AdvancedSettingsView: View {
                 Button("Restore Default Settings…") {
                     isConfirmingReset = true
                 }
-            } footer: {
-                Text("The calculator window keeps its current position and size.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .accessibilityIdentifier("restore-defaults-button")
             }
             Section {
                 LabeledContent("Custom Epsilon Framework") {

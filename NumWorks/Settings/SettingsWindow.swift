@@ -22,6 +22,7 @@ final class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: hosting)
         window.styleMask = [.titled, .closable]
         window.title = "NumWorks Settings"
+        window.setAccessibilityIdentifier("settings-window")
         window.isReleasedWhenClosed = false
         window.center()
         super.init(window: window)
