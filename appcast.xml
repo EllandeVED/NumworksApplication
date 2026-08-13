@@ -3,6 +3,48 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.10</title>
+            <pubDate>Fri, 14 Aug 2026 00:56:36 +0200</pubDate>
+            <sparkle:version>15</sparkle:version>
+            <sparkle:shortVersionString>2.0.10</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's New in 2.x.x
+
+This release introduces a modern update system powered by [Sparkle](https://github.com/sparkle-project/Sparkle), the standard open-source framework for keeping macOS apps up to date securely and reliably.
+
+NumWorks now embeds a compiled build of [Epsilon](https://github.com/numworks/epsilon) (the official calculator firmware) taken directly from NumWorks’ open-source project on GitHub, rather than relying on their website’s HTML simulator at [numworks.com](https://www.numworks.com/simulator/download/).
+
+### This make the calculator
+- **Safer, more reliable updates** — Sparkle verifies each release cryptographically before installing
+- **Closer to the real calculator** — running native Epsilon improves stability and makes the display feel calmer and more consistent
+- **Built from upstream source** — easier to track official Epsilon improvements as they ship
+
+With any new updates to the Epsilon software, an automatic GitHub Action will publish an update so that you always get the latest version of NumWorks. 
+
+### 2.0.7
+- Bug fix: the calculator would stay hidden behind the front most app 
+
+### 2.0.8
+- Bug fix: Fixed logic with the automatic update checkbox
+- Chage: AppMover is now triggered once on first launch
+
+### 2.0.9
+- Updates check on launch now
+
+### 2.0.10
+## What's New in 2.0.10
+Fixed and refined:
+	- Update checker behaiour
+	- Menubar icon hitbox 
+	- Settings hints
+
+
+**Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.9...2.0.10
+]]></description>
+            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.10/NumWorks-2.0.10.zip" length="3914510" type="application/octet-stream" sparkle:edSignature="Z9bd1jG0DGK2dwrAio5H/0M4unhT6bMxIyVX/y1N40aAiFeklt9g0AWRLP+jy/3WaCmZvtvhD6HHAFGVXrseBw=="/>
+        </item>
+        <item>
             <title>2.0.9</title>
             <pubDate>Thu, 30 Jul 2026 17:57:28 +0200</pubDate>
             <sparkle:version>14</sparkle:version>
@@ -65,31 +107,6 @@ With any new updates to the Epsilon software, an automatic GitHub Action will pu
 - Chage: AppMover is now triggered once on first launch
 ]]></description>
             <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.8/NumWorks-2.0.8.zip" length="3963358" type="application/octet-stream" sparkle:edSignature="IO1OQbq558gCQUk7GFbhNycYaEKrq42P0UoDmpt+ksL1E31sI5yD6Qt6NKQqZ7sf0B3tLWtmF1XSNu7Da0tMCw=="/>
-        </item>
-        <item>
-            <title>2.0.7</title>
-            <pubDate>Wed, 29 Jul 2026 05:20:11 +0200</pubDate>
-            <sparkle:version>10</sparkle:version>
-            <sparkle:shortVersionString>2.0.7</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## What's New in 2.x.x
-
-This release introduces a modern update system powered by [Sparkle](https://github.com/sparkle-project/Sparkle), the standard open-source framework for keeping macOS apps up to date securely and reliably.
-
-NumWorks now embeds a compiled build of [Epsilon](https://github.com/numworks/epsilon) (the official calculator firmware) taken directly from NumWorks’ open-source project on GitHub, rather than relying on their website’s HTML simulator at [numworks.com](https://www.numworks.com/simulator/download/).
-
-### This make the calculator
-- **Safer, more reliable updates** — Sparkle verifies each release cryptographically before installing
-- **Closer to the real calculator** — running native Epsilon improves stability and makes the display feel calmer and more consistent
-- **Built from upstream source** — easier to track official Epsilon improvements as they ship
-
-With any new updates to the Epsilon software, an automatic GitHub Action will publish an update so that you always get the latest version of NumWorks. 
-
-### 2.0.7
-- Bug fix: the calculator would stay hidden behind the front most app 
-]]></description>
-            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.7/NumWorks-2.0.7.zip" length="3955777" type="application/octet-stream" sparkle:edSignature="pyJEgrkLHp1dGMdwKnAuqowu6HVH//ywZyoQvrnj7EmcyDOM7+YU6d3IdODmfcbHvJVzq6MysyK8bh81dfsZCg=="/>
         </item>
     </channel>
 </rss>
