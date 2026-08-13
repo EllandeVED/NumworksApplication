@@ -15,6 +15,9 @@ final class AppController: NSObject {
     private var settingsWindowController: SettingsWindowController?
     private var statusItemController: StatusItemController?
     private var bridgeObserver: NSObjectProtocol?
+    /// Intercepts ⌘, before SDL can swallow it (menu key equivalents never fire
+    /// while the calculator NSWindow is key).
+    private var settingsKeyMonitor: Any?
     private var hasAttached = false
     private var cancellables = Set<AnyCancellable>()
 
@@ -28,6 +31,9 @@ final class AppController: NSObject {
         if let bridgeObserver {
             NotificationCenter.default.removeObserver(bridgeObserver)
         }
+        if let settingsKeyMonitor {
+            NSEvent.removeMonitor(settingsKeyMonitor)
+        }
     }
 
     /// Called from main.swift before Epsilon takes over the main thread.
@@ -38,8 +44,11 @@ final class AppController: NSObject {
         // Always start unpinned; the user can enable Always on Top during the session.
         preferences.alwaysOnTop = false
 
-        // Keep Sparkle alive for the whole process (weak delegates inside).
-        _ = UpdateController.shared
+        // Sparkle’s updater shares the main run loop; skip it under UI testing so
+        // XCTest isn’t blocked waiting for an “idle” SDL / network process.
+        if !UITesting.isEnabled {
+            _ = UpdateController.shared
+        }
 
         shortcutController = ShortcutController(
             preferences: preferences,
@@ -49,6 +58,7 @@ final class AppController: NSObject {
             toggleAlwaysOnTop: { [weak self] in
                 self?.togglePin()
             })
+        installSettingsKeyEquivalentMonitor()
         subscribeToPreferenceChanges()
 
         bridgeObserver = NotificationCenter.default.addObserver(
@@ -67,6 +77,26 @@ final class AppController: NSObject {
         }
     }
 
+    /// ⌘, must be handled before SDL’s window sees the keyDown; otherwise the
+    /// event is consumed and the app-menu Settings item never runs.
+    private func installSettingsKeyEquivalentMonitor() {
+        guard settingsKeyMonitor == nil else { return }
+        settingsKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            let commandOnly = flags.contains(.command)
+                && !flags.contains(.option)
+                && !flags.contains(.control)
+                && !flags.contains(.shift)
+            guard commandOnly, event.charactersIgnoringModifiers == "," else {
+                return event
+            }
+            MainActor.assumeIsolated {
+                self?.openSettings()
+            }
+            return nil
+        }
+    }
+
     // MARK: - Actions
 
     func toggleCalculator() {
@@ -79,8 +109,32 @@ final class AppController: NSObject {
 
     func quit() {
         // EpsilonBridge swizzles SDLApplication.terminate: so this actually
-        // exits after SDL_QUIT (needed for Quit and Sparkle).
+        // exits after SDL_QUIT (needed for Quit and Sparkle). Under UI-testing
+        // shell mode there is no SDL — standard terminate is enough.
         NSApp.terminate(nil)
+    }
+
+    /// AppKit-only process used by XCTest. Avoids `epsilon_main` / SDL, which
+    /// never go “idle” and make every Accessibility query appear to stall.
+    func runUITestingShell() -> Int32 {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.regular)
+        preferences.showDockIcon = true
+
+        let placeholder = NSWindow(
+            contentRect: NSRect(origin: .zero, size: WindowSizing.defaultContentSize),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false)
+        placeholder.title = "NumWorks"
+        placeholder.setAccessibilityIdentifier("calculator-window")
+        placeholder.isReleasedWhenClosed = false
+        placeholder.center()
+
+        attach(to: placeholder)
+        app.activate(ignoringOtherApps: true)
+        app.run()
+        return EXIT_SUCCESS
     }
 
     func openSettings() {
@@ -142,15 +196,24 @@ final class AppController: NSObject {
         NSApp.applicationIconImage = AppInfo.applicationIcon
 
         MenuBar.installSettingsItem(target: self, action: #selector(openSettingsAction(_:)))
-        MenuBar.installCheckForUpdatesItem(
-            target: UpdateController.shared,
-            action: #selector(UpdateController.checkForUpdates(_:)))
+        if !UITesting.isEnabled {
+            MenuBar.installCheckForUpdatesItem(
+                target: UpdateController.shared,
+                action: #selector(UpdateController.checkForUpdates(_:)))
+        }
         MenuBar.installQuitItem(target: self, action: #selector(quitAction(_:)))
         installReopenHandler()
         installStatusItem()
+
+        // UI tests need a regular activation policy and an AppKit window.
+        // Leaving the SDL simulator paused (hidden calculator) keeps the main
+        // thread responsive to Accessibility queries from XCTest.
+        if UITesting.isEnabled {
+            preferences.showDockIcon = true
+        }
         applyDockIconPolicy(effectiveShowDockIcon: preferences.showDockIcon)
 
-        if preferences.launchWindowVisible {
+        if UITesting.shouldShowCalculatorOnLaunch || preferences.launchWindowVisible {
             calculatorWindow.show()
         } else {
             calculatorWindow.hide()
@@ -160,19 +223,24 @@ final class AppController: NSObject {
 
         // Offer AppMover first (modal). Only after it returns, schedule the
         // delayed automatic update check so the two alerts never overlap.
+        // XCTest / --ui-testing skip both so popups cannot block the suite.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.offerMoveToApplicationsIfNeeded()
-            UpdateController.shared.schedulePostLaunchUpdateCheck(after: 3)
+            if !UITesting.skipAutomaticUpdateChecks {
+                UpdateController.shared.schedulePostLaunchUpdateCheck(after: 3)
+            }
         }
 
-#if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--show-settings") {
-            openSettings()
+        if UITesting.shouldOpenSettingsOnLaunch {
+            // Next turn so chrome/attach finish before Settings becomes key.
+            DispatchQueue.main.async { [weak self] in
+                self?.openSettings()
+            }
         }
-#endif
     }
 
     private func offerMoveToApplicationsIfNeeded() {
+        guard !UITesting.skipAppMover else { return }
         guard !Bundle.main.isInstalled else { return }
         guard preferences.shouldOfferAppMover else { return }
         preferences.recordAppMoverOfferShown()
@@ -271,9 +339,12 @@ final class AppController: NSObject {
             restoreDefaultSettings: { [weak self] in
                 self?.preferences.resetToDefaults()
                 self?.shortcutController?.resetShortcutsToDefaults()
-                UpdateController.shared.automaticallyChecksForUpdates = true
+                if !UITesting.isEnabled {
+                    UpdateController.shared.automaticallyChecksForUpdates = true
+                }
             },
             checkForUpdates: {
+                guard !UITesting.isEnabled else { return }
                 UpdateController.shared.checkForUpdates(nil)
             })
     }

@@ -2,15 +2,13 @@
 //  NumWorksUITestsLaunchTests.swift
 //  NumWorksUITests
 //
-//  Created by van Egmond Dascon on 28/07/2026.
-//
 
 import XCTest
 
 final class NumWorksUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
@@ -18,16 +16,30 @@ final class NumWorksUITestsLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testLaunch() throws {
+    func testLaunchScreenshot() throws {
         let app = XCUIApplication()
-        app.launch()
+        defer { NumWorksUITestSupport.terminate(app) }
 
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
-
+        try NumWorksUITestSupport.launch(app)
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    @MainActor
+    func testLaunchPerformance() throws {
+        try XCTSkipIf(
+            ProcessInfo.processInfo.environment["NUMWORKS_UI_PERF"] != "1",
+            "Set NUMWORKS_UI_PERF=1 to run launch performance (slow; relaunches the app).")
+
+        measure(metrics: [XCTApplicationLaunchMetric()]) {
+            let app = XCUIApplication()
+            app.launchArguments = NumWorksUITestSupport.isolationArguments
+            app.launch()
+            _ = app.windows["NumWorks Settings"].waitForExistence(timeout: 12)
+            app.terminate()
+            _ = app.wait(for: .notRunning, timeout: 5)
+        }
     }
 }

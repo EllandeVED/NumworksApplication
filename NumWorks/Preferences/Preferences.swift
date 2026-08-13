@@ -147,6 +147,10 @@ final class Preferences: ObservableObject {
 
     // MARK: - AppMover (not shown in Settings)
 
+    /// Version string used for the two-offer-per-version counter.
+    /// Tests may override; production leaves the default (`AppInfo.appVersion`).
+    var appMoverVersionProvider: () -> String = { AppInfo.appVersion }
+
     /// Reset the two-launch offer counter when the marketing/build version changes
     /// (including after Sparkle updates).
     func synchronizeAppMoverOffers(withVersion version: String) {
@@ -158,12 +162,12 @@ final class Preferences: ObservableObject {
 
     /// Whether we should still show the Move-to-Applications prompt this launch.
     var shouldOfferAppMover: Bool {
-        synchronizeAppMoverOffers(withVersion: AppInfo.appVersion)
+        synchronizeAppMoverOffers(withVersion: appMoverVersionProvider())
         return defaults.integer(forKey: Key.appMoverOfferCount) < Self.appMoverOffersPerVersion
     }
 
     func recordAppMoverOfferShown() {
-        synchronizeAppMoverOffers(withVersion: AppInfo.appVersion)
+        synchronizeAppMoverOffers(withVersion: appMoverVersionProvider())
         let next = defaults.integer(forKey: Key.appMoverOfferCount) + 1
         defaults.set(next, forKey: Key.appMoverOfferCount)
     }
