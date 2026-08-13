@@ -5,20 +5,24 @@
 # (Keychain EdDSA key), and publishes zip + appcast to GitHub Pages.
 #
 # Usage:
-#   ./NumWorks/Scripts/release.sh <marketing-version> [options]
+#   ./NumWorks/Scripts/release.sh [marketing-version] [options]
+#
+# If marketing version / build are omitted, values come from the NumWorks
+# target in NumWorks.xcodeproj (MARKETING_VERSION / CURRENT_PROJECT_VERSION).
 #
 # Examples:
-#   ./NumWorks/Scripts/release.sh 2.0.5
-#   ./NumWorks/Scripts/release.sh 2.0.5 --epsilon 23.2.3
-#   ./NumWorks/Scripts/release.sh 2.0.5 --epsilon latest
-#   ./NumWorks/Scripts/release.sh 2.0.5 --build 12
-#   ./NumWorks/Scripts/release.sh 2.0.5 --notes-file ./notes.md
-#   ./NumWorks/Scripts/release.sh 2.0.5 --skip-publish
+#   ./NumWorks/Scripts/release.sh --skip-publish
+#   ./NumWorks/Scripts/release.sh 2.0.10
+#   ./NumWorks/Scripts/release.sh --version 2.0.10 --build 15
+#   ./NumWorks/Scripts/release.sh 2.0.10 --epsilon 23.2.3
+#   ./NumWorks/Scripts/release.sh --epsilon latest --skip-publish
+#   ./NumWorks/Scripts/release.sh --notes-file ./notes.md
 #
 # Options:
+#   --version <x.y.z>    Marketing version (default: MARKETING_VERSION in Xcode)
+#   --build <n>          CFBundleVersion (default: CURRENT_PROJECT_VERSION in Xcode)
 #   --epsilon <ref>      prepare-epsilon.sh <ref> then rebuild libepsilon.a
 #   --epsilon latest     same, using the newest numworks/epsilon version tag
-#   --build <n>          CFBundleVersion (default: current + 1)
 #   --notes-file <path>  Use this Markdown file as release notes
 #                        (appends a Full Changelog compare link if missing)
 #   --configuration <c>  Debug or Release (default: Release)
@@ -31,7 +35,7 @@
 # Override either with NUMWORKS_RELEASES_DIR.
 #
 # On a real publish (without --skip-publish), also creates/updates a GitHub
-# Release whose tag and title are exactly the marketing version (e.g. 2.0.7).
+# Release whose tag and title are exactly the marketing version (e.g. 2.0.10).
 #
 # Requires: Xcode, Keychain Sparkle private key (generate_keys), git access to
 # EllandeVED/NumworksApplication (gh-pages branch), and `gh` for GitHub Releases.
@@ -96,6 +100,11 @@ usage() {
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
+    --version)
+      [[ -z "$VERSION" ]] || die "marketing version specified more than once"
+      VERSION="${2:?}"
+      shift 2
+      ;;
     --build) BUILD_NUMBER="${2:?}"; shift 2 ;;
     --notes-file) NOTES_FILE="${2:?}"; shift 2 ;;
     --configuration) CONFIGURATION="${2:?}"; shift 2 ;;
@@ -116,9 +125,46 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$VERSION" ]] || die "marketing version required (e.g. 2.0.5). Try --help."
 [[ -f "$PBXPROJ" ]] || die "project not found at $PBXPROJ"
+
+# --- Read MARKETING_VERSION / CURRENT_PROJECT_VERSION from Xcode project -----
+
+read_project_versions() {
+  python3 - <<'PY' "$PBXPROJ"
+import re, sys
+text = open(sys.argv[1]).read()
+blocks = re.findall(
+    r"buildSettings = \{[^{}]*COMBINE_HIDPI_IMAGES = YES;[^{}]*\};",
+    text,
+    flags=re.S,
+)
+if not blocks:
+    raise SystemExit("could not find NumWorks app buildSettings")
+block = blocks[0]
+build = re.search(r"CURRENT_PROJECT_VERSION = (\d+);", block)
+marketing = re.search(r"MARKETING_VERSION = ([^;]+);", block)
+if not build or not marketing:
+    raise SystemExit("could not read MARKETING_VERSION / CURRENT_PROJECT_VERSION")
+print(marketing.group(1).strip().strip('"'))
+print(build.group(1))
+PY
+}
+
+PROJECT_VERSIONS="$(read_project_versions)" || die "failed to read versions from project.pbxproj"
+PROJECT_MARKETING="$(printf '%s\n' "$PROJECT_VERSIONS" | sed -n '1p')"
+PROJECT_BUILD="$(printf '%s\n' "$PROJECT_VERSIONS" | sed -n '2p')"
+
+if [[ -z "$VERSION" ]]; then
+  VERSION="$PROJECT_MARKETING"
+  info "Using MARKETING_VERSION from Xcode: $VERSION"
+fi
+if [[ -z "$BUILD_NUMBER" ]]; then
+  BUILD_NUMBER="$PROJECT_BUILD"
+  info "Using CURRENT_PROJECT_VERSION from Xcode: $BUILD_NUMBER"
+fi
+
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] || die "invalid version: $VERSION"
+[[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]] || die "invalid build number: $BUILD_NUMBER"
 
 # Outside the git work tree so zips/appcasts cannot be committed by accident.
 if [[ -n "${NUMWORKS_RELEASES_DIR:-}" ]]; then
@@ -170,29 +216,7 @@ PROGRESS_TOTAL=5
 [[ "$SKIP_PUBLISH" -eq 0 ]] && PROGRESS_TOTAL=$((PROGRESS_TOTAL + 1))
 progress_init "$PROGRESS_TOTAL"
 
-# --- Resolve current build number (NumWorks app target only) -----------------
-
-current_build="$(
-  python3 - <<'PY' "$PBXPROJ"
-import re, sys
-text = open(sys.argv[1]).read()
-blocks = re.findall(
-    r"buildSettings = \{[^{}]*COMBINE_HIDPI_IMAGES = YES;[^{}]*\};",
-    text,
-    flags=re.S,
-)
-if not blocks:
-    raise SystemExit("could not find NumWorks app buildSettings")
-m = re.search(r"CURRENT_PROJECT_VERSION = (\d+);", blocks[0])
-print(m.group(1) if m else "0")
-PY
-)"
-
-if [[ -z "$BUILD_NUMBER" ]]; then
-  BUILD_NUMBER="$((current_build + 1))"
-fi
-
-info "Version $VERSION (build $BUILD_NUMBER)  [was build $current_build]"
+info "Version $VERSION (build $BUILD_NUMBER)  [Xcode had ${PROJECT_MARKETING} / ${PROJECT_BUILD}]"
 
 # --- Bump versions in project.pbxproj ----------------------------------------
 
