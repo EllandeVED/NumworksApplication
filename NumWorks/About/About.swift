@@ -19,7 +19,7 @@ struct AboutView: View {
         Form {
             Section {
                 VStack(spacing: 8) {
-                    Image(nsImage: AppInfo.applicationIcon)
+                    Image(nsImage: AppInfo.aboutIcon)
                         .resizable()
                         .frame(width: 96, height: 96)
                         .accessibilityHidden(true)

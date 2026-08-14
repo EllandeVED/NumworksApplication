@@ -138,8 +138,33 @@ struct GeneralSettingsView: View {
                         "Warning: Updates can be checked, but installation requires the Applications folder.")
                 }
             }
+
+            ShareNumWorksButton()
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color(nsColor: .windowBackgroundColor))
+                .listRowSeparator(.hidden)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct ShareNumWorksButton: View {
+    private static let url = URL(
+        string: "https://github.com/EllandeVED/NumworksApplication/releases/latest")!
+
+    var body: some View {
+        ShareLink(
+            item: Self.url,
+            subject: Text("NumWorks for Mac"),
+            message: Text(
+                "A native NumWorks graphing calculator for macOS: \(Self.url.absoluteString)"),
+                preview: SharePreview(
+                    "NumWorks for Mac",
+                    image: Image(nsImage: AppInfo.aboutIcon))
+        ) {
+            Label("Share NumWorks", systemImage: "square.and.arrow.up")
+        }
+        .accessibilityIdentifier("share-app-button")
     }
 }
 
