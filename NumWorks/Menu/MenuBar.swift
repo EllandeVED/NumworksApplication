@@ -71,15 +71,22 @@ final class StatusItemController: NSObject {
     private let actions: StatusItemActions
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
-    private var isToggling = false
+    /// Snapshot of hide-vs-show taken on mouseDown so activate/reopen cannot
+    /// invert the click before mouseUp runs.
+    private var pendingShouldShow: Bool?
+    private var ignoreReopenUntil = Date.distantPast
+    private var cachedIcons: [MenuBarIconStyle: NSImage] = [:]
 
     struct StatusItemActions {
         let togglePin: () -> Void
+        let showCalculator: () -> Void
+        let hideCalculator: () -> Void
         let toggleVisibility: () -> Void
         let openSettings: () -> Void
         let quit: () -> Void
         let isPinned: () -> Bool
         let isVisible: () -> Bool
+        let prefersHideOnToggle: () -> Bool
     }
 
     init(preferences: Preferences, actions: StatusItemActions) {
@@ -115,7 +122,7 @@ final class StatusItemController: NSObject {
         if let button = item.button {
             button.target = self
             button.action = #selector(statusItemClicked(_:))
-            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            button.sendAction(on: [.leftMouseDown, .leftMouseUp, .rightMouseUp])
             // Don’t scale the template down to the slot — hitbox and art stay independent.
             button.imageScaling = .scaleNone
         }
@@ -135,13 +142,17 @@ final class StatusItemController: NSObject {
 
     private func applyIcon() {
         guard let button = statusItem?.button else { return }
-        guard let source = NSImage(named: preferences.menuBarIconStyle.imageName) else {
+        let style = preferences.menuBarIconStyle
+        if let cached = cachedIcons[style] {
+            if button.image !== cached {
+                button.image = cached
+            }
+            return
+        }
+        guard let source = NSImage(named: style.imageName) else {
             button.image = nil
             return
         }
-        // Clear first so AppKit doesn’t keep the previous template cached on
-        // the button (style changes otherwise only appeared after a click).
-        button.image = nil
 
         let side = Self.iconSize
         let image = NSImage(size: NSSize(width: side, height: side))
@@ -154,24 +165,41 @@ final class StatusItemController: NSObject {
             fraction: 1.0)
         image.unlockFocus()
         image.isTemplate = true
+        cachedIcons[style] = image
 
         button.image = image
         button.imageScaling = .scaleNone
-        button.needsDisplay = true
-        button.displayIfNeeded()
+    }
+
+    private var buttonWindow: NSWindow? { statusItem?.button?.window }
+
+    func isEventFromStatusItem(_ event: NSEvent?) -> Bool {
+        if Date() < ignoreReopenUntil { return true }
+        guard let event, let buttonWindow else { return false }
+        return event.window === buttonWindow
     }
 
     @objc private func statusItemClicked(_ sender: Any?) {
-        if NSApp.currentEvent?.type == .rightMouseUp {
+        let type = NSApp.currentEvent?.type
+        if type == .rightMouseUp {
+            pendingShouldShow = nil
             showMenu(with: NSApp.currentEvent)
             return
         }
-        // Immediate, re-entrancy-safe toggle. No delay — AppKit toolbar no
-        // longer involves ViewBridge, so rapid clicks are safe.
-        guard !isToggling else { return }
-        isToggling = true
-        actions.toggleVisibility()
-        isToggling = false
+        if type == .leftMouseDown {
+            pendingShouldShow = !actions.prefersHideOnToggle()
+            ignoreReopenUntil = Date().addingTimeInterval(0.45)
+            return
+        }
+        ignoreReopenUntil = Date().addingTimeInterval(0.45)
+        // Same show/hide as the shortcut — but use the mouse-down snapshot so a
+        // reopen Apple Event from this click cannot invert hide ↔ show.
+        if let shouldShow = pendingShouldShow {
+            pendingShouldShow = nil
+            shouldShow ? actions.showCalculator() : actions.hideCalculator()
+        } else {
+            actions.toggleVisibility()
+        }
     }
 
     private func showMenu(with event: NSEvent?) {

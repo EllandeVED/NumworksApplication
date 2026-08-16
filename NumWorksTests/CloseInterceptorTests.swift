@@ -25,4 +25,13 @@ struct CloseInterceptorTests {
         interceptor.onRequestHide?()
         #expect(called)
     }
+
+    @Test func unattachedCalculatorDoesNotPreferHide() {
+        let name = "NumWorksTests.visibility.\(UUID().uuidString)"
+        let suite = UserDefaults(suiteName: name)!
+        suite.removePersistentDomain(forName: name)
+        let window = CalculatorWindow(preferences: Preferences(defaults: suite))
+        #expect(window.prefersHideOnToggle == false)
+        #expect(window.isVisibleOnActiveSpace == false)
+    }
 }

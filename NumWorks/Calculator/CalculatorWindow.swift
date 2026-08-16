@@ -105,6 +105,12 @@ final class CalculatorWindow {
 
     // MARK: - Visibility
 
+    /// Same condition the shortcut uses: hide only when already frontmost.
+    var prefersHideOnToggle: Bool {
+        guard let window else { return false }
+        return window.isVisible && window.isOnActiveSpace && isFrontmostCalculator(window)
+    }
+
     func show() {
         guard let window else { return }
         installCloseInterceptor(on: window)
@@ -125,10 +131,9 @@ final class CalculatorWindow {
         NSApp.activate(ignoringOtherApps: true)
         window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
-        if let contentView = window.contentView {
+        if let contentView = window.contentView, window.firstResponder !== contentView {
             window.makeFirstResponder(contentView)
         }
-        // AppKit can reset traffic-light alpha when re-ordering; re-apply style.
         let style = preferences.windowStyle.isAvailable
             ? preferences.windowStyle : .native
         trafficLights.apply(hoverUntilPointerNearby: style == .native, to: window)
@@ -138,14 +143,12 @@ final class CalculatorWindow {
         // Leave the AppKit toolbar accessory attached. Creating/destroying it
         // on every toggle was unnecessary once SwiftUI/ViewBridge was removed.
         EpsilonBridge.isSimulatorActive = false
+        trafficLights.pause()
         window?.orderOut(nil)
     }
 
     func toggleVisibility() {
-        guard let window else { return }
-        // If already on-screen but behind something else, bring forward instead
-        // of hiding — matches menu-bar calculator expectations.
-        if window.isVisible && window.isOnActiveSpace && isFrontmostCalculator(window) {
+        if prefersHideOnToggle {
             hide()
         } else {
             show()

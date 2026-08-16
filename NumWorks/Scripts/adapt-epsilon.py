@@ -253,7 +253,7 @@ def adapt_shared_window_cpp(root: Path) -> None:
         else:
             text = PAUSE_INCLUDE + "\n" + text
 
-    if PAUSE_MARKER in text and "NumWorksSimulatorIsActive" in text:
+    if PAUSE_MARKER in text and "NumWorksSimulatorShouldPresent" in text:
         info("window.cpp pause hook already present")
     else:
         old = """void refresh() {
@@ -266,8 +266,9 @@ def adapt_shared_window_cpp(root: Path) -> None:
     return;
   }
   // >>> NUMWORKS_PAUSE
-  /* Do not present (or clear the dirty flag) while hidden — redraw on show. */
-  if (!NumWorksSimulatorIsActive()) {
+  /* Do not present (or clear the dirty flag) while hidden or in the
+   * background — redraw once we are visible and frontmost again. */
+  if (!NumWorksSimulatorShouldPresent()) {
     return;
   }
   // <<< NUMWORKS_PAUSE

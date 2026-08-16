@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Menu-bar agent. Without this the app is a regular foreground app that
+	     merely switches to .accessory at runtime, so once the calculator is
+	     hidden it holds no window assertions and the system is free to
+	     terminate it (SIGTERM). The Dock-icon preference still promotes the
+	     app to .regular at runtime, which is the supported direction. -->
+	<key>LSUIElement</key>
+	<true/>
 	<key>SUFeedURL</key>
 	<string>https://ellandeved.github.io/NumworksApplication/appcast.xml</string>
 	<key>SUPublicEDKey</key>

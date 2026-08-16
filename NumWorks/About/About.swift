@@ -1,8 +1,13 @@
+import AppKit
 import SwiftUI
 
 /// The About page shown as a tab of the Settings window.
 struct AboutView: View {
 
+    private static let numworksWebsiteURL =
+        URL(string: "https://www.numworks.com")
+    private static let epsilonRepositoryURL =
+        URL(string: "https://github.com/numworks/epsilon")
     private static let repositoryURL =
         URL(string: "https://github.com/EllandeVED/NumworksApplication")
     private static let newIssueURL =
@@ -11,68 +16,123 @@ struct AboutView: View {
     @State private var showingLicence = false
 
     var body: some View {
-        VStack(spacing: 6) {
-            Image(nsImage: AppInfo.applicationIcon)
-                .resizable()
-                .frame(width: 96, height: 96)
-                .accessibilityHidden(true)
-                .padding(.top, 20)
+        Form {
+            Section {
+                VStack(spacing: 8) {
+                    Image(nsImage: AppInfo.aboutIcon)
+                        .resizable()
+                        .frame(width: 96, height: 96)
+                        .accessibilityHidden(true)
 
-            Text("NumWorks")
-                .font(.title2.weight(.semibold))
+                    Text("NumWorks")
+                        .font(.title2.weight(.semibold))
 
-            VStack(spacing: 2) {
-                Text("Version \(AppInfo.bundleVersion)")
-                Text("Build \(AppInfo.bundleBuild)")
-                Text("Epsilon v\(AppInfo.epsilonVersion)")
+                    VStack(spacing: 2) {
+                        Text("Version \(AppInfo.bundleVersion)")
+                        Text("Build \(AppInfo.bundleBuild)")
+                        Text("Epsilon v\(AppInfo.epsilonVersion)")
+                    }
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+
+                    Text("Made by Ellande VED")
+                        .font(.callout)
+                        .padding(.top, 2)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+                .listRowBackground(Color(nsColor: .windowBackgroundColor))
             }
-            .font(.callout)
-            .foregroundStyle(.secondary)
 
-            Text("Made by Ellande VED")
-                .font(.callout)
-                .padding(.top, 8)
+            Section("Official links") {
+                if let url = Self.numworksWebsiteURL {
+                    AboutLinkRow(
+                        title: "NumWorks website",
+                        systemImage: "globe",
+                        url: url)
+                }
+                if let url = Self.epsilonRepositoryURL {
+                    AboutLinkRow(
+                        title: "Epsilon repository",
+                        systemImage: "chevron.left.forwardslash.chevron.right",
+                        url: url)
+                }
+            }
 
-            Divider()
-                .frame(width: 240)
-                .padding(.vertical, 10)
-
-            VStack(alignment: .leading, spacing: 8) {
+            Section("Useful links") {
                 if let url = Self.repositoryURL {
-                    ExternalLink(title: "GitHub Repository", url: url)
+                    AboutLinkRow(
+                        title: "GitHub repository",
+                        systemImage: "shippingbox",
+                        url: url)
                 }
                 if let url = Self.newIssueURL {
-                    ExternalLink(title: "Report a bug or suggest a feature", url: url)
+                    AboutLinkRow(
+                        title: "Report a bug or suggest a feature",
+                        systemImage: "exclamationmark.bubble",
+                        url: url)
                 }
-                Button("Licence") {
+                Button {
                     showingLicence = true
+                } label: {
+                    AboutRowLabel(
+                        title: "Licence",
+                        systemImage: "doc.text",
+                        showsExternalIndicator: false)
                 }
-                .buttonStyle(.link)
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("licence-button")
             }
-            .padding(.bottom, 20)
         }
-        .frame(maxWidth: .infinity)
+        .formStyle(.grouped)
         .sheet(isPresented: $showingLicence) {
             LicencePlaceholderView()
         }
     }
 }
 
-private struct ExternalLink: View {
+private struct AboutLinkRow: View {
     let title: String
+    let systemImage: String
     let url: URL
 
     var body: some View {
-        Link(destination: url) {
-            HStack(spacing: 4) {
-                Text(title)
-                Image(systemName: "arrow.up.right.square")
-                    .font(.system(size: 11))
+        Button {
+            NSWorkspace.shared.open(url)
+        } label: {
+            AboutRowLabel(
+                title: title,
+                systemImage: systemImage,
+                showsExternalIndicator: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title) (opens in browser)")
+    }
+}
+
+private struct AboutRowLabel: View {
+    let title: String
+    let systemImage: String
+    let showsExternalIndicator: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .frame(width: 20, alignment: .center)
+                .accessibilityHidden(true)
+            Text(title)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 8)
+            if showsExternalIndicator {
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
         }
-        .accessibilityLabel("\(title) (opens in browser)")
+        .contentShape(Rectangle())
     }
 }
 

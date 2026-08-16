@@ -29,6 +29,18 @@ bool NumWorksSimulatorIsActive(void) {
   return atomic_load_explicit(&sSimulatorActive, memory_order_relaxed);
 }
 
+bool NumWorksSimulatorShouldPresent(void) {
+  if (!atomic_load_explicit(&sSimulatorActive, memory_order_relaxed)) {
+    return false;
+  }
+  /* SDL_RenderPresent / nextDrawable can block indefinitely once the window
+   * is occluded in the background. Skipping the present keeps epsilon_main
+   * pumping AppKit (menu bar, hover) instead of hanging. The dirty flag is
+   * left set, so the frame is drawn as soon as we come back to the front. */
+  NSApplication *app = NSApp;
+  return app == nil || app.isActive;
+}
+
 static void NumWorksTerminate(id self, SEL _cmd, id sender) {
   if (NumWorksOriginalTerminate != NULL) {
     ((void (*)(id, SEL, id))NumWorksOriginalTerminate)(self, _cmd, sender);
@@ -116,6 +128,11 @@ static __weak NSWindow *sCalculatorWindow = nil;
 }
 
 + (int)runSimulatorWithArgc:(int)argc argv:(char **)argv {
+  /* SDL disables the screensaver by default (game-oriented). That holds a
+   * PreventUserIdleDisplaySleep assertion for the life of the process, which
+   * for a menu-bar app blocks idle display/system sleep all day. Opt out
+   * before video init so macOS idle timers behave normally. */
+  setenv("SDL_VIDEO_ALLOW_SCREENSAVER", "1", 1);
   return epsilon_main(argc, argv);
 }
 

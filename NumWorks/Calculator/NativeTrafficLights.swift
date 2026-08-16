@@ -2,6 +2,11 @@ import AppKit
 
 /// In Native style, fades the traffic lights until the pointer is near them.
 /// Toolbar style always shows them at full opacity.
+///
+/// Uses a local event monitor (not an `NSTrackingArea` on the SDL view).
+/// Tracking areas on Epsilon’s window have hung the main thread after the
+/// app resigns key — the wait cursor then appears over the calculator and
+/// the menu-bar extra.
 @MainActor
 final class NativeTrafficLightsController {
 
@@ -22,6 +27,10 @@ final class NativeTrafficLightsController {
             stopMonitor()
             setAlpha(1, in: window)
         }
+    }
+
+    func pause() {
+        stopMonitor()
     }
 
     func invalidate() {
@@ -55,11 +64,9 @@ final class NativeTrafficLightsController {
     }
 
     private func updateForMouseEvent(_ event: NSEvent) {
-        guard hoverEnabled, let window, event.window == window || window.isKeyWindow else {
-            return
-        }
-        // Events for other windows still arrive locally; only react when this
-        // window is key or the event belongs to it.
+        guard hoverEnabled, let window else { return }
+        // Only the calculator window; ignore Settings / status-item traffic.
+        guard event.window === window || window.isKeyWindow else { return }
         let target = event.window ?? window
         guard target === window else {
             setAlpha(0, in: window)
@@ -79,8 +86,6 @@ final class NativeTrafficLightsController {
     }
 
     private func setAlpha(_ alpha: CGFloat, in window: NSWindow) {
-        // Prefer alpha over isHidden so title-bar layout stays stable.
-        // No animator — hover should feel instant, and avoids stacking animations.
         for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] {
             guard let button = window.standardWindowButton(type) else { continue }
             if abs(button.alphaValue - alpha) > 0.01 {

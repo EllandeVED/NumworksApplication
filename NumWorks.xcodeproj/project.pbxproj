@@ -444,7 +444,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -517,7 +517,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_LIBRARY_VALIDATION = NO;
@@ -541,7 +541,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 2.0.10;
+				MARKETING_VERSION = 2.0.11;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
@@ -583,7 +583,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -606,7 +606,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 2.0.10;
+				MARKETING_VERSION = 2.0.11;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",

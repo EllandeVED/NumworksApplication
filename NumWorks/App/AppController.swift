@@ -253,12 +253,17 @@ final class AppController: NSObject {
             preferences: preferences,
             actions: .init(
                 togglePin: { [weak self] in self?.togglePin() },
+                showCalculator: { [weak self] in self?.calculatorWindow.show() },
+                hideCalculator: { [weak self] in self?.calculatorWindow.hide() },
                 toggleVisibility: { [weak self] in self?.toggleCalculator() },
                 openSettings: { [weak self] in self?.openSettings() },
                 quit: { [weak self] in self?.quit() },
                 isPinned: { [weak self] in self?.preferences.alwaysOnTop ?? false },
                 isVisible: { [weak self] in
                     self?.calculatorWindow.isVisibleOnActiveSpace ?? false
+                },
+                prefersHideOnToggle: { [weak self] in
+                    self?.calculatorWindow.prefersHideOnToggle ?? false
                 }))
     }
 
@@ -312,7 +317,7 @@ final class AppController: NSObject {
         // template. Always re-apply the asset-catalog AppIcon whenever the
         // Dock icon is (or becomes) visible — including the temporary show
         // while Settings is open with “Show Dock icon” disabled.
-        if show {
+        if show, NSApp.applicationIconImage !== AppInfo.applicationIcon {
             NSApp.applicationIconImage = AppInfo.applicationIcon
         }
 
@@ -363,6 +368,9 @@ final class AppController: NSObject {
         _ event: NSAppleEventDescriptor,
         replyEvent: NSAppleEventDescriptor
     ) {
+        if statusItemController?.isEventFromStatusItem(NSApp.currentEvent) == true {
+            return
+        }
         if !calculatorWindow.isVisibleOnActiveSpace {
             calculatorWindow.show()
         }
