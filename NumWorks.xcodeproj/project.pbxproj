@@ -517,7 +517,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_LIBRARY_VALIDATION = NO;
@@ -541,7 +541,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 2.0.10;
+				MARKETING_VERSION = 2.0.11;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
@@ -583,7 +583,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -606,7 +606,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 2.0.10;
+				MARKETING_VERSION = 2.0.11;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
