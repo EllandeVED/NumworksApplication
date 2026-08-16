@@ -3,92 +3,76 @@ import AppKit
 /// In Native style, fades the traffic lights until the pointer is near them.
 /// Toolbar style always shows them at full opacity.
 ///
-/// Uses an `NSTrackingArea` on the calculator window instead of a local
-/// `mouseMoved` monitor. A mouseMoved monitor forces high-frequency mouse
-/// events for the whole app (including Settings scrolling) and shows up as
-/// elevated energy impact.
-final class NativeTrafficLightsController: NSResponder {
+/// Uses a local event monitor (not an `NSTrackingArea` on the SDL view).
+/// Tracking areas on Epsilon’s window have hung the main thread after the
+/// app resigns key — the wait cursor then appears over the calculator and
+/// the menu-bar extra.
+@MainActor
+final class NativeTrafficLightsController {
 
-    private weak var trackedWindow: NSWindow?
-    private weak var trackingView: NSView?
-    private var trackingArea: NSTrackingArea?
+    private weak var window: NSWindow?
+    private var mouseMonitor: Any?
     private var hoverEnabled = false
     /// Top-leading hit zone (window coordinates, origin bottom-left).
     private let hoverSize = NSSize(width: 110, height: 52)
 
     func apply(hoverUntilPointerNearby: Bool, to window: NSWindow) {
-        trackedWindow = window
+        self.window = window
         hoverEnabled = hoverUntilPointerNearby
 
         if hoverUntilPointerNearby {
-            installTracking(on: window)
             setAlpha(pointerIsInHoverZone(of: window) ? 1 : 0, in: window)
+            startMonitorIfNeeded()
         } else {
-            removeTracking()
+            stopMonitor()
             setAlpha(1, in: window)
         }
     }
 
-    /// Drop the tracking area while the calculator is ordered out.
     func pause() {
-        removeTracking()
+        stopMonitor()
     }
 
     func invalidate() {
-        removeTracking()
-        if let trackedWindow {
-            setAlpha(1, in: trackedWindow)
+        stopMonitor()
+        if let window {
+            setAlpha(1, in: window)
         }
-        trackedWindow = nil
+        window = nil
         hoverEnabled = false
     }
 
-    // MARK: - Tracking
+    // MARK: - Private
 
-    private func installTracking(on window: NSWindow) {
-        guard let view = window.standardWindowButton(.closeButton)?.superview
-                ?? window.contentView else { return }
-        if trackingView === view, trackingArea != nil { return }
-        removeTracking()
-        let area = NSTrackingArea(
-            rect: .zero,
-            options: [
-                .mouseEnteredAndExited,
-                .mouseMoved,
-                .activeInKeyWindow,
-                .inVisibleRect,
-            ],
-            owner: self,
-            userInfo: nil)
-        view.addTrackingArea(area)
-        trackingView = view
-        trackingArea = area
-    }
-
-    private func removeTracking() {
-        if let trackingArea, let trackingView {
-            trackingView.removeTrackingArea(trackingArea)
+    private func startMonitorIfNeeded() {
+        guard mouseMonitor == nil else { return }
+        mouseMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.mouseMoved, .leftMouseDragged, .mouseEntered, .mouseExited]
+        ) { [weak self] event in
+            MainActor.assumeIsolated {
+                self?.updateForMouseEvent(event)
+            }
+            return event
         }
-        trackingArea = nil
-        trackingView = nil
     }
 
-    override func mouseMoved(with event: NSEvent) {
-        updateHover()
+    private func stopMonitor() {
+        if let mouseMonitor {
+            NSEvent.removeMonitor(mouseMonitor)
+            self.mouseMonitor = nil
+        }
     }
 
-    override func mouseEntered(with event: NSEvent) {
-        updateHover()
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        guard let trackedWindow else { return }
-        setAlpha(0, in: trackedWindow)
-    }
-
-    private func updateHover() {
-        guard hoverEnabled, let trackedWindow, trackedWindow.isKeyWindow else { return }
-        setAlpha(pointerIsInHoverZone(of: trackedWindow) ? 1 : 0, in: trackedWindow)
+    private func updateForMouseEvent(_ event: NSEvent) {
+        guard hoverEnabled, let window else { return }
+        // Only the calculator window; ignore Settings / status-item traffic.
+        guard event.window === window || window.isKeyWindow else { return }
+        let target = event.window ?? window
+        guard target === window else {
+            setAlpha(0, in: window)
+            return
+        }
+        setAlpha(pointerIsInHoverZone(of: window) ? 1 : 0, in: window)
     }
 
     private func pointerIsInHoverZone(of window: NSWindow) -> Bool {

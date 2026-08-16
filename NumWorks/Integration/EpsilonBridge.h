@@ -12,7 +12,8 @@ FOUNDATION_EXPORT NSNotificationName const EpsilonWindowDidBecomeAvailableNotifi
 + (void)unregisterCalculatorWindow:(NSWindow *)window;
 
 /* When NO, Epsilon sleeps longer between polls and skips SDL presents.
- * Drive from CalculatorWindow show/hide / occlusion. */
+ * Drive from CalculatorWindow show/hide / occlusion. Presents are additionally
+ * suppressed whenever NSApp is in the background — see NumWorksSimulatorActive.h. */
 @property(class, nonatomic, getter=isSimulatorActive) BOOL simulatorActive;
 
 /* Runs the Epsilon simulator on the current thread. This wraps

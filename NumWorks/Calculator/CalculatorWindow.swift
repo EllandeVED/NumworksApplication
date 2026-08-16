@@ -142,20 +142,9 @@ final class CalculatorWindow {
     func hide() {
         // Leave the AppKit toolbar accessory attached. Creating/destroying it
         // on every toggle was unnecessary once SwiftUI/ViewBridge was removed.
-        pauseRendering()
+        EpsilonBridge.isSimulatorActive = false
         trafficLights.pause()
         window?.orderOut(nil)
-    }
-
-    /// Stop GPU presents without ordering the window out (Settings is key).
-    func pauseRendering() {
-        EpsilonBridge.isSimulatorActive = false
-    }
-
-    /// Resume presents if the calculator is on-screen.
-    func resumeRenderingIfVisible() {
-        guard let window, window.isVisible else { return }
-        EpsilonBridge.isSimulatorActive = true
     }
 
     func toggleVisibility() {
