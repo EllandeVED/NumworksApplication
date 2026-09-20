@@ -8,7 +8,7 @@
 
 A native macOS application that embeds **[Epsilon](https://github.com/numworks/epsilon)** — NumWorks’ open-source calculator firmware — as a real `.app`, with menu bar integration, keyboard shortcuts, offline use, and automatic updates via [Sparkle](https://github.com/sparkle-project/Sparkle).
 
----
+
 
 > **This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.**
 
@@ -77,7 +77,7 @@ open NumWorks.xcodeproj
 
 The `main` branch tracks the current native (Epsilon) app.
 
----
+
 
 ## Updates
 
@@ -95,16 +95,15 @@ The `main` branch tracks the current native (Epsilon) app.
 - Upstream Epsilon changes ship with new app releases (sometimes prepared automatically for maintainers when a new Epsilon version branch appears).
 - There is **no** separate “simulator download” into Application Support anymore.
 
----
 
 ## Offline support
 
 - After installation, the calculator runs **entirely locally**.
 - Network access is only needed to **check for / download app updates** (GitHub / GitHub Pages).
 
----
 
-## Features (macOS shell)
+
+## Features
 
 - Show / hide calculator (menu bar or global shortcut)
 - Always on top (pin)
@@ -112,7 +111,7 @@ The `main` branch tracks the current native (Epsilon) app.
 - Launch at login, Dock icon on/off, menu bar icon style
 - Window size / position remembered
 
----
+
 
 ## Known issues
 
