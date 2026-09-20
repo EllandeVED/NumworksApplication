@@ -4,6 +4,9 @@
 
 <img width="128" height="128" alt="icon_128x128" src="https://github.com/user-attachments/assets/ebf83080-d4f8-4cfd-9b79-790e0f1f98ce" />
 
+
+ 
+**Download Latest Version [HERE](https://github.com/EllandeVED/NumworksApplication/releases/latest)**
 </div>
 
 A native macOS application that embeds **[Epsilon](https://github.com/numworks/epsilon)** — NumWorks’ open-source calculator firmware — as a real `.app`, with menu bar integration, keyboard shortcuts, offline use, and automatic updates via [Sparkle](https://github.com/sparkle-project/Sparkle).
