@@ -20,6 +20,10 @@ fi
 
 echo "Fetching from ${EPSILON_REPO}"
 git -C "${VENDOR_DIR}" fetch --tags origin
+# Fetch the requested branch, tag, or commit so version-N branches are current.
+if ! git -C "${VENDOR_DIR}" fetch origin "${REF}"; then
+  git -C "${VENDOR_DIR}" fetch origin "refs/tags/${REF}:refs/tags/${REF}"
+fi
 
 echo "Resetting and cleaning ${VENDOR_DIR}"
 git -C "${VENDOR_DIR}" reset --hard
@@ -28,7 +32,7 @@ git -C "${VENDOR_DIR}" reset --hard
 git -C "${VENDOR_DIR}" clean -fdx -e .venv
 
 echo "Checking out ${REF}"
-git -C "${VENDOR_DIR}" checkout "${REF}"
+git -C "${VENDOR_DIR}" checkout --detach FETCH_HEAD
 
 RESOLVED="$(git -C "${VENDOR_DIR}" rev-parse HEAD)"
 echo "Epsilon resolved commit: ${RESOLVED}"

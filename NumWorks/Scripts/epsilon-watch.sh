@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI helper: if upstream Epsilon has a newer version tag than our pin, prepare + build it.
+# CI helper: if upstream Epsilon has a newer version branch than our pin, prepare + build it.
 # On failure, prints a filled agent prompt to $GITHUB_STEP_SUMMARY / stdout and exits 1.
 set -euo pipefail
 
@@ -14,7 +14,7 @@ cd "$ROOT"
 export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
 
 latest="$("$ROOT/NumWorks/Scripts/latest-epsilon-tag.sh")"
-[[ -n "$latest" ]] || { echo "Could not resolve latest Epsilon tag"; exit 1; }
+[[ -n "$latest" ]] || { echo "Could not resolve latest Epsilon version branch"; exit 1; }
 
 pinned=""
 if [[ -f "$PIN_FILE" ]]; then
@@ -25,7 +25,7 @@ echo "Pinned: ${pinned:-"(none)"}"
 echo "Latest: $latest"
 
 if [[ -n "$pinned" && "$pinned" == "$latest" ]]; then
-  echo "Already on latest Epsilon tag — nothing to do."
+  echo "Already on latest Epsilon version — nothing to do."
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "changed=false" >> "$GITHUB_OUTPUT"
     echo "ref=$latest" >> "$GITHUB_OUTPUT"

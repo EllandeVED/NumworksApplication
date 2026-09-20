@@ -73,7 +73,7 @@ No browser, no WebKit, no download of the official HTML simulator at runtime.
 git clone https://github.com/EllandeVED/NumworksApplication.git
 cd NumworksApplication
 # Prepare & build the linked Epsilon static library, then open in Xcode:
-./NumWorks/Scripts/prepare-epsilon.sh latest   # or a specific tag, e.g. 23.2.3
+./NumWorks/Scripts/prepare-epsilon.sh latest   # or a specific ref, e.g. version-25
 ./NumWorks/Scripts/build-epsilon-lib.sh
 open NumWorks.xcodeproj
 ```
@@ -95,7 +95,7 @@ The `main` branch tracks the current native (Epsilon) app.
 ### Epsilon (calculator engine)
 
 - Each app release embeds a specific Epsilon version (shown in **Settings → About**).
-- Upstream Epsilon changes ship with new app releases (sometimes prepared automatically for maintainers when a new Epsilon tag appears).
+- Upstream Epsilon changes ship with new app releases (sometimes prepared automatically for maintainers when a new Epsilon version branch appears).
 - There is **no** separate “simulator download” into Application Support anymore.
 
 ---
