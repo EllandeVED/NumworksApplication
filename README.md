@@ -35,9 +35,8 @@ No browser, no WebKit, no download of the official HTML simulator at runtime.
 ## Preview
 
 <div align="center">
- <img width="388" height="683" alt="image" src="https://github.com/user-attachments/assets/7e98aef0-7de8-4669-b269-34db9c60971a" /><img width="572" height="660" alt="image" src="https://github.com/user-attachments/assets/bf6e522a-58ba-4fca-9dfb-bebe013eac5a" />
+ <img width="194" height="342" alt="image" src="https://github.com/user-attachments/assets/7e98aef0-7de8-4669-b269-34db9c60971a" /><img width="281" height="330" alt="image" src="https://github.com/user-attachments/assets/39b4e099-3af9-41d8-9913-d3c0d279097b" />
 
-</div>
 
 ---
 
