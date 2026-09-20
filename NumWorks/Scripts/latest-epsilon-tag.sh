@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Resolve the latest Epsilon version line from numworks/epsilon.
-# Tags stopped at 23.2.3; the highest version-N branch is the real latest
-# (e.g. version-25), and currently matches master.
+# Highest version-N branch on numworks/epsilon.
 set -euo pipefail
 
 EPSILON_REPO="${EPSILON_REPO:-https://github.com/numworks/epsilon.git}"

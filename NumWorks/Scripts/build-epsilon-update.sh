@@ -95,7 +95,7 @@ mkdir -p "$ROOT/build"
 EXTRA_SIGN=()
 if [[ "${CI:-}" == "true" || -n "${GITHUB_ACTIONS:-}" ]]; then
   if [[ -z "${APPLE_CERTIFICATE_BASE64:-}" ]]; then
-    info "CI without Apple cert — ad-hoc codesign (fine for your local test download)"
+    info "CI without Apple cert — ad-hoc codesign"
     EXTRA_SIGN=(
       CODE_SIGN_IDENTITY="-"
       CODE_SIGNING_REQUIRED=NO

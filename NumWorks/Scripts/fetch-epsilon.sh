@@ -20,7 +20,6 @@ fi
 
 echo "Fetching from ${EPSILON_REPO}"
 git -C "${VENDOR_DIR}" fetch --tags origin
-# Fetch the requested branch, tag, or commit so version-N branches are current.
 if ! git -C "${VENDOR_DIR}" fetch origin "${REF}"; then
   git -C "${VENDOR_DIR}" fetch origin "refs/tags/${REF}:refs/tags/${REF}"
 fi

@@ -30,12 +30,9 @@ final class CalculatorCloseInterceptor: NSObject, NSWindowDelegate {
     }
 }
 
-/// Single owner of all behaviour applied to the Epsilon NSWindow.
-///
-/// The window itself is created and owned by Epsilon's SDL backend; it is
-/// stored weakly here and must never be closed or destroyed by this class.
-/// SDL installs its own `NSWindowDelegate`; close is intercepted via
-/// `CalculatorCloseInterceptor` while other delegate messages are forwarded.
+/// Behaviour applied to the Epsilon NSWindow (owned by SDL, stored weakly).
+/// Close is intercepted via `CalculatorCloseInterceptor`; other delegate
+/// messages are forwarded.
 @MainActor
 final class CalculatorWindow {
 

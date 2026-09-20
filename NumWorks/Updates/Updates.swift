@@ -2,16 +2,7 @@ import AppKit
 import Combine
 import Sparkle
 
-/// Owns the Sparkle updater for the lifetime of the app.
-///
-/// Created programmatically because NumWorks has a custom `main.swift` entry
-/// point (no MainMenu.xib). Keep a strong reference — Sparkle holds its
-/// delegates weakly.
-///
-/// Quit/relaunch compatibility with Epsilon’s SDL `terminate:` override is
-/// handled in `EpsilonBridge.installProcessExitOnTerminate` — do **not** force
-/// `exit` from `willInstallUpdate`, or Sparkle’s Installer XPC can die before
-/// Autoupdate is armed.
+/// Sparkle updater. Created from `main.swift` (no MainMenu.xib).
 @MainActor
 final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
 
@@ -19,7 +10,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
 
     private static let minimumAutomaticCheckInterval: TimeInterval = 60 * 60 * 24
     private static let parkedSparkleInterval: TimeInterval = 60 * 60 * 24 * 365
-    /// Hard cap so the Settings spinner never spins forever.
+    /// Settings spinner timeout.
     private static let userCheckTimeout: TimeInterval = 20
     static let defaultPostLaunchCheckDelay: TimeInterval = 3
 
@@ -29,12 +20,11 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
     private var checkTimeoutTimer: Timer?
     private var canCheckObservation: NSKeyValueObservation?
 
-    /// What feedback the current user-initiated check still owes the UI.
     private enum PendingUserCheck {
         case none
-        /// Outside Applications — we probe with `checkForUpdateInformation` and show our alerts.
+        /// Probe with `checkForUpdateInformation`; show our own alerts.
         case notInstalled
-        /// In Applications — Sparkle’s standard UI; we only track the Settings spinner.
+        /// Sparkle’s standard UI; we only track the Settings spinner.
         case installed
     }
 
@@ -79,7 +69,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             beginChecking()
             updaterController.checkForUpdates(sender)
         } else {
-            // Probe only — Sparkle’s install UI can’t run outside Applications.
+            // Sparkle cannot present its install UI outside Applications.
             pendingUserCheck = .notInstalled
             beginChecking()
             updater.checkForUpdateInformation()
@@ -293,8 +283,8 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
     ) {
         DispatchQueue.main.async {
             let controller = UpdateController.shared
-            // Do not clear `.notInstalled` here — didFind / didNotFind own that
-            // popup. Clearing early caused “spinner stops, no alert”.
+            // `.notInstalled` is cleared in didFind / didNotFind so the alert
+            // is not dropped when the cycle finishes first.
             switch controller.pendingUserCheck {
             case .notInstalled:
                 if let error, !controller.isNoUpdateError(error) {
@@ -376,7 +366,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
                 return
             }
 
-            // Outside Applications: always our move-required alert.
+            // Not in Applications: show the move-required alert.
             if controller.pendingUserCheck == .notInstalled {
                 controller.pendingUserCheck = .none
                 controller.finishChecking()

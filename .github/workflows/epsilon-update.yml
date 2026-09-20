@@ -2,14 +2,11 @@ name: Epsilon update
 
 # Daily/manual: build a testable app when Epsilon is newer than the pin.
 # Ship job waits for environment "sparkle-ship" approval, then publishes Sparkle.
-#
-# Setup: Environment sparkle-ship (required reviewers) + secret SPARKLE_ED_KEY
-#   generate_keys -x /tmp/sparkle.key  -> paste into SPARKLE_ED_KEY, delete file
 
 # Quote "on" so YAML 1.1 does not treat it as a boolean.
 "on":
   schedule:
-    # 12:00 UTC daily (was 07:15 — avoid morning). Manual runs still available.
+    # 12:00 UTC daily
     - cron: "0 12 * * *"
   workflow_dispatch:
     inputs:
