@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Resolve the newest version-looking tag from numworks/epsilon (e.g. 23.2.3).
+# Resolve the latest Epsilon version line from numworks/epsilon.
+# Tags stopped at 23.2.3; the highest version-N branch is the real latest
+# (e.g. version-25), and currently matches master.
 set -euo pipefail
 
 EPSILON_REPO="${EPSILON_REPO:-https://github.com/numworks/epsilon.git}"
 
-git ls-remote --tags --refs "$EPSILON_REPO" \
+git ls-remote --heads "$EPSILON_REPO" \
   | awk '{print $2}' \
-  | sed 's#refs/tags/##' \
-  | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' \
-  | sort -t . -k1,1n -k2,2n -k3,3n \
+  | sed 's#refs/heads/##' \
+  | grep -E '^version-[0-9]+$' \
+  | sort -t - -k2,2n \
   | tail -1

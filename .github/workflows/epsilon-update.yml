@@ -14,7 +14,7 @@ name: Epsilon update
   workflow_dispatch:
     inputs:
       epsilon_ref:
-        description: "Epsilon tag (empty = latest if newer than pin)"
+        description: "Epsilon ref (empty = latest version branch if newer than pin)"
         required: false
         default: ""
       force:

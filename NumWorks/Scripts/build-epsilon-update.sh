@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a testable NumWorks update for a new Epsilon tag (no Sparkle publish).
+# Build a testable NumWorks update for a new Epsilon version (no Sparkle publish).
 #
 # Usage:
 #   ./NumWorks/Scripts/build-epsilon-update.sh [epsilon-ref]

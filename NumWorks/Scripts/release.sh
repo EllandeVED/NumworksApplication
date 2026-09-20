@@ -22,7 +22,7 @@
 #   --version <x.y.z>    Marketing version (default: MARKETING_VERSION in Xcode)
 #   --build <n>          CFBundleVersion (default: CURRENT_PROJECT_VERSION in Xcode)
 #   --epsilon <ref>      prepare-epsilon.sh <ref> then rebuild libepsilon.a
-#   --epsilon latest     same, using the newest numworks/epsilon version tag
+#   --epsilon latest     same, using the newest numworks/epsilon version branch
 #   --notes-file <path>  Use this Markdown file as release notes
 #                        (appends a Full Changelog compare link if missing)
 #   --configuration <c>  Debug or Release (default: Release)
@@ -346,9 +346,9 @@ echo
 if [[ -n "$EPSILON_REF" ]]; then
   progress "Prepare & build Epsilon"
   if [[ "$EPSILON_REF" == "latest" ]]; then
-    info "Resolving latest numworks/epsilon version tag"
+    info "Resolving latest numworks/epsilon version branch"
     EPSILON_REF="$("$ROOT/NumWorks/Scripts/latest-epsilon-tag.sh")"
-    [[ -n "$EPSILON_REF" ]] || die "could not resolve latest Epsilon tag"
+    [[ -n "$EPSILON_REF" ]] || die "could not resolve latest Epsilon version branch"
   fi
   info "Preparing Epsilon ${EPSILON_REF}"
   "$ROOT/NumWorks/Scripts/prepare-epsilon.sh" "$EPSILON_REF"
