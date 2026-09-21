@@ -29,19 +29,30 @@ if [ ! -d "${VENDOR_DIR}/.git" ]; then
   exit 1
 fi
 
-if ! grep -q "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator/macos/window.mm" 2>/dev/null \
-  && ! grep -q "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator/mac/window.mm" 2>/dev/null; then
-  # Fall back: any adapted window.mm under the simulator tree.
-  if ! grep -Rql "EpsilonBridge" "${VENDOR_DIR}/ion/src/simulator" --include='window.mm' 2>/dev/null; then
-    echo "error: Epsilon has not been adapted for NumWorks." >&2
-    echo "error: Run NumWorks/Scripts/prepare-epsilon.sh <ref> first." >&2
-    exit 1
+WINDOW_MM=""
+for candidate in \
+  "${VENDOR_DIR}/shared/ion/src/simulator/macos/window.mm" \
+  "${VENDOR_DIR}/ion/src/simulator/macos/window.mm" \
+  "${VENDOR_DIR}/ion/src/simulator/mac/window.mm"
+do
+  if [ -f "${candidate}" ]; then
+    WINDOW_MM="${candidate}"
+    break
   fi
+done
+if [ -z "${WINDOW_MM}" ] || ! grep -q "EpsilonBridge" "${WINDOW_MM}"; then
+  echo "error: Epsilon has not been adapted for NumWorks." >&2
+  echo "error: Run NumWorks/Scripts/prepare-epsilon.sh <ref> first." >&2
+  exit 1
 fi
 
-if ! grep -q "NUMWORKS_INTEGRATION" "${VENDOR_DIR}/build/targets.simulator.macos.mak" 2>/dev/null \
-  && ! grep -Rql "NUMWORKS_INTEGRATION" "${VENDOR_DIR}/build" --include='targets.simulator*mac*.mak' 2>/dev/null; then
-  echo "error: Epsilon macOS makefile is missing the NumWorks libepsilon.a rules." >&2
+MAKE_DIR="${VENDOR_DIR}"
+if [ -d "${VENDOR_DIR}/epsilon" ] && [ -d "${VENDOR_DIR}/shared/ion" ]; then
+  MAKE_DIR="${VENDOR_DIR}/epsilon"
+fi
+
+if ! grep -Rql "NUMWORKS_INTEGRATION" "${MAKE_DIR}/build" --include='*.mak' 2>/dev/null; then
+  echo "error: Epsilon makefile is missing the NumWorks libepsilon.a rules." >&2
   echo "error: Run NumWorks/Scripts/prepare-epsilon.sh <ref> first." >&2
   exit 1
 fi
@@ -62,11 +73,16 @@ JOBS="$(sysctl -n hw.ncpu)"
 LIB_PATHS=()
 for arch in ${ARCHS}; do
   echo "Building Epsilon static library for ${arch}"
-  make -C "${VENDOR_DIR}" \
+  make -C "${MAKE_DIR}" \
     PLATFORM=simulator TARGET=macos DEBUG=0 ARCH="${arch}" \
+    PYTHON="${VENDOR_DIR}/.venv/bin/python3" \
     NUMWORKS_INTEGRATION_DIR="${INTEGRATION_DIR}" \
     -j"${JOBS}" libepsilon.a
-  LIB_PATHS+=("${VENDOR_DIR}/output/release/simulator/macos/${arch}/libepsilon.a")
+  if [ "${MAKE_DIR}" != "${VENDOR_DIR}" ]; then
+    LIB_PATHS+=("${MAKE_DIR}/output/release/macos/${arch}/libepsilon.a")
+  else
+    LIB_PATHS+=("${VENDOR_DIR}/output/release/simulator/macos/${arch}/libepsilon.a")
+  fi
 done
 
 mkdir -p "$(dirname "${OUTPUT_LIB}")"

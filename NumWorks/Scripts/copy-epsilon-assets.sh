@@ -8,6 +8,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NUMWORKS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 ASSETS_DIR="${NUMWORKS_DIR}/Vendor/EpsilonSource/ion/src/simulator/assets"
+BACKGROUND_SOURCE="${ASSETS_DIR}/background-with-shadow.webp"
+if [ -d "${NUMWORKS_DIR}/Vendor/EpsilonSource/shared/ion/src/simulator/assets" ]; then
+  ASSETS_DIR="${NUMWORKS_DIR}/Vendor/EpsilonSource/shared/ion/src/simulator/assets"
+  if [ -f "${ASSETS_DIR}/epsilon/background-with-shadow.webp" ]; then
+    BACKGROUND_SOURCE="${ASSETS_DIR}/epsilon/background-with-shadow.webp"
+  else
+    BACKGROUND_SOURCE="${ASSETS_DIR}/background-with-shadow.webp"
+  fi
+fi
 DEST_DIR="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
 
 mkdir -p "${DEST_DIR}"
@@ -19,7 +28,6 @@ done
 
 # background.jpg is generated from the webp source (upstream does this with
 # ImageMagick; we use a small ImageIO script to avoid that dependency).
-BACKGROUND_SOURCE="${ASSETS_DIR}/background-with-shadow.webp"
 BACKGROUND_DEST="${DEST_DIR}/background.jpg"
 if [ ! -f "${BACKGROUND_DEST}" ] || [ "${BACKGROUND_SOURCE}" -nt "${BACKGROUND_DEST}" ]; then
   xcrun -sdk macosx swift "${SCRIPT_DIR}/generate-background-asset.swift" \

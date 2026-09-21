@@ -11,10 +11,9 @@
  * which matches the symbol produced when compiling Epsilon's main.cpp. */
 int epsilon_main(int argc, char *argv[]);
 
-/* Matches Ion::epsilonVersion() from ion/include/ion.h in the linked
- * libepsilon.a. */
+/* Matches Ion::softwareVersion() from ion/include/ion.h (Epsilon 25+). */
 namespace Ion {
-const char *epsilonVersion();
+const char *softwareVersion();
 }
 
 NSNotificationName const EpsilonWindowDidBecomeAvailableNotification =
@@ -137,7 +136,11 @@ static __weak NSWindow *sCalculatorWindow = nil;
 }
 
 + (NSString *)epsilonVersionString {
-  return [NSString stringWithUTF8String:Ion::epsilonVersion()];
+  const char *version = Ion::softwareVersion();
+  if (version == nullptr) {
+    return @"";
+  }
+  return [NSString stringWithUTF8String:version];
 }
 
 @end

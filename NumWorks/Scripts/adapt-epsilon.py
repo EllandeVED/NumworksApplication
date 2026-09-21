@@ -31,15 +31,25 @@ def info(msg: str) -> None:
     print(f"adapt-epsilon: {msg}")
 
 
+def is_split_layout(root: Path) -> bool:
+    """version-25+: ion lives in shared/ion, firmware in epsilon/."""
+    return (root / "shared" / "ion").is_dir() and (root / "epsilon").is_dir()
+
+
+def ion_dir(root: Path) -> Path:
+    return root / "shared" / "ion" if is_split_layout(root) else root / "ion"
+
+
 def find_macos_window_mm(root: Path) -> Path:
+    ion = ion_dir(root)
     candidates = [
-        root / "ion/src/simulator/macos/window.mm",
-        root / "ion/src/simulator/mac/window.mm",
+        ion / "src/simulator/macos/window.mm",
+        ion / "src/simulator/mac/window.mm",
     ]
     for path in candidates:
         if path.is_file():
             return path
-    sim = root / "ion/src/simulator"
+    sim = ion / "src/simulator"
     found = list(sim.rglob("window.mm")) if sim.is_dir() else []
     macosish = [p for p in found if "mac" in str(p).lower()]
     if macosish:
@@ -190,7 +200,7 @@ PAUSE_MARKER = "// >>> NUMWORKS_PAUSE"
 
 def adapt_shared_events_cpp(root: Path) -> None:
     """Slow the ~100 Hz poll when the calculator window is hidden/occluded."""
-    path = root / "ion/src/simulator/shared/events.cpp"
+    path = ion_dir(root) / "src/simulator/shared/events.cpp"
     if not path.is_file():
         die(f"missing {path.relative_to(root)}")
     info(f"adapting {path.relative_to(root)}")
@@ -198,8 +208,9 @@ def adapt_shared_events_cpp(root: Path) -> None:
     text = original
 
     if PAUSE_INCLUDE not in text:
-        # After the last local include in the preamble
-        m = re.search(r'(#include "screenshot.h"\n)', text)
+        m = re.search(r'(#include "haptics.h"\n)', text)
+        if not m:
+            m = re.search(r'(#include "screenshot.h"\n)', text)
         if m:
             text = text[: m.end()] + PAUSE_INCLUDE + "\n" + text[m.end() :]
         else:
@@ -208,13 +219,15 @@ def adapt_shared_events_cpp(root: Path) -> None:
     if PAUSE_MARKER in text:
         info("events.cpp pause hook already present")
     else:
-        old = """bool waitForInterruptingEvent(int maximumDelay, int *timeout) {
-  Keyboard::scan();
-  /* As pressing keys on the simulator does not generate interruptions, we need
-   * to poll the keyboard more regularly than on the device. */
-  constexpr int simulatorDelay = 10;
-  maximumDelay = std::min(simulatorDelay, maximumDelay);"""
-        new = """bool waitForInterruptingEvent(int maximumDelay, int *timeout) {
+        pattern = re.compile(
+            r"bool waitForInterruptingEvent\(int maximumDelay, int\s*\*\s*timeout\) \{\n"
+            r"  Keyboard::scan\(\);\n"
+            r"  /\* As pressing keys on the simulator does not generate interruptions, we need\n"
+            r"   \* to poll the keyboard more regularly than on the device\. \*/\n"
+            r"  constexpr int simulatorDelay = 10;\n"
+            r"  maximumDelay = std::min\(simulatorDelay, maximumDelay\);",
+        )
+        new = """bool waitForInterruptingEvent(int maximumDelay, int* timeout) {
   Keyboard::scan();
   /* As pressing keys on the simulator does not generate interruptions, we need
    * to poll the keyboard more regularly than on the device. */
@@ -225,9 +238,9 @@ def adapt_shared_events_cpp(root: Path) -> None:
   const int simulatorDelay = NumWorksSimulatorIsActive() ? 10 : 50;
   // <<< NUMWORKS_PAUSE
   maximumDelay = std::min(simulatorDelay, maximumDelay);"""
-        if old not in text:
+        if not pattern.search(text):
             die("events.cpp waitForInterruptingEvent pattern not found — upstream changed?")
-        text = text.replace(old, new, 1)
+        text = pattern.sub(new, text, count=1)
 
     if text != original:
         path.write_text(text)
@@ -238,7 +251,7 @@ def adapt_shared_events_cpp(root: Path) -> None:
 
 def adapt_shared_window_cpp(root: Path) -> None:
     """Skip SDL_RenderPresent while the calculator is hidden (keep dirty flag)."""
-    path = root / "ion/src/simulator/shared/window.cpp"
+    path = ion_dir(root) / "src/simulator/shared/window.cpp"
     if not path.is_file():
         die(f"missing {path.relative_to(root)}")
     info(f"adapting {path.relative_to(root)}")
@@ -285,6 +298,11 @@ def adapt_shared_window_cpp(root: Path) -> None:
 
 
 def find_macos_simulator_mak(root: Path) -> Path:
+    if is_split_layout(root):
+        path = root / "epsilon/build/rules.simulator.mak"
+        if path.is_file():
+            return path
+        die("could not find epsilon/build/rules.simulator.mak")
     candidates = [
         root / "build/targets.simulator.macos.mak",
         root / "build/targets.simulator.mac.mak",
@@ -300,18 +318,19 @@ def find_macos_simulator_mak(root: Path) -> Path:
 
 
 def find_simulator_main_cpp(root: Path) -> list[str]:
-    sim = root / "ion/src/simulator"
+    sim = ion_dir(root) / "src/simulator"
+    fallback = str((ion_dir(root) / "src/simulator/shared/main.cpp").relative_to(root))
     if not sim.is_dir():
-        return ["ion/src/simulator/shared/main.cpp"]
+        return [fallback]
     mains = sorted(
         str(p.relative_to(root))
         for p in sim.rglob("main.cpp")
         if "external" not in p.parts
     )
-    return mains or ["ion/src/simulator/shared/main.cpp"]
+    return mains or [fallback]
 
 
-def makefile_fragment(main_paths: list[str]) -> str:
+def makefile_fragment_legacy(main_paths: list[str]) -> str:
     main_rules = "\n".join(
         f"$(call object_for,{path}): SFLAGS += -Dmain=epsilon_main"
         for path in main_paths
@@ -330,6 +349,31 @@ $(BUILD_DIR)/libepsilon.a: $(call flavored_object_for,$(epsilon_src),)
 	$(call rule_label,LIBTOOL)
 	$(Q) rm -f $@
 	$(Q) xcrun libtool -static -no_warning_for_no_symbols -o $@ $^
+endif
+{MARKER_END}
+"""
+
+
+def makefile_fragment_split() -> str:
+    return f"""{MARKER_BEGIN}
+# NumWorks macOS shell integration (generated by adapt-epsilon.py).
+# Builds the simulator as libepsilon.a; the shell calls epsilon_main().
+ifdef NUMWORKS_INTEGRATION_DIR
+SFLAGS += -I$(NUMWORKS_INTEGRATION_DIR)
+$(call all_objects_for,$(PATH_ion)/src/simulator/shared/main.cpp): SFLAGS += -Dmain=epsilon_main
+
+.PHONY: libepsilon.a
+libepsilon.a: $(foreach a,$(ARCHS),$(OUTPUT_DIRECTORY)/$(a)/libepsilon.a)
+
+$(foreach a,$(ARCHS),$(OUTPUT_DIRECTORY)/$(a)/libepsilon.a): SFLAGS += $(foreach m,$(MODULES_epsilon),$(call sflags_for_flavored_module,$(m)))
+
+define numworks_libepsilon
+$(OUTPUT_DIRECTORY)/$1/libepsilon.a: $(foreach m,$(MODULES_epsilon),$(call objects_for_flavored_module,$1/$m))
+	$$(call rule_label,LIBTOOL)
+	$$(Q) rm -f $$@
+	$$(Q) xcrun libtool -static -no_warning_for_no_symbols -o $$@ $$^
+endef
+$(foreach a,$(ARCHS),$(eval $(call numworks_libepsilon,$(a))))
 endif
 {MARKER_END}
 """
@@ -360,10 +404,14 @@ def upsert_makefile_block(text: str, block: str) -> str:
 def adapt_makefile(root: Path) -> None:
     path = find_macos_simulator_mak(root)
     info(f"adapting {path.relative_to(root)}")
-    mains = find_simulator_main_cpp(root)
-    info("main.cpp candidates: " + ", ".join(mains))
+    if is_split_layout(root):
+        block = makefile_fragment_split()
+    else:
+        mains = find_simulator_main_cpp(root)
+        info("main.cpp candidates: " + ", ".join(mains))
+        block = makefile_fragment_legacy(mains)
     original = path.read_text()
-    text = upsert_makefile_block(original, makefile_fragment(mains))
+    text = upsert_makefile_block(original, block)
     if text != original:
         path.write_text(text)
         info("makefile updated")
@@ -377,7 +425,7 @@ def adapt_events_platform_cpp(root: Path) -> None:
     Process exit for Quit / Sparkle still comes from EpsilonBridge's terminate
     swizzle (exit after posting SDL_QUIT), not from Events::Termination.
     """
-    path = root / "ion/src/simulator/shared/events_platform.cpp"
+    path = ion_dir(root) / "src/simulator/shared/events_platform.cpp"
     if not path.is_file():
         die(f"missing {path.relative_to(root)}")
     info(f"adapting {path.relative_to(root)}")
@@ -420,7 +468,7 @@ def main() -> None:
 
     if not root.is_dir():
         die(f"Epsilon root not found: {root}")
-    if not (root / "ion").is_dir():
+    if not ion_dir(root).is_dir():
         die(f"does not look like an Epsilon tree (no ion/): {root}")
 
     adapt_window_mm(root)

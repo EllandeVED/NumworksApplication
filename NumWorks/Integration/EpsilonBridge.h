@@ -23,7 +23,7 @@ FOUNDATION_EXPORT NSNotificationName const EpsilonWindowDidBecomeAvailableNotifi
 + (int)runSimulatorWithArgc:(int)argc
                        argv:(char *_Nullable *_Nonnull)argv;
 
-/* Version string of the linked Epsilon library (e.g. "23.2.3"). */
+/* Version string of the linked Epsilon library (e.g. "25.2.2"). */
 + (NSString *)epsilonVersionString;
 
 /* SDLApplication overrides -terminate: to only post SDL_QUIT (no process

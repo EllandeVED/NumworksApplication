@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NUMWORKS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 VENDOR_DIR="${NUMWORKS_DIR}/Vendor/EpsilonSource"
 
-if [ ! -d "${VENDOR_DIR}/.git" ] && [ ! -d "${VENDOR_DIR}/ion" ]; then
+if [ ! -d "${VENDOR_DIR}/.git" ]; then
   echo "Epsilon source not found at ${VENDOR_DIR}" >&2
   echo "Run fetch-epsilon.sh first." >&2
   exit 1
