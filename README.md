@@ -4,11 +4,14 @@
 
 <img width="128" height="128" alt="icon_128x128" src="https://github.com/user-attachments/assets/ebf83080-d4f8-4cfd-9b79-790e0f1f98ce" />
 
+
+ 
+**Download Latest Version [HERE](https://github.com/EllandeVED/NumworksApplication/releases/latest)**
 </div>
 
 A native macOS application that embeds **[Epsilon](https://github.com/numworks/epsilon)** — NumWorks’ open-source calculator firmware — as a real `.app`, with menu bar integration, keyboard shortcuts, offline use, and automatic updates via [Sparkle](https://github.com/sparkle-project/Sparkle).
 
----
+
 
 > **This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.**
 
@@ -30,16 +33,13 @@ A native macOS application that embeds **[Epsilon](https://github.com/numworks/e
 
 No browser, no WebKit, no download of the official HTML simulator at runtime.
 
----
 
 ## Preview
 
 <div align="center">
- <img width="388" height="683" alt="image" src="https://github.com/user-attachments/assets/7e98aef0-7de8-4669-b269-34db9c60971a" /><img width="572" height="660" alt="image" src="https://github.com/user-attachments/assets/bf6e522a-58ba-4fca-9dfb-bebe013eac5a" />
+ <img width="194" height="342" alt="image" src="https://github.com/user-attachments/assets/7e98aef0-7de8-4669-b269-34db9c60971a" /><img width="281" height="330" alt="image" src="https://github.com/user-attachments/assets/39b4e099-3af9-41d8-9913-d3c0d279097b" />
 
 </div>
-
----
 
 ## Installation
 
@@ -80,7 +80,7 @@ open NumWorks.xcodeproj
 
 The `main` branch tracks the current native (Epsilon) app.
 
----
+
 
 ## Updates
 
@@ -98,16 +98,15 @@ The `main` branch tracks the current native (Epsilon) app.
 - Upstream Epsilon changes ship with new app releases (sometimes prepared automatically for maintainers when a new Epsilon version branch appears).
 - There is **no** separate “simulator download” into Application Support anymore.
 
----
 
 ## Offline support
 
 - After installation, the calculator runs **entirely locally**.
 - Network access is only needed to **check for / download app updates** (GitHub / GitHub Pages).
 
----
 
-## Features (macOS shell)
+
+## Features
 
 - Show / hide calculator (menu bar or global shortcut)
 - Always on top (pin)
@@ -115,7 +114,7 @@ The `main` branch tracks the current native (Epsilon) app.
 - Launch at login, Dock icon on/off, menu bar icon style
 - Window size / position remembered
 
----
+
 
 ## Known issues
 
