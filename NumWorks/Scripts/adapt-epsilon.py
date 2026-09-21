@@ -365,7 +365,9 @@ $(call all_objects_for,$(PATH_ion)/src/simulator/shared/main.cpp): SFLAGS += -Dm
 .PHONY: libepsilon.a
 libepsilon.a: $(foreach a,$(ARCHS),$(OUTPUT_DIRECTORY)/$(a)/libepsilon.a)
 
-$(foreach a,$(ARCHS),$(OUTPUT_DIRECTORY)/$(a)/libepsilon.a): SFLAGS += $(foreach m,$(MODULES_epsilon),$(call sflags_for_flavored_module,$(m)))
+# Haussmann attaches PRIVATE_SFLAGS_* to each module's .a. Compiling those
+# objects straight into libepsilon.a would skip them (SDL needs khronos -I).
+$(foreach a,$(ARCHS),$(OUTPUT_DIRECTORY)/$(a)/libepsilon.a): SFLAGS += $(foreach m,$(MODULES_epsilon),$(call sflags_for_flavored_module,$(m)) $(PRIVATE_SFLAGS_$(call name_for_flavored_target,$(m))))
 
 define numworks_libepsilon
 $(OUTPUT_DIRECTORY)/$1/libepsilon.a: $(foreach m,$(MODULES_epsilon),$(call objects_for_flavored_module,$1/$m))

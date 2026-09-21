@@ -85,7 +85,9 @@ jobs:
           if [[ $status -ne 0 ]]; then
             ref="${{ steps.decide.outputs.ref }}"
             LOG="${RUNNER_TEMP}/epsilon-watch-build.log"
-            if [[ -f build/xcodebuild.log ]]; then
+            if [[ -s build/epsilon-update.log ]]; then
+              cp build/epsilon-update.log "$LOG"
+            elif [[ -f build/xcodebuild.log ]]; then
               cp build/xcodebuild.log "$LOG"
             else
               : > "$LOG"
@@ -170,8 +172,10 @@ jobs:
         with:
           name: epsilon-update-failure
           path: |
+            build/epsilon-update.log
             build/xcodebuild.log
             ${{ runner.temp }}/epsilon-agent-prompt-filled.md
+            ${{ runner.temp }}/excerpt.txt
           if-no-files-found: ignore
 
       - name: Open failure issue with agent prompt
@@ -187,15 +191,27 @@ jobs:
           {
             echo "Automated **Epsilon update** build failed for \`${ref}\`."
             echo
-            echo "### Agent prompt"
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo
-            echo '```markdown'
-            if [[ -f "$prompt_file" ]]; then cat "$prompt_file"
-            else sed "s/{{EPSILON_REF}}/${ref}/g; s/{{LOG_EXCERPT}}/(see artifact)/g" NumWorks/Scripts/epsilon-agent-prompt.md
+            echo "Full log: artifact \`epsilon-update-failure\` (\`build/epsilon-update.log\`)."
+            echo
+            echo "### Error excerpt"
+            echo
+            echo '```'
+            if [[ -f "${RUNNER_TEMP}/excerpt.txt" ]]; then cat "${RUNNER_TEMP}/excerpt.txt"
+            else echo "(no log captured — see the Actions run)"
             fi
             echo '```'
             echo
-            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "<details><summary>Agent prompt</summary>"
+            echo
+            echo '````markdown'
+            if [[ -f "$prompt_file" ]]; then cat "$prompt_file"
+            else sed "s/{{EPSILON_REF}}/${ref}/g; s/{{LOG_EXCERPT}}/(see artifact)/g" NumWorks/Scripts/epsilon-agent-prompt.md
+            fi
+            echo '````'
+            echo
+            echo "</details>"
           } > "$body_file"
           existing="$(gh issue list --label epsilon-watch --state open --json number,title --jq ".[] | select(.title==\"${title}\") | .number" | head -1)"
           if [[ -n "$existing" ]]; then

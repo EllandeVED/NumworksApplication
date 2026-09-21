@@ -26,6 +26,12 @@ info() { echo "==> $*"; }
 
 cd "$ROOT"
 export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
+mkdir -p "$ROOT/build"
+# Keep a copy of prepare/make/xcodebuild output for CI artifacts and local debugging.
+if [[ -z "${NUMWORKS_UPDATE_LOG_ACTIVE:-}" ]]; then
+  export NUMWORKS_UPDATE_LOG_ACTIVE=1
+  exec > >(tee "$ROOT/build/epsilon-update.log") 2>&1
+fi
 
 if [[ "$REF" == "latest" ]]; then
   REF="$("$ROOT/NumWorks/Scripts/latest-epsilon-tag.sh")"
