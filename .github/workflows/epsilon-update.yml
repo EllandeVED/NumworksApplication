@@ -78,21 +78,20 @@ jobs:
         if: steps.decide.outputs.skip != 'true'
         continue-on-error: true
         run: |
+          mkdir -p build
           set +e
-          ./NumWorks/Scripts/build-epsilon-update.sh "${{ steps.decide.outputs.ref }}"
-          status=$?
+          set -o pipefail
+          ./NumWorks/Scripts/build-epsilon-update.sh "${{ steps.decide.outputs.ref }}" 2>&1 | tee build/epsilon-update.log
+          status=${PIPESTATUS[0]}
+          set +o pipefail
           set -e
           if [[ $status -ne 0 ]]; then
+            python3 NumWorks/Scripts/epsilon-failure-report.py \
+              "${RUNNER_TEMP}/excerpt.txt" \
+              build/epsilon-update.log \
+              build/xcodebuild.log \
+              || true
             ref="${{ steps.decide.outputs.ref }}"
-            LOG="${RUNNER_TEMP}/epsilon-watch-build.log"
-            if [[ -s build/epsilon-update.log ]]; then
-              cp build/epsilon-update.log "$LOG"
-            elif [[ -f build/xcodebuild.log ]]; then
-              cp build/xcodebuild.log "$LOG"
-            else
-              : > "$LOG"
-            fi
-            tail -120 "$LOG" > "${RUNNER_TEMP}/excerpt.txt"
             python3 -c "
             from pathlib import Path
             ref = '''${ref}'''
