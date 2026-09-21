@@ -6,8 +6,8 @@ name: Epsilon update
 # Quote "on" so YAML 1.1 does not treat it as a boolean.
 "on":
   schedule:
-    # 12:00 UTC daily
-    - cron: "0 12 * * *"
+    # 19:00 local (17:00 UTC)
+    - cron: "0 17 * * *"
   workflow_dispatch:
     inputs:
       epsilon_ref:
