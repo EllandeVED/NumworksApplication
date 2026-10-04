@@ -4,7 +4,7 @@
 
 <img width="128" height="128" alt="icon_128x128" src="https://github.com/user-attachments/assets/ebf83080-d4f8-4cfd-9b79-790e0f1f98ce" />
 
-
+ 
  
 **Download Latest Version [HERE](https://github.com/EllandeVED/NumworksApplication/releases/latest)**
 </div>
