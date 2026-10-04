@@ -9,7 +9,7 @@
 **Download Latest Version [HERE](https://github.com/EllandeVED/NumworksApplication/releases/latest)**
 </div>
 
-A native macOS application that embeds **[Epsilon](https://github.com/numworks/epsilon)** — NumWorks’ open-source calculator firmware — as a real `.app`, with menu bar integration, keyboard shortcuts, offline use, and automatic updates via [Sparkle](https://github.com/sparkle-project/Sparkle).
+A native macOS application that embeds **[Epsilon](https://github.com/numworks/epsilon)** (NumWorks’ open-source calculator firmware) as a real `.app`, with menu bar integration, keyboard shortcuts and automatic updates (using [Sparkle](https://github.com/sparkle-project/Sparkle)).
 
 
 
@@ -22,19 +22,12 @@ A native macOS application that embeds **[Epsilon](https://github.com/numworks/e
 ---
 
 ## Overview
-
-**NumWorks App for Mac** aims to make the calculator feel at home on macOS:
+No official Numworks app really exists so I made my own.
 
 - Runs as a real macOS app (Dock, menu bar, global shortcuts, Settings)
 - Embeds a **compiled Epsilon** simulator (same engine as the physical calculator)
-- Works **fully offline** once installed
-- **App updates** via Sparkle (signed appcast on GitHub Pages)
-- Optional automatic tracking of new **upstream Epsilon** versions (maintainers)
+- **App updates** via Sparkle and a GitHub bot automatically updates when epsilon repository publishes a new version
 
-No browser, no WebKit, no download of the official HTML simulator at runtime.
-
-
-## Preview
 
 <div align="center">
  <img width="194" height="342" alt="image" src="https://github.com/user-attachments/assets/7e98aef0-7de8-4669-b269-34db9c60971a" /><img width="281" height="330" alt="image" src="https://github.com/user-attachments/assets/39b4e099-3af9-41d8-9913-d3c0d279097b" />
@@ -45,19 +38,18 @@ No browser, no WebKit, no download of the official HTML simulator at runtime.
 
 ### Requirements
 
-- **macOS 15.5** or later (deployment target of the current build)
-- Apple Silicon or Intel Mac
+- **macOS 15.5** or later (I mean... it should work on older version I guess)
 
 ### Option 1 — Download
 
 1. Open the latest release:  
    [https://github.com/EllandeVED/NumworksApplication/releases/latest](https://github.com/EllandeVED/NumworksApplication/releases/latest)
 
-2. Download **`NumWorks-<version>.zip`** (for example `NumWorks-2.0.6.zip`).
+2. Download **`NumWorks-LATESTVERSION.zip`**
 
 3. Unzip, then drag **NumWorks** into **Applications**.
 
-4. Because the app may not be notarized with a paid Developer ID, macOS can show a security warning:
+4. Because the app is not  notarized with a paid Developer ID, macOS can show a security warning:
 
 <img width="220" height="200" alt="Security Warning" src="https://github.com/user-attachments/assets/12e0d587-f73c-43fb-a1dd-d413e34dacba" />
 
@@ -65,7 +57,6 @@ No browser, no WebKit, no download of the official HTML simulator at runtime.
 
    <img width="379" height="324" alt="Open Anyway" src="https://github.com/user-attachments/assets/a2b2fa2f-db6a-49ec-b6ae-9c7ad19b583e" />
 
-> **Put the app in `/Applications`.** Sparkle updates are disabled until it lives there (you’ll also see a prompt in Settings).
 
 ### Option 2 — Build from source
 
@@ -78,13 +69,9 @@ cd NumworksApplication
 open NumWorks.xcodeproj
 ```
 
-The `main` branch tracks the current native (Epsilon) app.
-
-
-
 ## Updates
 
-### App updates (Sparkle)
+### App updates ([Sparkle](https://github.com/sparkle-project/Sparkle))
 
 - The app can check for updates automatically (toggle in **Settings → General**).
 - You can also use **Check for Updates…** from the menu or Settings.
@@ -94,31 +81,18 @@ The `main` branch tracks the current native (Epsilon) app.
 
 ### Epsilon (calculator engine)
 
-- Each app release embeds a specific Epsilon version (shown in **Settings → About**).
-- Upstream Epsilon changes ship with new app releases (sometimes prepared automatically for maintainers when a new Epsilon version branch appears).
-- There is **no** separate “simulator download” into Application Support anymore.
-
-
-## Offline support
-
-- After installation, the calculator runs **entirely locally**.
-- Network access is only needed to **check for / download app updates** (GitHub / GitHub Pages).
-
-
+- Directly retrieved from [Epsilon](https://github.com/numworks/epsilon) and slightly modified to embed it into an app window
 
 ## Features
 
 - Show / hide calculator (menu bar or global shortcut)
 - Always on top (pin)
-- Native or toolbar window chrome
-- Launch at login, Dock icon on/off, menu bar icon style
-- Window size / position remembered
-
+- Menubar icon
 
 
 ## Known issues
 
-- [ ] **⌘,** to open Settings is not always reliable. Workaround: open Settings from the menu bar icon menu, or focus the menu bar item first, then try ⌘, again.
+- [ ] **⌘,** to open Settings is not always reliable.
 
 ---
 
@@ -140,9 +114,7 @@ This project is **not** affiliated with, endorsed by, or sponsored by NumWorks.
 
 NumWorks for Mac does not collect, store, or send personal data about your usage.
 
-- Settings live only on your Mac (`UserDefaults`).
-- Update checks contact **GitHub** / **GitHub Pages** (Sparkle appcast and releases).
-- The calculator runs **locally** inside the app process (no embedded browser, no numworks.com simulator fetch).
+- The calculator runs **locally** and only connects to internet for update checks (can be disabled)
 
 ---
 
