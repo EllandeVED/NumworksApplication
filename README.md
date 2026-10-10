@@ -9,7 +9,7 @@
 **Download Latest Version [HERE](https://github.com/EllandeVED/NumworksApplication/releases/latest)**
 </div>
 
-A native macOS application that embeds **[Epsilon](https://github.com/numworks/epsilon)** (NumWorks’ open-source calculator firmware) as a real `.app`, with menu bar integration, keyboard shortcuts and automatic updates (using [Sparkle](https://github.com/sparkle-project/Sparkle)).
+NumWorks App for Mac – A free, native macOS calculator that embeds **[Epsilon](https://github.com/numworks/epsilon)** (NumWorks’ open-source calculator firmware) as a real `.app`, with menu bar integration, keyboard shortcuts and automatic updates (using [Sparkle](https://github.com/sparkle-project/Sparkle)).
 
 
 
