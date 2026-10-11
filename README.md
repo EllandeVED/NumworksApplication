@@ -2,24 +2,31 @@
 
 # NUMWORKS APP FOR MAC
 
-<img width="128" height="128" alt="icon_128x128" src="https://github.com/user-attachments/assets/ebf83080-d4f8-4cfd-9b79-790e0f1f98ce" />
+<img width="128" height="128" alt="icon_128x128" src="https://github.com/EllandeVED/NumworksApplication/blob/main/NumWorks/Assets.xcassets/AppIcon.appiconset/icon_512x512.png" />
 
- 
+ <p align="center">
+  <a href="https://github.com/EllandeVED/NumworksApplication/releases/latest">
+    <img
+      src="https://img.shields.io/badge/Download%20for%20macOS-000000?style=for-the-badge&logo=apple&logoColor=white"
+      alt="Download for macOS"
+      height="48"
+    >
+  </a>
+</p>
  
 **Download Latest Version [HERE](https://github.com/EllandeVED/NumworksApplication/releases/latest)**
 </div>
 
-NumWorks App for Mac – A free, native macOS calculator that embeds **[Epsilon](https://github.com/numworks/epsilon)** (NumWorks’ open-source calculator firmware) as a usable `.app`, with menu bar integration, keyboard shortcuts and automatic updates (using [Sparkle](https://github.com/sparkle-project/Sparkle)).
+NumWorks App for Mac – A free, native macOS calculator that embeds **[Epsilon](https://github.com/numworks/epsilon)** (NumWorks open-source calculator firmware) as a usable `.app`, with menu bar integration, keyboard shortcuts and automatic updates (using [Sparkle](https://github.com/sparkle-project/Sparkle)).
 
 
 
 > **This is an independent project and is not affiliated with, endorsed by, or sponsored by NumWorks.**
 
-> The purpose of this project is to provide a native macOS shell around Epsilon, with desktop integration and update management.
 
-> Looking for the **previous generation** of this app (embedded **HTML** NumWorks simulator)? See release **[1.3.1](https://github.com/EllandeVED/NumworksApplication/releases/tag/1.3.1)** — the last version based on the web simulator. Current releases (**2.x**) use a compiled Epsilon build from [github.com/numworks/epsilon](https://github.com/numworks/epsilon) instead.
+> Looking for the **previous generation** of this app (embedded **HTML** NumWorks simulator)? See release **[1.3.1](https://github.com/EllandeVED/NumworksApplication/releases/tag/1.3.1)** — the last version based on the web simulator.
 
----
+
 
 ## Overview
 No official Numworks app really exists so I made my own.
@@ -33,6 +40,8 @@ No official Numworks app really exists so I made my own.
  <img width="194" height="342" alt="image" src="https://github.com/user-attachments/assets/7e98aef0-7de8-4669-b269-34db9c60971a" /><img width="281" height="330" alt="image" src="https://github.com/user-attachments/assets/39b4e099-3af9-41d8-9913-d3c0d279097b" />
 
 </div>
+
+
 
 ## Installation
 
