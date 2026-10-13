@@ -354,10 +354,17 @@ if [[ -n "$EPSILON_REF" ]]; then
   "$ROOT/NumWorks/Scripts/prepare-epsilon.sh" "$EPSILON_REF"
   info "Building libepsilon.a"
   ARCHS="${ARCHS:-$(uname -m)}" "$ROOT/NumWorks/Scripts/build-epsilon-lib.sh"
-  # Record pin for CI / humans
+  # Record pin for CI / humans (branch + APP_VERSION when available)
   mkdir -p "$ROOT/NumWorks/Support"
-  echo "$EPSILON_REF" > "$ROOT/NumWorks/Support/epsilon-pinned-ref.txt"
-  info "Pinned Epsilon ref → NumWorks/Support/epsilon-pinned-ref.txt"
+  APP_VERSION=""
+  set +e
+  APP_VERSION="$("$ROOT/NumWorks/Scripts/epsilon-app-version.sh" --from-tree "$ROOT/NumWorks/Vendor/EpsilonSource" 2>/dev/null)"
+  set -e
+  if [[ -z "$APP_VERSION" ]]; then
+    echo "warning: could not read APP_VERSION from EpsilonSource; pinning branch only" >&2
+  fi
+  "$ROOT/NumWorks/Scripts/write-epsilon-pin.sh" "$EPSILON_REF" "$APP_VERSION"
+  info "Pinned Epsilon ref → NumWorks/Support/epsilon-pinned-ref.txt (${APP_VERSION:-branch only})"
 fi
 
 # --- Build -------------------------------------------------------------------
