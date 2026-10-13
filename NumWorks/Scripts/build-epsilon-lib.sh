@@ -13,8 +13,8 @@ VENDOR_DIR="${NUMWORKS_DIR}/Vendor/EpsilonSource"
 INTEGRATION_DIR="${NUMWORKS_DIR}/Integration"
 OUTPUT_LIB="${VENDOR_DIR}/output/libepsilon.a"
 
-# Homebrew tools (pkg-config, freetype) are not on Xcode's default PATH.
-export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
+# Homebrew tools (pkg-config, freetype, GNU make) are not on Xcode's default PATH.
+export PATH="/opt/homebrew/opt/make/libexec/gnubin:/opt/homebrew/bin:/usr/local/opt/make/libexec/gnubin:/usr/local/bin:${PATH}"
 
 ACTION="${1:-build}"
 if [ "${ACTION}" = "clean" ]; then
@@ -66,6 +66,16 @@ if [ ! -x "${VENDOR_DIR}/.venv/bin/python3" ]; then
   "${VENDOR_DIR}/.venv/bin/pip3" install --quiet lz4 pyelftools pypng stringcase
 fi
 
+# Haussmann requires GNU Make >= 4.3. macOS ships BSD make 3.81 as `make`.
+if command -v gmake >/dev/null 2>&1; then
+  MAKE="${MAKE:-gmake}"
+elif command -v make >/dev/null 2>&1; then
+  MAKE="${MAKE:-make}"
+else
+  echo "error: GNU Make >= 4.3 is required (brew install make)." >&2
+  exit 1
+fi
+
 # ARCHS is exported by Xcode (e.g. "arm64" or "arm64 x86_64").
 ARCHS="${ARCHS:-$(uname -m)}"
 JOBS="$(sysctl -n hw.ncpu)"
@@ -73,7 +83,7 @@ JOBS="$(sysctl -n hw.ncpu)"
 LIB_PATHS=()
 for arch in ${ARCHS}; do
   echo "Building Epsilon static library for ${arch}"
-  make -C "${MAKE_DIR}" \
+  "${MAKE}" -C "${MAKE_DIR}" \
     PLATFORM=simulator TARGET=macos DEBUG=0 ARCH="${arch}" \
     PYTHON="${VENDOR_DIR}/.venv/bin/python3" \
     NUMWORKS_INTEGRATION_DIR="${INTEGRATION_DIR}" \

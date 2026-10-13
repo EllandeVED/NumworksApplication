@@ -43,7 +43,9 @@ jobs:
 
       - name: Install Epsilon build deps
         run: |
-          brew install pkg-config freetype || true
+          brew install pkg-config freetype make || true
+          # Haussmann (Epsilon 26+) requires GNU Make >= 4.3; macOS /usr/bin/make is 3.81.
+          echo "$(brew --prefix)/opt/make/libexec/gnubin" >> "$GITHUB_PATH"
           python3 -m venv "$HOME/epsilon-venv"
           # shellcheck disable=SC1091
           source "$HOME/epsilon-venv/bin/activate"
