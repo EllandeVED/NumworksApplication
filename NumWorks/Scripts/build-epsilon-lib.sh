@@ -75,6 +75,17 @@ else
   echo "error: GNU Make >= 4.3 is required (brew install make)." >&2
   exit 1
 fi
+MAKE_VER="$("${MAKE}" -v 2>/dev/null | awk 'NR==1 { print $3 }')"
+MAKE_MAJOR="${MAKE_VER%%.*}"
+MAKE_REST="${MAKE_VER#*.}"
+MAKE_MINOR="${MAKE_REST%%.*}"
+if ! [[ "${MAKE_MAJOR}" =~ ^[0-9]+$ ]] || \
+   [ "${MAKE_MAJOR}" -lt 4 ] || \
+   { [ "${MAKE_MAJOR}" -eq 4 ] && [ "${MAKE_MINOR:-0}" -lt 3 ]; }; then
+  echo "error: GNU Make >= 4.3 is required (found ${MAKE:-make} ${MAKE_VER:-unknown}; brew install make)." >&2
+  exit 1
+fi
+echo "Using ${MAKE} ${MAKE_VER}"
 
 # ARCHS is exported by Xcode (e.g. "arm64" or "arm64 x86_64").
 ARCHS="${ARCHS:-$(uname -m)}"
