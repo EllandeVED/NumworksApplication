@@ -16,21 +16,51 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
 latest="$("$ROOT/NumWorks/Scripts/latest-epsilon-tag.sh")"
 [[ -n "$latest" ]] || { echo "Could not resolve latest Epsilon version branch"; exit 1; }
 
-pinned=""
+pinned_branch=""
+pinned_app=""
 if [[ -f "$PIN_FILE" ]]; then
-  pinned="$(tr -d '[:space:]' < "$PIN_FILE")"
+  pinned_branch="$(sed -n '1p' "$PIN_FILE" | tr -d '[:space:]')"
+  pinned_app="$(sed -n '2p' "$PIN_FILE" | tr -d '[:space:]')"
 fi
 
-echo "Pinned: ${pinned:-"(none)"}"
+echo "Pinned branch: ${pinned_branch:-"(none)"}"
+echo "Pinned APP_VERSION: ${pinned_app:-"(none)"}"
 echo "Latest: $latest"
 
-if [[ -n "$pinned" && "$pinned" == "$latest" ]]; then
-  echo "Already on latest Epsilon version — nothing to do."
-  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-    echo "changed=false" >> "$GITHUB_OUTPUT"
-    echo "ref=$latest" >> "$GITHUB_OUTPUT"
+# First: version-* branch. Then: APP_VERSION from Makefile (warn-only on failure).
+same_branch=false
+if [[ -n "$pinned_branch" && "$pinned_branch" == "$latest" ]]; then
+  same_branch=true
+fi
+
+if [[ "$same_branch" == "true" ]]; then
+  set +e
+  remote_app="$("$ROOT/NumWorks/Scripts/epsilon-app-version.sh" "$latest" 2>/tmp/epsilon-app-version.err)"
+  app_status=$?
+  set -e
+  if [[ "$app_status" -ne 0 || -z "$remote_app" ]]; then
+    echo "warning: could not read APP_VERSION for $latest; treating branch pin as current. $(tr '\n' ' ' </tmp/epsilon-app-version.err 2>/dev/null || true)"
+    echo "Already on latest Epsilon version — nothing to do."
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+      echo "changed=false" >> "$GITHUB_OUTPUT"
+      echo "ref=$latest" >> "$GITHUB_OUTPUT"
+    fi
+    exit 0
   fi
-  exit 0
+  echo "Remote APP_VERSION: $remote_app"
+  if [[ -n "$pinned_app" && "$pinned_app" == "$remote_app" ]]; then
+    echo "Already on latest Epsilon version — nothing to do."
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+      echo "changed=false" >> "$GITHUB_OUTPUT"
+      echo "ref=$latest" >> "$GITHUB_OUTPUT"
+    fi
+    exit 0
+  fi
+  if [[ -z "$pinned_app" ]]; then
+    echo "Pin lacks APP_VERSION; will build to record $remote_app."
+  else
+    echo "APP_VERSION changed $pinned_app → $remote_app on $latest."
+  fi
 fi
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -53,7 +83,14 @@ else
   build_status=$?
   set -e
   if [[ "$build_status" -eq 0 ]]; then
-    echo "$latest" > "$PIN_FILE"
+    APP_VERSION=""
+    set +e
+    APP_VERSION="$("$ROOT/NumWorks/Scripts/epsilon-app-version.sh" --from-tree "$ROOT/NumWorks/Vendor/EpsilonSource" 2>/dev/null)"
+    set -e
+    if [[ -z "$APP_VERSION" ]]; then
+      echo "warning: could not read APP_VERSION from EpsilonSource; pinning branch only"
+    fi
+    "$ROOT/NumWorks/Scripts/write-epsilon-pin.sh" "$latest" "$APP_VERSION"
     echo "SUCCESS: libepsilon.a built for $latest"
     if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
       echo "build=success" >> "$GITHUB_OUTPUT"

@@ -59,19 +59,49 @@ jobs:
         run: |
           chmod +x NumWorks/Scripts/*.sh NumWorks/Scripts/*.py
           latest="$(./NumWorks/Scripts/latest-epsilon-tag.sh)"
-          pinned=""
+          pinned_branch=""
+          pinned_app=""
           if [[ -f NumWorks/Support/epsilon-pinned-ref.txt ]]; then
-            pinned="$(tr -d '[:space:]' < NumWorks/Support/epsilon-pinned-ref.txt)"
+            pinned_branch="$(sed -n '1p' NumWorks/Support/epsilon-pinned-ref.txt | tr -d '[:space:]')"
+            pinned_app="$(sed -n '2p' NumWorks/Support/epsilon-pinned-ref.txt | tr -d '[:space:]')"
           fi
           ref="${{ github.event.inputs.epsilon_ref }}"
           force="${{ github.event.inputs.force }}"
           if [[ -z "$ref" ]]; then
             ref="$latest"
           fi
-          echo "pinned=$pinned latest=$latest ref=$ref force=$force"
-          if [[ "$force" != "true" && -n "$pinned" && "$pinned" == "$ref" ]]; then
+          echo "pinned_branch=$pinned_branch pinned_app=${pinned_app:-"(none)"} latest=$latest ref=$ref force=$force"
+
+          should_skip=false
+          if [[ "$force" == "true" ]]; then
+            should_skip=false
+          elif [[ -z "$pinned_branch" || "$pinned_branch" != "$ref" ]]; then
+            # Branch (or first pin) differs — build.
+            should_skip=false
+          else
+            # Same version-* branch: also compare APP_VERSION from the Makefile.
+            set +e
+            remote_app="$(./NumWorks/Scripts/epsilon-app-version.sh "$ref" 2>/tmp/epsilon-app-version.err)"
+            app_status=$?
+            set -e
+            if [[ "$app_status" -ne 0 || -z "$remote_app" ]]; then
+              echo "::warning::Could not read APP_VERSION for $ref; using branch pin only. $(tr '\n' ' ' </tmp/epsilon-app-version.err 2>/dev/null || true)"
+              should_skip=true
+              echo "Already on Epsilon branch $ref (APP_VERSION check skipped) — nothing to build."
+            elif [[ -z "$pinned_app" ]]; then
+              echo "Pin has branch $ref but no APP_VERSION yet; remote is $remote_app — will build to record it."
+              should_skip=false
+            elif [[ "$pinned_app" == "$remote_app" ]]; then
+              should_skip=true
+              echo "Already on Epsilon $ref (APP_VERSION $remote_app) — nothing to build."
+            else
+              echo "Same branch $ref but APP_VERSION $pinned_app → $remote_app — will build."
+              should_skip=false
+            fi
+          fi
+
+          if [[ "$should_skip" == "true" ]]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Already on Epsilon $ref — nothing to build."
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
             echo "ref=$ref" >> "$GITHUB_OUTPUT"

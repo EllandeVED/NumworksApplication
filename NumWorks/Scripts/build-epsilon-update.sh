@@ -38,7 +38,14 @@ info "Epsilon ref: $REF"
 ARCHS="${ARCHS:-$(uname -m)}" "$ROOT/NumWorks/Scripts/build-epsilon-lib.sh"
 
 mkdir -p "$ROOT/NumWorks/Support"
-echo "$REF" > "$ROOT/NumWorks/Support/epsilon-pinned-ref.txt"
+APP_VERSION=""
+set +e
+APP_VERSION="$("$ROOT/NumWorks/Scripts/epsilon-app-version.sh" --from-tree "$ROOT/NumWorks/Vendor/EpsilonSource" 2>/dev/null)"
+set -e
+if [[ -z "$APP_VERSION" ]]; then
+  echo "warning: could not read APP_VERSION from EpsilonSource; pinning branch only" >&2
+fi
+"$ROOT/NumWorks/Scripts/write-epsilon-pin.sh" "$REF" "$APP_VERSION"
 
 # Bump marketing patch + build (NumWorks app target only: COMBINE_HIDPI_IMAGES block)
 read -r VERSION BUILD_NUMBER < <(
