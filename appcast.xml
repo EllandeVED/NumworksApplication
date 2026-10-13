@@ -3,6 +3,20 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.14</title>
+            <pubDate>Tue, 13 Oct 2026 21:50:06 +0000</pubDate>
+            <sparkle:version>19</sparkle:version>
+            <sparkle:shortVersionString>2.0.14</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[This was an automatic update following a new version of the [Epsilon](https://github.com/numworks/epsilon) calculator software (**version-26**).
+
+For upstream changes, see:
+https://github.com/numworks/epsilon/tree/version-26
+]]></description>
+            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.14/NumWorks-2.0.14.zip" length="3939099" type="application/octet-stream" sparkle:edSignature="Z70tQtOImPzZRDUPrmpP8uVQAX0gDw1QMQ/T5B4Nx5SnNCXfT1xrvtkXCo9QSwe6lnV2nNyFk/Hhci2MM1lcBw=="/>
+        </item>
+        <item>
             <title>2.0.13</title>
             <pubDate>Tue, 13 Oct 2026 07:30:15 +0000</pubDate>
             <sparkle:version>18</sparkle:version>
@@ -29,47 +43,6 @@ For upstream changes, see:
 https://github.com/numworks/epsilon/tree/version-25
 ]]></description>
             <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.12/NumWorks-2.0.12.zip" length="3897520" type="application/octet-stream" sparkle:edSignature="kZ+6rX1+8EFjra0t7g73v4rv4mSTWa2h9+xmCSMOPIZpzwfV5KgUaGwfNUpJF6JqO71Ma+hSc519hgGL4J/YDw=="/>
-        </item>
-        <item>
-            <title>2.0.11</title>
-            <pubDate>Sun, 16 Aug 2026 11:20:04 +0200</pubDate>
-            <sparkle:version>16</sparkle:version>
-            <sparkle:shortVersionString>2.0.11</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## What's New in 2.0.11
-
-- bug fixes
-- added share button, reduced energy and memory impact
-- added official links in about section in settings
-
-**Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.10...2.0.11
-
-> ## What's New in 2.x.x
-> 
-> This release introduces a modern update system powered by [Sparkle](https://github.com/sparkle-project/Sparkle), the standard open-source framework for keeping macOS apps up to date securely and reliably.
-> 
-> NumWorks now embeds a compiled build of [Epsilon](https://github.com/numworks/epsilon) (the official calculator firmware) taken directly from NumWorks’ open-source project on GitHub, rather than relying on their website’s HTML simulator at [numworks.com](https://www.numworks.com/simulator/download/).
-> 
-> ### This make the calculator
-> - **Safer, more reliable updates** — Sparkle verifies each release cryptographically before installing
-> - **Closer to the real calculator** — running native Epsilon improves stability and makes the display feel calmer and more consistent
-> - **Built from upstream source** — easier to track official Epsilon improvements as they ship
-> 
-> With any new updates to the Epsilon software, an automatic GitHub Action will publish an update so that you always get the latest version of NumWorks. 
-> 
-> ### 2.0.7
-> - Bug fix: the calculator would stay hidden behind the front most app 
-> 
-> ### 2.0.8
-> - Bug fix: Fixed logic with the automatic update checkbox
-> - Chage: AppMover is now triggered once on first launch
-> 
-> ### 2.0.9
-> - Updates check on launch now
-
-]]></description>
-            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.11/NumWorks-2.0.11.zip" length="4023523" type="application/octet-stream" sparkle:edSignature="YzGUZSKrycv+g5644JGgC5FWwVnz+4NcqMwN3yXLY+i/9qEOPkley1CRBOOLGBHYz9r9MrUExbFyNEGX84lPAw=="/>
         </item>
     </channel>
 </rss>
