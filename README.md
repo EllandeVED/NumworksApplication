@@ -115,15 +115,19 @@ See the [`LICENSE`](LICENSE) file in this repository for the full text.
 
 The app embeds **[Epsilon](https://github.com/numworks/epsilon)** (also GPLv3) and uses other third-party components (for example [Sparkle](https://github.com/sparkle-project/Sparkle)) under their respective licenses. Combining this shell with Epsilon means redistributed binaries of the app are covered by **GPLv3**: you may use, study, share, and modify the software, and derivative works must remain under GPLv3 with appropriate attribution and source availability.
 
-This project is **not** affiliated with, endorsed by, or sponsored by NumWorks.
+> This project is **not** affiliated with, endorsed by, or sponsored by NumWorks.
 
 ---
 
 ## Privacy
 
-NumWorks for Mac does not collect, store, or send personal data about your usage.
+The calculator runs **locally** and only connects to internet for update checks (can be disabled) and to collect anonymous diagnostics through Aptabase to estimate the number of downloads.
 
-- The calculator runs **locally** and only connects to internet for update checks (can be disabled)
+**No accounts or personally identifying information are collected.**
+
+_-> Anonymous usage statistics can be disabled at any time in Settings._
+
+
 
 ---
 
