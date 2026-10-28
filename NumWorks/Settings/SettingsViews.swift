@@ -84,12 +84,6 @@ struct GeneralSettingsView: View {
             }
             Section {
                 Toggle("Show Dock icon", isOn: $preferences.showDockIcon)
-            } footer: {
-                Text("The Dock icon will always stay visible while the app Settings window is open.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section {
                 Toggle("Enable menu bar icon", isOn: $preferences.showMenuBarIcon)
                 Picker("Menu bar icon style", selection: $preferences.menuBarIconStyle) {
                     ForEach(MenuBarIconStyle.allCases) { style in
@@ -98,6 +92,11 @@ struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.radioGroup)
                 .disabled(!preferences.showMenuBarIcon)
+            } footer: {
+                Text("Keep at least the Dock or menu bar icon on so you can reopen NumWorks. "
+                     + "The Dock icon stays visible while Settings is open.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -120,8 +119,8 @@ struct GeneralSettingsView: View {
                 }
             } footer: {
                 if isInApplicationsFolder {
-                    Text("Automatic checks run shortly after launch (at most once a day). "
-                         + "Keep NumWorks in the Applications folder so updates can install.")
+                    Text("Automatic checks run shortly after launch and about once a day while "
+                         + "NumWorks stays open. Keep the app in Applications so updates can install.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -137,6 +136,15 @@ struct GeneralSettingsView: View {
                     .accessibilityLabel(
                         "Warning: Updates can be checked, but installation requires the Applications folder.")
                 }
+            }
+
+            Section {
+                Toggle("Share anonymous usage statistics", isOn: $preferences.telemetryEnabled)
+            } footer: {
+                Text("Helps count how many people use NumWorks and report update errors. "
+                     + "No account or personal identity is sent. You can turn this off anytime.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             ShareNumWorksButton()
@@ -221,6 +229,11 @@ struct WindowToolbarSettingsView: View {
                 Toggle("Always on top", isOn: $preferences.alwaysOnTop)
                 Toggle("Move calculator to current desktop when shown",
                        isOn: $preferences.moveWindowToCurrentSpaceWhenShown)
+            } footer: {
+                Text("Always on top applies for this session only and turns off the next time "
+                     + "NumWorks launches.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section {
                 Picker("Toolbar style", selection: $preferences.windowStyle) {
@@ -289,13 +302,6 @@ struct AdvancedSettingsView: View {
                     isConfirmingReset = true
                 }
                 .accessibilityIdentifier("restore-defaults-button")
-            }
-            Section {
-                LabeledContent("Custom Epsilon Framework") {
-                    Text("Coming in a future release.")
-                        .foregroundStyle(.secondary)
-                }
-                .disabled(true)
             }
         }
         .formStyle(.grouped)

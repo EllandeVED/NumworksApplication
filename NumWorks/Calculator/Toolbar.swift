@@ -1,21 +1,18 @@
 import AppKit
 import Combine
 
-/// Actions the toolbar can trigger. Provided by AppController so the toolbar
-/// stays free of window-management logic.
 struct ToolbarActions {
     let togglePin: () -> Void
     let openSettings: () -> Void
 }
 
-/// Owns an AppKit titlebar accessory (no SwiftUI / ViewBridge).
-///
-/// Pure AppKit avoids the RemoteViewService cancellations that crashed the
-/// app when the calculator was shown and hidden from the status item.
+/// Titlebar pin/settings controls. AppKit only — SwiftUI accessories broke
+/// under status-item show/hide (ViewBridge).
 @MainActor
 final class CalculatorToolbarController: NSObject {
 
     private var accessory: NSTitlebarAccessoryViewController?
+    private var titleLabel: NSTextField?
     private var pinButton: NSButton?
     private var settingsButton: NSButton?
     private var stack: NSStackView?
@@ -46,19 +43,19 @@ final class CalculatorToolbarController: NSObject {
             let stack = NSStackView(views: [pin, settings])
             stack.orientation = .horizontal
             stack.alignment = .centerY
-            stack.spacing = 2
+            stack.spacing = 6
             stack.edgeInsets = NSEdgeInsets(top: 0, left: 4, bottom: 0, right: 6)
             stack.setHuggingPriority(.required, for: .horizontal)
             stack.translatesAutoresizingMaskIntoConstraints = false
 
-            let container = NSView(frame: NSRect(x: 0, y: 0, width: 64, height: 28))
+            let container = NSView(frame: NSRect(x: 0, y: 0, width: 64, height: 32))
             container.addSubview(stack)
             NSLayoutConstraint.activate([
                 stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
                 container.trailingAnchor.constraint(equalTo: stack.trailingAnchor),
-                container.heightAnchor.constraint(equalToConstant: 28),
             ])
+            sizeAccessoryView(container)
 
             let accessory = NSTitlebarAccessoryViewController()
             accessory.view = container
@@ -71,28 +68,19 @@ final class CalculatorToolbarController: NSObject {
             self.stack = stack
         }
 
-        // Keep the accessory installed across style flips; only hide it in Native.
         accessory?.isHidden = false
+        showCenteredTitle(in: window)
         refresh()
     }
 
-    /// Hides without removing — avoids title-bar rebuild jank when flipping styles.
     func setVisible(_ visible: Bool) {
         accessory?.isHidden = !visible
-    }
-
-    func detach(from window: NSWindow) {
-        cancellables.removeAll()
-        if let accessory,
-           let index = window.titlebarAccessoryViewControllers.firstIndex(of: accessory) {
-            window.removeTitlebarAccessoryViewController(at: index)
+        if visible, let window = accessory?.view.window {
+            showCenteredTitle(in: window)
+        } else {
+            titleLabel?.removeFromSuperview()
+            titleLabel = nil
         }
-        accessory = nil
-        pinButton = nil
-        settingsButton = nil
-        stack = nil
-        actions = nil
-        preferences = nil
     }
 
     func refresh() {
@@ -114,9 +102,35 @@ final class CalculatorToolbarController: NSObject {
             pinned ? "Unpin calculator" : "Pin calculator")
         pinButton?.contentTintColor = pinned ? .controlAccentColor : .secondaryLabelColor
 
-        // Keep stack width tight when buttons are hidden.
         stack.needsLayout = true
-        accessory?.view.needsLayout = true
+        stack.layoutSubtreeIfNeeded()
+        if let view = accessory?.view {
+            sizeAccessoryView(view)
+        }
+    }
+
+    private func showCenteredTitle(in window: NSWindow) {
+        titleLabel?.removeFromSuperview()
+        window.titleVisibility = .hidden
+        guard let bar = window.standardWindowButton(.closeButton)?.superview else { return }
+
+        let label = NSTextField(labelWithString: "NumWorks")
+        label.font = .titleBarFont(ofSize: NSFont.systemFontSize)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        bar.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: bar.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+        ])
+        titleLabel = label
+    }
+
+    private func sizeAccessoryView(_ view: NSView) {
+        view.layoutSubtreeIfNeeded()
+        var size = view.fittingSize
+        size.height = max(size.height, 32)
+        size.width = max(size.width, 1)
+        view.frame.size = size
     }
 
     private func observePreferences(_ preferences: Preferences) {

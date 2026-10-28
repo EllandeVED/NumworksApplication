@@ -86,7 +86,7 @@ struct AboutView: View {
         }
         .formStyle(.grouped)
         .sheet(isPresented: $showingLicence) {
-            LicencePlaceholderView()
+            LicenceView()
         }
     }
 }
@@ -136,7 +136,7 @@ private struct AboutRowLabel: View {
     }
 }
 
-private struct LicencePlaceholderView: View {
+private struct LicenceView: View {
     @Environment(\.dismiss) private var dismiss
 
     private static let gplURL = URL(string: "https://www.gnu.org/licenses/gpl-3.0.html")

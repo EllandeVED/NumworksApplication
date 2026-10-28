@@ -37,7 +37,8 @@ enum AppMover {
             let alert = NSAlert()
             alert.messageText = "Move to Applications folder"
             alert.informativeText =
-                "\(Bundle.main.localizedName) needs to move to your Applications folder in order to work properly."
+                "\(Bundle.main.localizedName) can run from this location, but updates can only be installed "
+                + "when the app lives in your Applications folder."
             if needAuth {
                 alert.informativeText.append(
                     " You need to authenticate with your administrator password to complete this step.")
@@ -56,7 +57,9 @@ enum AppMover {
                 return
             }
             guard result.success else {
-                NSApplication.shared.terminate(self)
+                presentMoveFailed(
+                    "Couldn’t move \(Bundle.main.localizedName) to Applications. "
+                        + "Try moving it manually in Finder.")
                 return
             }
         } else {
@@ -66,11 +69,17 @@ enum AppMover {
                     return
                 } else {
                     guard (try? fm.trashItem(at: destinationUrl, resultingItemURL: nil)) != nil else {
+                        presentMoveFailed(
+                            "Couldn’t replace the existing copy in Applications. "
+                                + "Quit that copy or move this app manually.")
                         return
                     }
                 }
             }
             guard (try? fm.copyItem(at: bundleUrl, to: destinationUrl)) != nil else {
+                presentMoveFailed(
+                    "Couldn’t copy \(Bundle.main.localizedName) into Applications. "
+                        + "Try moving it manually in Finder.")
                 return
             }
         }
@@ -111,6 +120,15 @@ enum AppMover {
                 return ((error?[NSAppleScript.errorNumber] as? Int16) == -128, error == nil)
             })
         })
+    }
+
+    private static func presentMoveFailed(_ message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Couldn’t Move to Applications"
+        alert.informativeText = message
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     static func preferredInstallDirectory() -> URL? {

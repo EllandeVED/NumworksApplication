@@ -4,8 +4,9 @@ import Combine
 import LaunchAtLogin
 #endif
 
-/// Central preferences model. This is the only type in the app that reads or
-/// writes UserDefaults; every other feature goes through it.
+/// Central preferences model for app settings. Feature code should go through
+/// this type rather than writing keys ad hoc (Sparkle / KeyboardShortcuts /
+/// LaunchAtLogin keep their own stores).
 @MainActor
 final class Preferences: ObservableObject {
 
@@ -23,6 +24,10 @@ final class Preferences: ObservableObject {
         static let savedWindowFrame = "savedWindowFrame"
         static let appMoverOfferVersion = "appMoverOfferVersion"
         static let appMoverOfferCount = "appMoverOfferCount"
+        static let telemetryEnabled = "telemetryEnabled"
+        static let telemetryFirstLaunchVersion = "telemetryFirstLaunchVersion"
+        /// Marks that launch-at-login was set explicitly (or via our default-on).
+        static let launchAtLoginConfigured = "launchAtLoginConfigured"
     }
 
     /// How many AppMover prompts to show per app version when not in Applications.
@@ -40,6 +45,7 @@ final class Preferences: ObservableObject {
         Key.launchWindowVisible: false,
         Key.moveWindowToCurrentSpaceWhenShown: true,
         Key.appMoverOfferCount: 0,
+        Key.telemetryEnabled: true,
     ]
 
     private let defaults: UserDefaults
@@ -56,6 +62,17 @@ final class Preferences: ObservableObject {
         showMenuBarIcon = defaults.bool(forKey: Key.showMenuBarIcon)
         menuBarIconStyle = defaults.string(forKey: Key.menuBarIconStyle)
             .flatMap(MenuBarIconStyle.init(rawValue:)) ?? .filled
+        if defaults.object(forKey: Key.launchAtLoginConfigured) == nil {
+            // Fresh install only: default launch-at-login on. Upgrades keep
+            // whatever Login Items already say (including an explicit off).
+            let isUpgrade = defaults.object(forKey: Key.showDockIcon) != nil
+                || defaults.object(forKey: Key.windowStyle) != nil
+                || defaults.object(forKey: Key.showMenuBarIcon) != nil
+            if !isUpgrade {
+                Self.systemLaunchAtLogin = true
+            }
+            defaults.set(true, forKey: Key.launchAtLoginConfigured)
+        }
         launchAtLogin = Self.systemLaunchAtLogin
         let storedStyle = defaults.string(forKey: Key.windowStyle)
             .flatMap(WindowStyle.init(rawValue:)) ?? .toolbar
@@ -63,6 +80,7 @@ final class Preferences: ObservableObject {
         launchWindowVisible = defaults.bool(forKey: Key.launchWindowVisible)
         moveWindowToCurrentSpaceWhenShown =
             defaults.bool(forKey: Key.moveWindowToCurrentSpaceWhenShown)
+        telemetryEnabled = defaults.bool(forKey: Key.telemetryEnabled)
         savedWindowFrame = defaults.string(forKey: Key.savedWindowFrame)
     }
 
@@ -85,11 +103,22 @@ final class Preferences: ObservableObject {
     }
 
     @Published var showDockIcon: Bool {
-        didSet { defaults.set(showDockIcon, forKey: Key.showDockIcon) }
+        didSet {
+            defaults.set(showDockIcon, forKey: Key.showDockIcon)
+            // LSUIElement app: keep at least one way to reach the UI.
+            if !showDockIcon && !showMenuBarIcon {
+                showMenuBarIcon = true
+            }
+        }
     }
 
     @Published var showMenuBarIcon: Bool {
-        didSet { defaults.set(showMenuBarIcon, forKey: Key.showMenuBarIcon) }
+        didSet {
+            defaults.set(showMenuBarIcon, forKey: Key.showMenuBarIcon)
+            if !showMenuBarIcon && !showDockIcon {
+                showDockIcon = true
+            }
+        }
     }
 
     @Published var menuBarIconStyle: MenuBarIconStyle {
@@ -97,7 +126,10 @@ final class Preferences: ObservableObject {
     }
 
     @Published var launchAtLogin: Bool {
-        didSet { Self.systemLaunchAtLogin = launchAtLogin }
+        didSet {
+            Self.systemLaunchAtLogin = launchAtLogin
+            defaults.set(true, forKey: Key.launchAtLoginConfigured)
+        }
     }
 
     static var isLaunchAtLoginAvailable: Bool {
@@ -137,6 +169,20 @@ final class Preferences: ObservableObject {
                 moveWindowToCurrentSpaceWhenShown,
                 forKey: Key.moveWindowToCurrentSpaceWhenShown)
         }
+    }
+
+    /// Anonymous Aptabase usage/error reports. Opt-out; off means nothing is sent.
+    @Published var telemetryEnabled: Bool {
+        didSet {
+            defaults.set(telemetryEnabled, forKey: Key.telemetryEnabled)
+            Telemetry.applyPreferenceChange()
+        }
+    }
+
+    /// Last `AppInfo.appVersion` for which `first_launch` was sent (not a Settings UI field).
+    var telemetryFirstLaunchVersion: String? {
+        get { defaults.string(forKey: Key.telemetryFirstLaunchVersion) }
+        set { defaults.set(newValue, forKey: Key.telemetryFirstLaunchVersion) }
     }
 
     // MARK: - Window frame persistence (not shown in the Settings UI)
@@ -182,10 +228,11 @@ final class Preferences: ObservableObject {
         showDockIcon = true
         showMenuBarIcon = true
         menuBarIconStyle = .filled
-        launchAtLogin = false
+        launchAtLogin = true
         windowStyle = .toolbar
         launchWindowVisible = false
         moveWindowToCurrentSpaceWhenShown = true
+        telemetryEnabled = true
     }
 }
 

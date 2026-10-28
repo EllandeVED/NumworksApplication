@@ -17,6 +17,8 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
     private(set) var updaterController: SPUStandardUpdaterController!
 
     private var postLaunchCheckTimer: Timer?
+    /// Fires about once a day while the app stays open (launch check is separate).
+    private var dailyWhileRunningTimer: Timer?
     private var checkTimeoutTimer: Timer?
     private var canCheckObservation: NSKeyValueObservation?
 
@@ -32,6 +34,9 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
 
     @Published private(set) var isCheckingForUpdates = false
     @Published private(set) var canCheckForUpdates = true
+
+    /// Restores Dock / activation policy after an alert forced `.regular`.
+    var restoreActivationPolicy: (() -> Void)?
 
     private var updater: SPUUpdater { updaterController.updater }
 
@@ -81,9 +86,13 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         set {
             updater.automaticallyChecksForUpdates = newValue
             parkSparkleAutomaticSchedule()
-            if !newValue {
+            if newValue {
+                scheduleDailyWhileRunningChecks()
+            } else {
                 postLaunchCheckTimer?.invalidate()
                 postLaunchCheckTimer = nil
+                dailyWhileRunningTimer?.invalidate()
+                dailyWhileRunningTimer = nil
             }
         }
     }
@@ -143,7 +152,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         }
     }
 
-    // MARK: - Post-launch schedule
+    // MARK: - Post-launch + daily-while-running schedule
 
     func schedulePostLaunchUpdateCheck(
         after delay: TimeInterval = UpdateController.defaultPostLaunchCheckDelay
@@ -157,19 +166,43 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
 
         let timer = Timer(timeInterval: max(delay, 0.5), repeats: false) { [weak self] _ in
             Task { @MainActor in
-                self?.performPostLaunchCheck()
+                self?.performAutomaticBackgroundCheck()
             }
         }
         timer.tolerance = 0.5
         RunLoop.main.add(timer, forMode: .common)
         postLaunchCheckTimer = timer
+
+        // Also keep checking about once a day if the process stays alive.
+        scheduleDailyWhileRunningChecks()
+    }
+
+    private func scheduleDailyWhileRunningChecks() {
+        dailyWhileRunningTimer?.invalidate()
+        dailyWhileRunningTimer = nil
+
+        guard !UITesting.skipAutomaticUpdateChecks else { return }
+        guard automaticallyChecksForUpdates else { return }
+
+        let timer = Timer(
+            timeInterval: Self.minimumAutomaticCheckInterval,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.performAutomaticBackgroundCheck()
+            }
+        }
+        // Allow the system to coalesce wakeups; exact midnight isn’t required.
+        timer.tolerance = 60 * 30
+        RunLoop.main.add(timer, forMode: .common)
+        dailyWhileRunningTimer = timer
     }
 
     private func parkSparkleAutomaticSchedule() {
         updater.updateCheckInterval = Self.parkedSparkleInterval
     }
 
-    private func performPostLaunchCheck() {
+    private func performAutomaticBackgroundCheck() {
         postLaunchCheckTimer = nil
         guard automaticallyChecksForUpdates else { return }
         guard updater.canCheckForUpdates, !updater.sessionInProgress else { return }
@@ -198,6 +231,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         let response = alert.runModal()
         updaterController.userDriver.dismissUpdateInstallation()
         canCheckForUpdates = updater.canCheckForUpdates
+        restoreActivationPolicyAfterAlert()
         if response == .alertFirstButtonReturn {
             AppMover.moveIfNecessary(prompt: false)
         }
@@ -216,6 +250,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             AppMover.moveIfNecessary(prompt: false)
         }
         canCheckForUpdates = updater.canCheckForUpdates
+        restoreActivationPolicyAfterAlert()
     }
 
     private func presentCheckFailed(_ message: String) {
@@ -227,6 +262,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         alert.addButton(withTitle: "OK")
         alert.runModal()
         canCheckForUpdates = updater.canCheckForUpdates
+        restoreActivationPolicyAfterAlert()
     }
 
     private func activateForAlert() {
@@ -234,6 +270,10 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             NSApp.setActivationPolicy(.regular)
         }
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func restoreActivationPolicyAfterAlert() {
+        restoreActivationPolicy?()
     }
 
     private func isNoUpdateError(_ error: Error) -> Bool {
@@ -258,7 +298,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         }
     }
 
-    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error?) {
+    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
         DispatchQueue.main.async {
             let controller = UpdateController.shared
             switch controller.pendingUserCheck {
@@ -285,7 +325,8 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             let controller = UpdateController.shared
             // `.notInstalled` is cleared in didFind / didNotFind so the alert
             // is not dropped when the cycle finishes first.
-            switch controller.pendingUserCheck {
+            let pending = controller.pendingUserCheck
+            switch pending {
             case .notInstalled:
                 if let error, !controller.isNoUpdateError(error) {
                     controller.pendingUserCheck = .none
@@ -303,6 +344,10 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
 
             if let error, !controller.isNoUpdateError(error) {
                 NSLog("[NumWorks] Sparkle cycle finished with error: %@", error as NSError)
+                // Background / automatic path only — user aborts report in didAbort.
+                if pending == .none {
+                    Telemetry.trackError(error)
+                }
             }
         }
     }
@@ -333,6 +378,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             controller.pendingUserCheck = .none
             controller.finishChecking()
             if shouldAlert {
+                Telemetry.trackError(nsError)
                 controller.presentCheckFailed(nsError.localizedDescription)
             }
         }
@@ -366,12 +412,13 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
                 return
             }
 
-            // Not in Applications: show the move-required alert.
+            // Not in Applications: only alert for a user-initiated check.
+            // Automatic finds would stack on the launch AppMover prompt.
             if controller.pendingUserCheck == .notInstalled {
                 controller.pendingUserCheck = .none
                 controller.finishChecking()
+                controller.presentMoveRequiredForUpdate(update)
             }
-            controller.presentMoveRequiredForUpdate(update)
         }
     }
 }

@@ -68,15 +68,9 @@ enum WindowSizing {
         }
     }
 
-    /// Builds the frame to restore at attach time from the saved frame and
-    /// the remember-position/-size preferences, falling back to a centred
-    /// default frame. `window` provides screen context and chrome metrics.
-    static func restorationFrame(
-        savedFrame: NSRect?,
-        rememberPosition: Bool,
-        rememberSize: Bool,
-        window: NSWindow
-    ) -> NSRect {
+    /// Frame to restore at attach time from the saved frame, or a centred
+    /// default if missing / off-screen. `window` supplies chrome metrics.
+    static func restorationFrame(savedFrame: NSRect?, window: NSWindow) -> NSRect {
         let defaultFrame = centeredFrame(
             contentSize: defaultContentSize, window: window)
 
@@ -85,16 +79,9 @@ enum WindowSizing {
         }
 
         var frame = defaultFrame
-        if rememberSize {
-            frame.size = clampedSize(savedFrame.size, window: window)
-        }
-        if rememberPosition {
-            frame.origin = savedFrame.origin
-        } else {
-            // Centre the possibly-resized frame.
-            frame.origin = centeredOrigin(for: frame.size, window: window)
-        }
-        // A remembered origin combined with a different size could push the
+        frame.size = clampedSize(savedFrame.size, window: window)
+        frame.origin = savedFrame.origin
+        // A remembered origin with a different chrome size can push the
         // window off-screen; re-centre in that case.
         if !isFrameReachable(frame) {
             frame.origin = centeredOrigin(for: frame.size, window: window)

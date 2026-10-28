@@ -73,7 +73,7 @@ final class StatusItemController: NSObject {
     private var cancellables = Set<AnyCancellable>()
     /// Snapshot of hide-vs-show taken on mouseDown so activate/reopen cannot
     /// invert the click before mouseUp runs.
-    private var pendingShouldShow: Bool?
+    private var pendingShouldHide: Bool?
     private var ignoreReopenUntil = Date.distantPast
     private var cachedIcons: [MenuBarIconStyle: NSImage] = [:]
 
@@ -81,12 +81,11 @@ final class StatusItemController: NSObject {
         let togglePin: () -> Void
         let showCalculator: () -> Void
         let hideCalculator: () -> Void
-        let toggleVisibility: () -> Void
         let openSettings: () -> Void
         let quit: () -> Void
         let isPinned: () -> Bool
-        let isVisible: () -> Bool
-        let prefersHideOnToggle: () -> Bool
+        /// True only when the calculator is frontmost (same rule as the shortcut).
+        let shouldHideOnToggle: () -> Bool
     }
 
     init(preferences: Preferences, actions: StatusItemActions) {
@@ -182,23 +181,25 @@ final class StatusItemController: NSObject {
     @objc private func statusItemClicked(_ sender: Any?) {
         let type = NSApp.currentEvent?.type
         if type == .rightMouseUp {
-            pendingShouldShow = nil
+            pendingShouldHide = nil
             showMenu(with: NSApp.currentEvent)
             return
         }
         if type == .leftMouseDown {
-            pendingShouldShow = !actions.prefersHideOnToggle()
+            // Snapshot before status-item activation flips NSApp.isActive —
+            // hide only if we were already the frontmost calculator.
+            pendingShouldHide = actions.shouldHideOnToggle()
             ignoreReopenUntil = Date().addingTimeInterval(0.45)
             return
         }
         ignoreReopenUntil = Date().addingTimeInterval(0.45)
-        // Same show/hide as the shortcut — but use the mouse-down snapshot so a
-        // reopen Apple Event from this click cannot invert hide ↔ show.
-        if let shouldShow = pendingShouldShow {
-            pendingShouldShow = nil
-            shouldShow ? actions.showCalculator() : actions.hideCalculator()
+        if let shouldHide = pendingShouldHide {
+            pendingShouldHide = nil
+            shouldHide ? actions.hideCalculator() : actions.showCalculator()
         } else {
-            actions.toggleVisibility()
+            actions.shouldHideOnToggle()
+                ? actions.hideCalculator()
+                : actions.showCalculator()
         }
     }
 
@@ -214,7 +215,7 @@ final class StatusItemController: NSObject {
         menu.addItem(pin)
 
         let visibility = NSMenuItem(
-            title: actions.isVisible() ? "Hide" : "Show",
+            title: actions.shouldHideOnToggle() ? "Hide" : "Show",
             action: #selector(visibilityAction),
             keyEquivalent: "")
         visibility.target = self
@@ -249,7 +250,13 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func pinAction() { actions.togglePin() }
-    @objc private func visibilityAction() { actions.toggleVisibility() }
+    @objc private func visibilityAction() {
+        if actions.shouldHideOnToggle() {
+            actions.hideCalculator()
+        } else {
+            actions.showCalculator()
+        }
+    }
     @objc private func settingsAction() { actions.openSettings() }
     @objc private func quitAction() { actions.quit() }
 }
