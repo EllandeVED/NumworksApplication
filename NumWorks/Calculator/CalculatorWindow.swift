@@ -102,10 +102,45 @@ final class CalculatorWindow {
 
     // MARK: - Visibility
 
-    /// Same condition the shortcut uses: hide only when already frontmost.
+    /// App that was frontmost before we activated for a user show — restored on hide.
+    private var previousFrontAppPID: pid_t?
+
+    /// Hide only when the calculator is already the focused front window on this Space.
+    /// Otherwise treat as “not up” (bring to front / show) — menu bar, shortcut, and
+    /// context menu all share this rule for stable one-click behavior.
     var prefersHideOnToggle: Bool {
         guard let window else { return false }
         return window.isVisible && window.isOnActiveSpace && isFrontmostCalculator(window)
+    }
+
+    /// User-driven show (menu bar / shortcut). Remembers the previous app for hide.
+    func showFromUser() {
+        rememberPreviousFrontAppIfNeeded()
+        show()
+        // SDL + status-item activation can leave the window unfocused on the first
+        // pass; a same-turn follow-up makes one click enough when fully hidden.
+        DispatchQueue.main.async { [weak self] in
+            self?.finishShowingIfNeeded()
+        }
+    }
+
+    /// User-driven hide. Optionally returns focus to the app that was frontmost
+    /// before we showed (e.g. Safari), instead of leaving NumWorks active.
+    func hideFromUser(yieldFocus: Bool) {
+        hide()
+        if yieldFocus {
+            yieldFocusToPreviousFrontApp()
+        } else {
+            previousFrontAppPID = nil
+        }
+    }
+
+    func toggleFromUser(yieldFocusOnHide: Bool) {
+        if prefersHideOnToggle {
+            hideFromUser(yieldFocus: yieldFocusOnHide)
+        } else {
+            showFromUser()
+        }
     }
 
     func show() {
@@ -144,48 +179,39 @@ final class CalculatorWindow {
         window?.orderOut(nil)
     }
 
-    func toggleVisibility() {
-        if prefersHideOnToggle {
-            hide()
-        } else {
-            show()
-        }
-    }
-
     /// True when the calculator is the focused front window (safe to hide).
     private func isFrontmostCalculator(_ window: NSWindow) -> Bool {
         NSApp.isActive && window.isKeyWindow
     }
 
-    func bringToFront() {
-        guard let window else { return }
-        NSApp.activate(ignoringOtherApps: true)
-        window.orderFrontRegardless()
-        window.makeKeyAndOrderFront(nil)
+    private func rememberPreviousFrontAppIfNeeded() {
+        guard let front = NSWorkspace.shared.frontmostApplication else { return }
+        if front.bundleIdentifier == Bundle.main.bundleIdentifier { return }
+        previousFrontAppPID = front.processIdentifier
     }
 
-    func centre() {
-        guard let window else { return }
-        let origin = WindowSizing.centeredFrame(
-            contentSize: window.contentRect(forFrameRect: window.frame).size,
-            window: window).origin
-        window.setFrameOrigin(origin)
-        saveFrameIfEnabled()
+    private func yieldFocusToPreviousFrontApp() {
+        defer { previousFrontAppPID = nil }
+        guard let pid = previousFrontAppPID,
+              let app = NSRunningApplication(processIdentifier: pid),
+              !app.isTerminated
+        else { return }
+        if #available(macOS 14.0, *) {
+            app.activate()
+        } else {
+            app.activate(options: [.activateIgnoringOtherApps])
+        }
     }
 
-    func resetSize() {
-        guard let window else { return }
-        var frame = window.frame
-        let newSize = window.frameRect(forContentRect:
-            NSRect(origin: .zero, size: WindowSizing.defaultContentSize)).size
-        frame.origin.y += frame.height - newSize.height
-        frame.size = newSize
-        window.setFrame(frame, display: true, animate: true)
-        saveFrameIfEnabled()
-    }
-
-    func resetPosition() {
-        centre()
+    private func finishShowingIfNeeded() {
+        guard let window, window.isVisible else { return }
+        if !NSApp.isActive || !window.isKeyWindow {
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            if let contentView = window.contentView {
+                window.makeFirstResponder(contentView)
+            }
+        }
     }
 
     // MARK: - Preferences
@@ -263,15 +289,11 @@ final class CalculatorWindow {
     private func restoreFrame() {
         guard let window else { return }
         let saved = preferences.savedWindowFrame.flatMap(WindowSizing.decode(frameString:))
-        let frame = WindowSizing.restorationFrame(
-            savedFrame: saved,
-            rememberPosition: true,
-            rememberSize: true,
-            window: window)
+        let frame = WindowSizing.restorationFrame(savedFrame: saved, window: window)
         window.setFrame(frame, display: true)
     }
 
-    private func saveFrameIfEnabled() {
+    private func saveFrame() {
         guard let window else { return }
         preferences.savedWindowFrame = WindowSizing.encode(frame: window.frame)
     }
@@ -283,7 +305,7 @@ final class CalculatorWindow {
                 forName: name, object: window, queue: .main
             ) { [weak self] _ in
                 MainActor.assumeIsolated {
-                    self?.saveFrameIfEnabled()
+                    self?.saveFrame()
                 }
             })
         }

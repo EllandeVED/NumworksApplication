@@ -1,6 +1,15 @@
 {
-  "originHash" : "2e3e50ba024e1415badbdeefa38500f20d20ffc3c6d18b3f7c94daa971b6355c",
+  "originHash" : "f8afe22da5404492d330346321ede647d1804314c224f50947f25e94462fcfb3",
   "pins" : [
+    {
+      "identity" : "aptabase-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/aptabase/aptabase-swift",
+      "state" : {
+        "revision" : "a1ee53e99478921cd166c40f59f2e41271032776",
+        "version" : "0.4.0"
+      }
+    },
     {
       "identity" : "keyboardshortcuts",
       "kind" : "remoteSourceControl",

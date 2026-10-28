@@ -37,7 +37,7 @@ enum WindowStyle: String, CaseIterable, Identifiable {
             window.styleMask.insert([.titled, .closable, .miniaturizable, .resizable])
             window.styleMask.remove(.fullSizeContentView)
             window.titlebarAppearsTransparent = false
-            window.titleVisibility = .visible
+            window.titleVisibility = .hidden
             window.title = "NumWorks"
         }
     }

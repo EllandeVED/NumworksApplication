@@ -50,11 +50,14 @@ final class SettingsWindowController: NSWindowController {
     /// Shows the window, or brings the existing one forward.
     func show() {
         guard let window else { return }
-        // If the calculator is pinned at .floating level, a .normal-level
-        // Settings window would open behind it; match the level so Settings
-        // stays usable.
-        window.level = preferences.alwaysOnTop ? .floating : .normal
+        syncLevelWithPin(preferences.alwaysOnTop)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// If the calculator is pinned at `.floating`, Settings must match or it
+    /// opens behind the calculator.
+    func syncLevelWithPin(_ pinned: Bool) {
+        window?.level = pinned ? .floating : .normal
     }
 }

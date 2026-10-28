@@ -29,6 +29,7 @@ struct PreferencesTests {
         #expect(prefs.windowStyle == .toolbar)
         #expect(prefs.launchWindowVisible == false)
         #expect(prefs.moveWindowToCurrentSpaceWhenShown == true)
+        #expect(prefs.telemetryEnabled == true)
         #expect(prefs.savedWindowFrame == nil)
     }
 
@@ -41,11 +42,12 @@ struct PreferencesTests {
         prefs.showSettingsButton = false
         prefs.shortcutsEnabled = false
         prefs.showDockIcon = false
-        prefs.showMenuBarIcon = false
+        prefs.showMenuBarIcon = true
         prefs.menuBarIconStyle = .outline
         prefs.windowStyle = .native
         prefs.launchWindowVisible = true
         prefs.moveWindowToCurrentSpaceWhenShown = false
+        prefs.telemetryEnabled = false
         prefs.savedWindowFrame = "{{10, 20}, {300, 600}}"
 
         let reloaded = Preferences(defaults: defaults)
@@ -54,12 +56,27 @@ struct PreferencesTests {
         #expect(reloaded.showSettingsButton == false)
         #expect(reloaded.shortcutsEnabled == false)
         #expect(reloaded.showDockIcon == false)
-        #expect(reloaded.showMenuBarIcon == false)
+        #expect(reloaded.showMenuBarIcon == true)
         #expect(reloaded.menuBarIconStyle == .outline)
         #expect(reloaded.windowStyle == .native)
         #expect(reloaded.launchWindowVisible == true)
         #expect(reloaded.moveWindowToCurrentSpaceWhenShown == false)
+        #expect(reloaded.telemetryEnabled == false)
         #expect(reloaded.savedWindowFrame == "{{10, 20}, {300, 600}}")
+    }
+
+    @Test func cannotDisableBothDockAndMenuBarIcons() {
+        let prefs = Preferences(defaults: makeSuite())
+
+        // Turning the last icon off re-enables the other.
+        prefs.showDockIcon = false
+        prefs.showMenuBarIcon = false
+        #expect(prefs.showMenuBarIcon == false)
+        #expect(prefs.showDockIcon == true)
+
+        prefs.showDockIcon = false
+        #expect(prefs.showDockIcon == false)
+        #expect(prefs.showMenuBarIcon == true)
     }
 
     @Test func unavailableWindowStyleFallsBackToToolbar() {

@@ -44,10 +44,17 @@ final class AppController: NSObject {
         // Always start unpinned; the user can enable Always on Top during the session.
         preferences.alwaysOnTop = false
 
+        Telemetry.start(preferences: preferences)
+
         // Sparkle’s updater shares the main run loop; skip it under UI testing so
         // XCTest isn’t blocked waiting for an “idle” SDL / network process.
         if !UITesting.isEnabled {
-            _ = UpdateController.shared
+            let updates = UpdateController.shared
+            updates.restoreActivationPolicy = { [weak self] in
+                guard let self else { return }
+                let showDock = self.isSettingsVisible || self.preferences.showDockIcon
+                self.applyDockIconPolicy(effectiveShowDockIcon: showDock)
+            }
         }
 
         shortcutController = ShortcutController(
@@ -100,7 +107,7 @@ final class AppController: NSObject {
     // MARK: - Actions
 
     func toggleCalculator() {
-        calculatorWindow.toggleVisibility()
+        calculatorWindow.toggleFromUser(yieldFocusOnHide: !isSettingsVisible)
     }
 
     func togglePin() {
@@ -178,10 +185,6 @@ final class AppController: NSObject {
     }
 
     private func performAttach(to window: NSWindow) {
-#if DEBUG
-        NSLog("[NumWorks] Attaching to Epsilon window: %@", window)
-#endif
-
         let toolbarActions = ToolbarActions(
             togglePin: { [weak self] in
                 self?.togglePin()
@@ -253,17 +256,16 @@ final class AppController: NSObject {
             preferences: preferences,
             actions: .init(
                 togglePin: { [weak self] in self?.togglePin() },
-                showCalculator: { [weak self] in self?.calculatorWindow.show() },
-                hideCalculator: { [weak self] in self?.calculatorWindow.hide() },
-                toggleVisibility: { [weak self] in self?.toggleCalculator() },
+                showCalculator: { [weak self] in self?.calculatorWindow.showFromUser() },
+                hideCalculator: { [weak self] in
+                    guard let self else { return }
+                    self.calculatorWindow.hideFromUser(yieldFocus: !self.isSettingsVisible)
+                },
                 openSettings: { [weak self] in self?.openSettings() },
                 quit: { [weak self] in self?.quit() },
-                isPinned: { [weak self] in self?.preferences.alwaysOnTop ?? false },
-                isVisible: { [weak self] in
-                    self?.calculatorWindow.isVisibleOnActiveSpace ?? false
-                },
-                prefersHideOnToggle: { [weak self] in
-                    self?.calculatorWindow.prefersHideOnToggle ?? false
+                isPinned: { [weak self] in self?.preferences.alwaysOnTop == true },
+                shouldHideOnToggle: { [weak self] in
+                    self?.calculatorWindow.prefersHideOnToggle == true
                 }))
     }
 
@@ -273,8 +275,15 @@ final class AppController: NSObject {
         preferences.$alwaysOnTop
             .dropFirst()
             .sink { [weak self] pinned in
-                self?.calculatorWindow.setAlwaysOnTop(pinned)
-                self?.calculatorWindow.restoreCalculatorFocus()
+                guard let self else { return }
+                self.calculatorWindow.setAlwaysOnTop(pinned)
+                // Keep Settings above a pinned calculator; don't steal focus from it.
+                self.settingsWindowController?.syncLevelWithPin(pinned)
+                if self.isSettingsVisible {
+                    self.settingsWindowController?.show()
+                } else {
+                    self.calculatorWindow.restoreCalculatorFocus()
+                }
             }
             .store(in: &cancellables)
 
