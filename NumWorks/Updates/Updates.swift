@@ -352,6 +352,15 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         }
     }
 
+    nonisolated func updater(_ updater: SPUUpdater, didDownloadUpdate item: SUAppcastItem) {
+        DispatchQueue.main.async {
+            Telemetry.track("update_downloaded", [
+                "version": item.displayVersionString,
+                "build": item.versionString,
+            ])
+        }
+    }
+
     nonisolated func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
         NSLog(
             "[NumWorks] Sparkle will install update %@ (%@)",
