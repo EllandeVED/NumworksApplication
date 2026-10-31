@@ -45,6 +45,16 @@ enum Telemetry {
         Aptabase.shared.trackError(error, fatal: fatal)
     }
 
+    /// Settings toggle only. Call while telemetry is still on, then set the pref off.
+    static func trackUserDisabled() {
+        track("telemetry_disabled")
+    }
+
+    /// Settings toggle only. Call after the pref is on again.
+    static func trackUserEnabled() {
+        track("telemetry_enabled")
+    }
+
     private static var isEnabled: Bool {
         !UITesting.isEnabled && (preferences?.telemetryEnabled ?? false)
     }

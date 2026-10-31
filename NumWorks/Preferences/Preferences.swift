@@ -232,7 +232,11 @@ final class Preferences: ObservableObject {
         windowStyle = .toolbar
         launchWindowVisible = false
         moveWindowToCurrentSpaceWhenShown = true
+        let wasTelemetryOff = !telemetryEnabled
         telemetryEnabled = true
+        if wasTelemetryOff {
+            Telemetry.trackUserEnabled()
+        }
     }
 }
 
