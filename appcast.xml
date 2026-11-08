@@ -3,6 +3,21 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.16</title>
+            <pubDate>Sun, 08 Nov 2026 20:52:18 +0100</pubDate>
+            <sparkle:version>21</sparkle:version>
+            <sparkle:shortVersionString>2.0.16</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's New in 2.0.1
+
+Fixed some bugs
+
+ **Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.15...2.0.16
+]]></description>
+            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.16/NumWorks-2.0.16.zip" length="4121188" type="application/octet-stream" sparkle:edSignature="i9NxYIfj/1X1693RYFA0g46CwUs08xq+FKS/wYuCgIKUfC6jDnVkOSeUx63JPKNpC3ZlnPoLdv5gD7aamknNAw=="/>
+        </item>
+        <item>
             <title>2.0.15</title>
             <pubDate>Wed, 28 Oct 2026 15:14:13 +0100</pubDate>
             <sparkle:version>20</sparkle:version>
@@ -32,20 +47,6 @@ For upstream changes, see:
 https://github.com/numworks/epsilon/tree/version-26
 ]]></description>
             <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.14/NumWorks-2.0.14.zip" length="3939099" type="application/octet-stream" sparkle:edSignature="Z70tQtOImPzZRDUPrmpP8uVQAX0gDw1QMQ/T5B4Nx5SnNCXfT1xrvtkXCo9QSwe6lnV2nNyFk/Hhci2MM1lcBw=="/>
-        </item>
-        <item>
-            <title>2.0.13</title>
-            <pubDate>Tue, 13 Oct 2026 07:30:15 +0000</pubDate>
-            <sparkle:version>18</sparkle:version>
-            <sparkle:shortVersionString>2.0.13</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[This was an automatic update following a new version of the [Epsilon](https://github.com/numworks/epsilon) calculator software (**version-26**).
-
-For upstream changes, see:
-https://github.com/numworks/epsilon/tree/version-26
-]]></description>
-            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.13/NumWorks-2.0.13.zip" length="3938882" type="application/octet-stream" sparkle:edSignature="kAijwsfyiBsB6o/WkFAML+YhxfiGTV26Z4GusZndz816Hq/kxFP4yKAlyXGGQQnRSrI+Kr9YR8zYSOs1ktM8Bw=="/>
         </item>
     </channel>
 </rss>
