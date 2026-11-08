@@ -179,7 +179,7 @@ final class Preferences: ObservableObject {
         }
     }
 
-    /// Last `AppInfo.appVersion` for which `first_launch` was sent (not a Settings UI field).
+    /// Last `AppInfo.appVersion` whose `first_launch` was flushed (not a Settings UI field).
     var telemetryFirstLaunchVersion: String? {
         get { defaults.string(forKey: Key.telemetryFirstLaunchVersion) }
         set { defaults.set(newValue, forKey: Key.telemetryFirstLaunchVersion) }
@@ -232,7 +232,11 @@ final class Preferences: ObservableObject {
         windowStyle = .toolbar
         launchWindowVisible = false
         moveWindowToCurrentSpaceWhenShown = true
+        let wasTelemetryOff = !telemetryEnabled
         telemetryEnabled = true
+        if wasTelemetryOff {
+            Telemetry.trackUserEnabled()
+        }
     }
 }
 

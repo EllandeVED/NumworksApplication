@@ -67,6 +67,20 @@ struct GeneralSettingsView: View {
             })
     }
 
+    private var telemetryToggle: Binding<Bool> {
+        Binding(
+            get: { preferences.telemetryEnabled },
+            set: { newValue in
+                if !newValue, preferences.telemetryEnabled {
+                    Telemetry.trackUserDisabled()
+                    preferences.telemetryEnabled = false
+                } else if newValue, !preferences.telemetryEnabled {
+                    preferences.telemetryEnabled = true
+                    Telemetry.trackUserEnabled()
+                }
+            })
+    }
+
     var body: some View {
         Form {
             Section {
@@ -139,7 +153,7 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle("Share anonymous usage statistics", isOn: $preferences.telemetryEnabled)
+                Toggle("Share anonymous usage statistics", isOn: telemetryToggle)
             } footer: {
                 Text("Helps count how many people use NumWorks and report update errors. "
                      + "No account or personal identity is sent. You can turn this off anytime.")
