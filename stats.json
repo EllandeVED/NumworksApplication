@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-15T09:01:20Z",
+  "updated": "2026-11-15T19:39:01Z",
   "asset": "NumWorks-*.zip",
   "days": [
     "2026-11-09",
@@ -14,7 +14,7 @@
     {
       "tag": "2.0.16",
       "date": "08/11/26",
-      "downloads_total": 31,
+      "downloads_total": 32,
       "downloads_per_day_last7": [
         0,
         3,
@@ -22,7 +22,7 @@
         2,
         8,
         7,
-        0
+        1
       ]
     },
     {
@@ -40,5 +40,5 @@
       ]
     }
   ],
-  "downloads_total_latest": 31
+  "downloads_total_latest": 32
 }
