@@ -1,0 +1,115 @@
+import XCTest
+@testable import Aptabase
+
+class MockURLSession: URLSessionProtocol {
+    var requestCount: Int = 0
+    var statusCode: Int = 200
+    var lastRequest: URLRequest?
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        requestCount += 1
+        lastRequest = request
+
+        let data = "{}".data(using: .utf8)!
+        let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+        return (data, response)
+    }
+}
+
+final class EventDispatcherTests: XCTestCase {
+    var dispatcher: EventDispatcher!
+    var session: MockURLSession!
+    let env = EnvironmentInfo(
+        isDebug: true,
+        osName: "iOS",
+        osVersion: "17.0",
+        appVersion: "1.0.0",
+        deviceModel: "iPhone16,2"
+    )
+
+    override func setUp() {
+        super.setUp()
+        session = MockURLSession()
+        dispatcher = EventDispatcher(
+            appKey: "A-DEV-000",
+            baseUrl: "http://localhost:3000",
+            env: env,
+            session: session
+        )
+    }
+
+    override func tearDown() {
+        dispatcher = nil
+        session = nil
+        super.tearDown()
+    }
+
+    func testFlushEmptyQueue() async {
+        await dispatcher.flush()
+        XCTAssertEqual(session.requestCount, 0)
+    }
+
+    func testFlushSingleItem() async {
+        await dispatcher.enqueue(newEvent("app_started"))
+
+        await dispatcher.flush()
+        XCTAssertEqual(session.requestCount, 1)
+    }
+
+    func testFlushMultipleCalls() async {
+        for i in 0...50 {
+            await dispatcher.enqueue(newEvent("app_event_\(i)"))
+        }
+
+        await withTaskGroup { group in
+            group.addTask { [self] in
+                await dispatcher.flush()
+            }
+            group.addTask { [self] in
+                await dispatcher.flush()
+            }
+        }
+    }
+
+    func testFlushShouldBatchMultipleItems() async {
+        await dispatcher.enqueue(newEvent("app_started"))
+        await dispatcher.enqueue(newEvent("item_created"))
+        await dispatcher.enqueue(newEvent("item_deleted"))
+
+        await dispatcher.flush()
+        XCTAssertEqual(session.requestCount, 1)
+
+        await dispatcher.flush()
+        XCTAssertEqual(session.requestCount, 1)
+    }
+
+    func testFlushShouldRetryAfterFailure() async {
+        await dispatcher.enqueue(newEvent("app_started"))
+        await dispatcher.enqueue(newEvent("item_created"))
+        await dispatcher.enqueue(newEvent("item_deleted"))
+
+
+        session.statusCode = 500
+        await dispatcher.flush()
+        XCTAssertEqual(session.requestCount, 1)
+
+        session.statusCode = 200
+        await dispatcher.flush()
+        XCTAssertEqual(session.requestCount, 2)
+    }
+
+    private func newEvent(_ eventName: String) -> Event {
+        return Event(timestamp: Date(),
+                     sessionId: UUID().uuidString,
+                     eventName: eventName,
+                     systemProps: Event.SystemProps(isDebug: env.isDebug,
+                                                    locale: env.locale,
+                                                    osName: env.osName,
+                                                    osVersion: env.osVersion,
+                                                    appVersion: env.appVersion,
+                                                    appBuildNumber: env.appBuildNumber,
+                                                    sdkVersion: "aptabase-swift@0.0.0",
+                                                    deviceModel: env.deviceModel)
+        )
+    }
+}

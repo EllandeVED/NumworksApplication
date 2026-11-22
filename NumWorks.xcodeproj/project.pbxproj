@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E1638C030917F2D0034352E /* Aptabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1E1638C130917F2D0034352E /* Aptabase */; };
 		1E0390D930191907001CD48C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0390D830191907001CD48C /* LaunchAtLogin */; };
 		1E0391AC301947F9001CD48C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0391AB301947F9001CD48C /* Sparkle */; };
 		1E1638B930917F2D0034352E /* Aptabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1E1638B830917F2D0034352E /* Aptabase */; };
@@ -96,6 +97,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E1638C030917F2D0034352E /* Aptabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -197,6 +199,7 @@
 			);
 			name = NumWorksTests;
 			packageProductDependencies = (
+				1E1638C130917F2D0034352E /* Aptabase */,
 			);
 			productName = NumWorksTests;
 			productReference = 1E03B1413018F5D0001CD48C /* NumWorksTests.xctest */;
@@ -261,7 +264,7 @@
 				1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
 				1E0391AA301947F9001CD48C /* XCRemoteSwiftPackageReference "Sparkle" */,
-				1E1638B730917F2D0034352E /* XCRemoteSwiftPackageReference "aptabase-swift" */,
+				1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1E03B1343018F5CE001CD48C /* Products */;
@@ -793,14 +796,6 @@
 				minimumVersion = 2.9.4;
 			};
 		};
-		1E1638B730917F2D0034352E /* XCRemoteSwiftPackageReference "aptabase-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/aptabase/aptabase-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.4.0;
-			};
-		};
 		1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
@@ -810,6 +805,13 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Aptabase;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		1E0390D830191907001CD48C /* LaunchAtLogin */ = {
@@ -824,13 +826,18 @@
 		};
 		1E1638B830917F2D0034352E /* Aptabase */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1E1638B730917F2D0034352E /* XCRemoteSwiftPackageReference "aptabase-swift" */;
+			package = 1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */;
 			productName = Aptabase;
 		};
 		1EAA000930190009001CD48C /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		1E1638C130917F2D0034352E /* Aptabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */;
+			productName = Aptabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

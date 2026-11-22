@@ -21,6 +21,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
     private var dailyWhileRunningTimer: Timer?
     private var checkTimeoutTimer: Timer?
     private var canCheckObservation: NSKeyValueObservation?
+    private var lastCheckObservation: NSKeyValueObservation?
 
     private enum PendingUserCheck {
         case none
@@ -34,6 +35,8 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
 
     @Published private(set) var isCheckingForUpdates = false
     @Published private(set) var canCheckForUpdates = true
+    /// Sparkle’s last successful check time; nil until the first check.
+    @Published private(set) var lastUpdateCheckDate: Date?
 
     /// Restores Dock / activation policy after an alert forced `.regular`.
     var restoreActivationPolicy: (() -> Void)?
@@ -48,6 +51,7 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
             userDriverDelegate: self)
         parkSparkleAutomaticSchedule()
         observeCanCheckForUpdates()
+        observeLastUpdateCheckDate()
     }
 
     // MARK: - User-initiated check
@@ -124,6 +128,19 @@ final class UpdateController: NSObject, ObservableObject, SPUUpdaterDelegate, SP
         checkTimeoutTimer = nil
         isCheckingForUpdates = false
         canCheckForUpdates = updater.canCheckForUpdates
+        lastUpdateCheckDate = updater.lastUpdateCheckDate
+    }
+
+    private func observeLastUpdateCheckDate() {
+        lastUpdateCheckDate = updater.lastUpdateCheckDate
+        lastCheckObservation = updater.observe(
+            \.lastUpdateCheckDate,
+            options: [.new]
+        ) { [weak self] updater, _ in
+            Task { @MainActor in
+                self?.lastUpdateCheckDate = updater.lastUpdateCheckDate
+            }
+        }
     }
 
     private func handleCheckTimeout() {

@@ -1,0 +1,118 @@
+## 0.4.0
+
+* Adds error reporting: `Aptabase.shared.trackError(error)` and `trackError(error, fatal: true)` post structured error reports (type, message, stack trace, severity, kind) to the `Errors` page https://github.com/aptabase/aptabase-swift/pull/39
+* Error reports are sent immediately and retried from memory on network failures; 403 (monthly error quota exhausted) is never retried
+* Stack traces are captured at the `trackError` call site with the SDK's own frames removed
+* Report fields are truncated to the server's limits instead of being rejected
+* Errors from Apple frameworks are reported by domain and code, Swift errors by type name with their description
+* CI runs on `macos-15` with Xcode 16; the retired `macos-13` image left every run queued until timeout
+* Fixes the build on Xcode 16 (Swift 6.1): `Dispatcher<Item>` cannot be used in a conformance clause there, so the dispatchers declare their `Item` typealias instead
+
+## 0.3.12
+
+* Adds an `appVersion` option to `InitOptions` to override the app version read from the bundle https://github.com/aptabase/aptabase-swift/pull/36
+
+`Aptabase.shared.initialize(appKey: "", with: InitOptions(appVersion: "2.0.0-beta3"))`
+
+## 0.3.11
+
+* Reverts previous change which caused RELEASE data not to show up
+* Adds an option to explicitly set the tracking mode to Debug or Release. Not setting this option will fallback to the previous reading of environment value.
+
+- Setting to release
+`Aptabase.shared.initialize(appKey: "", options: InitOptions(trackingMode: .asRelease))`
+
+- Setting to debug
+`Aptabase.shared.initialize(appKey: "", options: InitOptions(trackingMode: .asDebug))`
+
+- Setting omitting the value, same as setting to `.readFromEnvironment`:
+`Aptabase.shared.initialize(appKey: "")`
+`Aptabase.shared.initialize(appKey: "", options: InitOptions(trackingMode: .readFromEnvironment))`
+
+## 0.3.10
+
+* Fix isDebug environment for multiple non RELEASE build configs https://github.com/aptabase/aptabase-swift/pull/24
+
+## 0.3.9
+
+* Fix device model for Mac https://github.com/aptabase/aptabase-swift/pull/22
+* Fix application hang/crash https://github.com/aptabase/aptabase-swift/pull/19
+
+## 0.3.8
+
+* Add `deviceModel`
+
+## 0.3.7
+
+* Add support for visionOS
+
+## 0.3.6
+
+* Fix bad formatting in podspec
+
+## 0.3.5
+
+* Only include .h, .m, .swift files in the podspec
+
+## 0.3.4
+
+* Use new session id format
+
+## 0.3.3
+
+* Added Privacy Manifest (PrivacyInfo.xcprivacy)
+
+## 0.3.2
+
+* Dropped support for Swift 5.6
+* Added automated tests for Xcode 14+
+
+## 0.3.1
+
+* Restore support for watchOS 7+
+
+## 0.3.0
+
+* Migrated to new event batching and background flush for tracking, the result is lower resource usage and better support for offline events.
+* Refactor Xcode project and examples
+
+## 0.2.3
+
+* support for macOS Catalyst (thanks @manucheri)
+
+## 0.2.2
+
+* Fix compile issues on Swift 5.6 (thanks @manucheri)
+
+## 0.2.1
+
+* Added DocC support (thanks @manucheri)
+
+## 0.2.0
+
+* Added support for ObjC
+
+## 0.1.0
+
+* General refactor
+* Explicitly define what types are allowed for custom properties
+
+## 0.0.7
+
+* Added support for CocoaPods
+
+## 0.0.6
+
+* Added support for automatic segregation of Debug/Release data source
+
+## 0.0.5
+
+* Ability to set custom hosts for self hosted servers
+
+## 0.0.4
+
+* Updated to new API endpoints
+
+## 0.0.3
+
+* Moved from static functions to the 'shared' singleton pattern.

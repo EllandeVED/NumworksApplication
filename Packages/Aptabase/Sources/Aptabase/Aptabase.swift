@@ -1,0 +1,218 @@
+import Foundation
+
+#if os(iOS) || os(visionOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#elseif os(watchOS)
+import WatchKit
+#elseif os(tvOS)
+import TVUIKit
+#endif
+
+/// The Aptabase client used to track events.
+public class Aptabase: NSObject {
+    private var env = EnvironmentInfo.current()
+    private var client: AptabaseClient?
+
+    /// The shared client instance.
+    @objc public static let shared = Aptabase()
+
+    /// Initializes the client with given App Key.
+    /// - Parameters:
+    ///   - appKey: The App Key to use.
+    ///   - options: Optional initialization options.
+    public func initialize(appKey: String, with options: InitOptions? = nil) {
+        let parts = appKey.components(separatedBy: "-")
+        if parts.count != 3 || hosts[parts[1]] == nil {
+            debugPrint("The Aptabase App Key \(appKey) is invalid. Tracking will be disabled.")
+            return
+        }
+
+        guard let baseUrl = getBaseUrl(parts[1], options?.host) else {
+            return
+        }
+
+        if let trackingMode = options?.trackingMode, trackingMode != .readFromEnvironment {
+            env.isDebug = trackingMode.isDebug
+        }
+
+        if let appVersion = options?.appVersion {
+            env.appVersion = appVersion
+        }
+
+        client?.stopPolling()
+        client = AptabaseClient(appKey: appKey, baseUrl: baseUrl, env: env, options: options)
+
+        let notifications = NotificationCenter.default
+        #if os(tvOS) || os(iOS) || os(visionOS)
+        notifications.addObserver(self, selector: #selector(startPolling), name: UIApplication.willEnterForegroundNotification, object: nil)
+        notifications.addObserver(self, selector: #selector(stopPolling), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        #elseif os(macOS)
+        notifications.addObserver(self, selector: #selector(startPolling), name: NSApplication.didBecomeActiveNotification, object: nil)
+        notifications.addObserver(self, selector: #selector(stopPolling), name: NSApplication.willTerminateNotification, object: nil)
+        #elseif os(watchOS)
+        if #available(watchOS 7.0, *) {
+            notifications.addObserver(self, selector: #selector(startPolling), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
+            notifications.addObserver(self, selector: #selector(stopPolling), name: WKExtension.applicationDidEnterBackgroundNotification, object: nil)
+        }
+        #endif
+    }
+
+    /// Track an event using given properties.
+    /// - Parameters:
+    ///   - eventName: The name of the event to track.
+    ///   - props: Additional given properties.
+    public func trackEvent(_ eventName: String, with props: [String: Value] = [:]) {
+        guard let codable = toCodableProps(from: props) else {
+            return
+        }
+
+        enqueueEvent(eventName, with: codable)
+    }
+
+    /// Track errors you've caught and handled.
+    /// - Parameters:
+    ///   - error: The error to report.
+    ///   - fatal: Whether the app can recover from the error. Fatal errors are reported with severity `fatal` and kind `crash`.
+    public func trackError(_ error: Error, fatal: Bool = false) {
+        enqueueErrorReport(error, fatal: fatal)
+    }
+
+    /// Initializes the client with given App Key.
+    /// - Parameter appKey: The App Key to use.
+    @objc public func initialize(appKey: String) {
+        initialize(appKey: appKey, with: nil)
+    }
+
+    /// Initializes the client with given App Key.
+    /// - Parameters:
+    ///   - appKey: The App Key to use.
+    ///   - options: Optional initialization options.
+    @objc public func initialize(appKey: String, options: InitOptions?) {
+        initialize(appKey: appKey, with: options)
+    }
+
+    /// Track an event using given properties.
+    /// - Parameters:
+    ///   - eventName: The name of the event to track.
+    ///   - props: Additional given properties.
+    @objc public func trackEvent(_ eventName: String, with props: [String: Any] = [:]) {
+        guard let codable = toCodableProps(from: props) else {
+            return
+        }
+
+        enqueueEvent(eventName, with: codable)
+    }
+
+    /// Track errors you've caught and handled.
+    /// - Parameters:
+    ///   - error: The error to report.
+    ///   - fatal: Whether the app can recover from the error. Fatal errors are reported with severity `fatal` and kind `crash`.
+    @objc public func trackError(_ error: NSError, fatal: Bool = false) {
+        enqueueErrorReport(error, fatal: fatal)
+    }
+
+    /// Forces all queued events to be sent to the server asynchronously. Returns before the events have been sent.
+    @objc public func flush() {
+        Task {
+            await self.client?.flush()
+        }
+    }
+
+    /// Attempts queued delivery. Returning is not proof of server acceptance.
+    public func flush() async {
+        await client?.flush()
+    }
+
+    /// Await enqueue completion, without waiting for HTTP.
+    public func trackEvent(_ name: String, with props: [String: Value] = [:]) async {
+        guard let client, let values = toCodableProps(from: props) else { return }
+        await client.trackEvent(name, with: values)
+    }
+
+    /// Creates an event with the SDK's session and system properties, without queuing it.
+    public func prepareEvent(_ name: String, with props: [String: Value] = [:]) -> PreparedEvent? {
+        guard let client, let values = toCodableProps(from: props) else { return nil }
+        return client.prepareEvent(name, with: values)
+    }
+
+    /// A result for this specific event, rather than completion of a queue flush.
+    public func sendPreparedEvent(_ event: PreparedEvent) async -> EventDeliveryResult {
+        guard let client else { return .retryableFailure(statusCode: nil, retryAfter: nil) }
+        return await client.sendPreparedEvent(event)
+    }
+
+    /// Synchronous fence: stops new requests and cancels only this client's requests.
+    public func pauseTracking() { client?.pauseTracking() }
+
+    public func discardQueuedEvents() async { await client?.discardQueuedEvents() }
+
+    /// Clears old queues before enabling; a concurrent pause invalidates this transition.
+    public func resumeTracking() async { await client?.resumeTracking() }
+
+    private func enqueueEvent(_ eventName: String, with props: [String: AnyCodableValue] = [:]) {
+        guard let client else {
+            return
+        }
+
+        client.trackEvent(eventName, with: props)
+    }
+
+    private func enqueueErrorReport(_ error: Error, fatal: Bool = false) {
+        guard let client else {
+            return
+        }
+
+        client.trackError(error, fatal: fatal)
+    }
+
+    @objc private func startPolling() {
+        client?.startPolling()
+    }
+
+    @objc private func stopPolling() {
+        client?.stopPolling()
+    }
+
+    private var hosts = [
+        "US": "https://us.aptabase.com",
+        "EU": "https://eu.aptabase.com",
+        "DEV": "http://localhost:3000",
+        "SH": ""
+    ]
+
+    private func getBaseUrl(_ region: String, _ host: String?) -> String? {
+        guard var baseURL = hosts[region] else { return nil }
+        if region == "SH" {
+            guard let host else {
+                debugPrint("Aptabase: Host parameter must be defined when using Self-Hosted App Key. Tracking will be disabled.")
+                return nil
+            }
+            baseURL = host
+        }
+
+        return baseURL
+    }
+
+    private func toCodableProps(from props: [String: Any]) -> [String: AnyCodableValue]? {
+        var codableProps: [String: AnyCodableValue] = [:]
+        for (key, value) in props {
+            if let intValue = value as? Int {
+                codableProps[key] = .integer(intValue)
+            } else if let doubleValue = value as? Double {
+                codableProps[key] = .double(doubleValue)
+            } else if let stringValue = value as? String {
+                codableProps[key] = .string(stringValue)
+            } else if let floatValue = value as? Float {
+                codableProps[key] = .float(floatValue)
+            } else if let boolValue = value as? Bool {
+                codableProps[key] = .boolean(boolValue)
+            } else {
+                debugPrint("Aptabase: Props with key \(key) has an unsupported value type. Supported types are: String, Int, Double, Float and Boolean. Event will be discarded")
+                return nil
+            }
+        }
+        return codableProps
+    }
+}

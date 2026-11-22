@@ -196,8 +196,14 @@ private struct CheckForUpdatesButton: View {
 
     var body: some View {
         if UITesting.isEnabled {
-            Button("Check for Updates…", action: {})
-                .disabled(true)
+            HStack {
+                Button("Check for Updates…", action: {})
+                    .disabled(true)
+                Spacer(minLength: 8)
+                Text("N.A.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         } else {
             CheckForUpdatesButtonLive(actions: actions)
         }
@@ -223,8 +229,49 @@ private struct CheckForUpdatesButtonLive: View {
             }
             .disabled(!updates.canCheckForUpdates || updates.isCheckingForUpdates)
             .accessibilityValue(updates.isCheckingForUpdates ? "Checking" : "Idle")
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(UpdateCheckAge.label(for: updates.lastUpdateCheckDate, now: context.date))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(
+                        UpdateCheckAge.accessibilityLabel(
+                            for: updates.lastUpdateCheckDate, now: context.date))
+            }
         }
+    }
+}
+
+private enum UpdateCheckAge {
+    static func label(for date: Date?, now: Date) -> String {
+        guard let date, date <= now else { return "N.A." }
+        let seconds = Int(now.timeIntervalSince(date))
+        if seconds < 60 {
+            return "Checked \(max(seconds, 0))s ago"
+        }
+        let minutes = seconds / 60
+        if minutes < 60 {
+            return "Checked \(minutes) min ago"
+        }
+        let hours = minutes / 60
+        if hours < 24 {
+            return hours == 1 ? "Checked 1 hour ago" : "Checked \(hours) hours ago"
+        }
+        let days = hours / 24
+        if days < 30 {
+            return days == 1 ? "Checked 1 day ago" : "Checked \(days) days ago"
+        }
+        let months = days / 30
+        if months < 12 {
+            return months == 1 ? "Checked 1 month ago" : "Checked \(months) months ago"
+        }
+        let years = months / 12
+        return years == 1 ? "Checked 1 year ago" : "Checked \(years) years ago"
+    }
+
+    static func accessibilityLabel(for date: Date?, now: Date) -> String {
+        let text = label(for: date, now: now)
+        return text == "N.A." ? "Never checked for updates" : text
     }
 }
 

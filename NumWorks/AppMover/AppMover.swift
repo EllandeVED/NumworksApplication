@@ -88,11 +88,10 @@ enum AppMover {
         _ = try? fm.removeItem(at: bundleUrl)
 
         relaunch(at: destinationUrl.path, completionCallback: {
-            // The relaunch script is already waiting on this pid. Flush first:
-            // exit skips willTerminate, so Aptabase would otherwise drop the
-            // queued first_launch while the version was already stored.
+            // Persist pending milestones; the relocated process can retry.
+            // Quitting must not wait for an analytics HTTP request.
             Task { @MainActor in
-                await Telemetry.flushBeforeTermination()
+                await Telemetry.prepareForTermination()
                 exit(0)
             }
         })
