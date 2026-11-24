@@ -3,6 +3,22 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.17</title>
+            <pubDate>Tue, 24 Nov 2026 21:37:18 +0100</pubDate>
+            <sparkle:version>22</sparkle:version>
+            <sparkle:shortVersionString>2.0.17</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's New in 2.0.17
+
+- Fixed a few bugs with flags send timing, updates prompts
+- Reduced CPU comsumption, especially at idle
+
+**Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.16...2.0.17
+]]></description>
+            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.17/NumWorks-2.0.17.zip" length="4292460" type="application/octet-stream" sparkle:edSignature="n9CTn3NgOy8cYE24k9sRWInzfNsydilqc/mhoz+2uHdL9eHWsD3ewXwHfX5tXOAVeCYyTN4DAxK5c4ZzagQ3Aw=="/>
+        </item>
+        <item>
             <title>2.0.16</title>
             <pubDate>Sun, 08 Nov 2026 20:52:18 +0100</pubDate>
             <sparkle:version>21</sparkle:version>
@@ -33,20 +49,6 @@ Fixed some bugs
 **Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.14...2.0.15
 ]]></description>
             <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.15/NumWorks-2.0.15.zip" length="4106911" type="application/octet-stream" sparkle:edSignature="uRLMvJj/xlw91bid1vj3tO7rmXpr2OwEzv14MCdkG48Jg8Uhln7ZKDArI1ZAzDg/sC6TcsUc9uJ4mF1e4UIyAA=="/>
-        </item>
-        <item>
-            <title>2.0.14</title>
-            <pubDate>Tue, 13 Oct 2026 21:50:06 +0000</pubDate>
-            <sparkle:version>19</sparkle:version>
-            <sparkle:shortVersionString>2.0.14</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[This was an automatic update following a new version of the [Epsilon](https://github.com/numworks/epsilon) calculator software (**version-26**).
-
-For upstream changes, see:
-https://github.com/numworks/epsilon/tree/version-26
-]]></description>
-            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.14/NumWorks-2.0.14.zip" length="3939099" type="application/octet-stream" sparkle:edSignature="Z70tQtOImPzZRDUPrmpP8uVQAX0gDw1QMQ/T5B4Nx5SnNCXfT1xrvtkXCo9QSwe6lnV2nNyFk/Hhci2MM1lcBw=="/>
         </item>
     </channel>
 </rss>
