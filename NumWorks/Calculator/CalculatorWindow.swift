@@ -46,6 +46,8 @@ final class CalculatorWindow {
     private let workspaceCenter = NSWorkspace.shared.notificationCenter
     private var workspaceObservers: [NSObjectProtocol] = []
     private let closeInterceptor = CalculatorCloseInterceptor()
+    /// Invalidates focus work when a newer show/hide request arrives.
+    private var visibilityRequestID: UInt = 0
 
     init(preferences: Preferences) {
         self.preferences = preferences
@@ -68,7 +70,7 @@ final class CalculatorWindow {
     /// Whether the calculator is currently visible on the active Space.
     var isVisibleOnActiveSpace: Bool {
         guard let window else { return false }
-        return window.isVisible && window.isOnActiveSpace
+        return EpsilonBridge.isSimulatorActive && window.isVisible && window.isOnActiveSpace
     }
 
     // MARK: - Attach
@@ -115,18 +117,19 @@ final class CalculatorWindow {
     /// context menu all share this rule for stable one-click behavior.
     var prefersHideOnToggle: Bool {
         guard let window else { return false }
-        return window.isVisible && window.isOnActiveSpace && isFrontmostCalculator(window)
+        return isVisibleOnActiveSpace && isFrontmostCalculator(window)
     }
 
     /// User-driven show (menu bar / shortcut). Remembers the previous app for hide.
     func showFromUser() {
         if window != nil { Telemetry.noteCalculatorUsed() }
         rememberPreviousFrontAppIfNeeded()
+        let requestID = visibilityRequestID &+ 1
         show()
         // SDL + status-item activation can leave the window unfocused on the first
         // pass; a same-turn follow-up makes one click enough when fully hidden.
         DispatchQueue.main.async { [weak self] in
-            self?.finishShowingIfNeeded()
+            self?.finishShowingIfNeeded(requestID: requestID)
         }
     }
 
@@ -134,6 +137,7 @@ final class CalculatorWindow {
     /// before we showed (e.g. Safari), instead of leaving NumWorks active.
     func hideFromUser(yieldFocus: Bool) {
         hide()
+        guard !EpsilonBridge.isSimulatorActive else { return }
         if yieldFocus {
             yieldFocusToPreviousFrontApp()
         } else {
@@ -151,6 +155,11 @@ final class CalculatorWindow {
 
     func show() {
         guard let window else { return }
+        visibilityRequestID &+= 1
+        let requestID = visibilityRequestID
+        // Wake before ordering front. Record intent before AppKit can deliver
+        // activation/focus callbacks (epsilon_main shares this thread).
+        EpsilonBridge.isSimulatorActive = true
         installCloseInterceptor(on: window)
 
         if preferences.moveWindowToCurrentSpaceWhenShown {
@@ -159,17 +168,19 @@ final class CalculatorWindow {
             window.collectionBehavior.remove(.moveToActiveSpace)
         }
 
-        // Wake the simulator before ordering front so the next main-thread
-        // iteration presents promptly (epsilon_main shares this thread).
-        EpsilonBridge.isSimulatorActive = true
         window.alphaValue = 1
 
         // Always activate — including .accessory (menu-bar-only) mode. Skipping
         // activate left the previously focused app’s window above ours.
+        guard visibilityRequestID == requestID else { return }
         NSApp.activate(ignoringOtherApps: true)
+        guard visibilityRequestID == requestID else { return }
         if window.isMiniaturized { window.deminiaturize(nil) }
+        guard visibilityRequestID == requestID else { return }
         window.orderFrontRegardless()
+        guard visibilityRequestID == requestID else { return }
         window.makeKeyAndOrderFront(nil)
+        guard visibilityRequestID == requestID else { return }
         if let contentView = window.contentView, window.firstResponder !== contentView {
             window.makeFirstResponder(contentView)
         }
@@ -180,6 +191,7 @@ final class CalculatorWindow {
     }
 
     func hide() {
+        visibilityRequestID &+= 1
         // Leave the AppKit toolbar accessory attached. Creating/destroying it
         // on every toggle was unnecessary once SwiftUI/ViewBridge was removed.
         EpsilonBridge.isSimulatorActive = false
@@ -211,10 +223,12 @@ final class CalculatorWindow {
         }
     }
 
-    private func finishShowingIfNeeded() {
-        guard let window, window.isVisible else { return }
+    private func finishShowingIfNeeded(requestID: UInt) {
+        guard visibilityRequestID == requestID, EpsilonBridge.isSimulatorActive,
+              let window, window.isVisible else { return }
         if !NSApp.isActive || !window.isKeyWindow {
             NSApp.activate(ignoringOtherApps: true)
+            guard visibilityRequestID == requestID else { return }
             window.makeKeyAndOrderFront(nil)
             if let contentView = window.contentView {
                 window.makeFirstResponder(contentView)
@@ -284,7 +298,7 @@ final class CalculatorWindow {
     // MARK: - Focus
 
     func restoreCalculatorFocus() {
-        guard let window, window.isVisible else { return }
+        guard EpsilonBridge.isSimulatorActive, let window, window.isVisible else { return }
         if !window.isKeyWindow {
             window.makeKeyAndOrderFront(nil)
         }

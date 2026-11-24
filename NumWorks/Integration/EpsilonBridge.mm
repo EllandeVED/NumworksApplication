@@ -20,6 +20,7 @@ NSNotificationName const EpsilonWindowDidBecomeAvailableNotification =
     @"EpsilonWindowDidBecomeAvailableNotification";
 
 static IMP NumWorksOriginalTerminate = NULL;
+static IMP NumWorksOriginalFocusSomeWindow = NULL;
 /* Start with presentation disabled until Swift restores the frame and decides
  * whether to show the calculator. Input processing is never suspended. */
 static atomic_bool sSimulatorActive = false;
@@ -98,6 +99,14 @@ static void NumWorksTerminate(id self, SEL _cmd, id sender) {
   });
 }
 
+static void NumWorksFocusSomeWindow(id self, SEL _cmd, NSNotification *notification) {
+  // SDL raises/restores its window on app activation. A hide request must win
+  // even while AppKit still reports the window visible inside orderOut:.
+  if (NumWorksSimulatorIsActive() && NumWorksOriginalFocusSomeWindow != NULL) {
+    ((void (*)(id, SEL, id))NumWorksOriginalFocusSomeWindow)(self, _cmd, notification);
+  }
+}
+
 @implementation EpsilonBridge
 
 // Weak storage avoids retaining the SDL-owned NSWindow. Epsilon remains the
@@ -158,6 +167,18 @@ static __weak NSWindow *sCalculatorWindow = nil;
   });
 }
 
++ (void)installWindowActivationGuard {
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    Class cls = NSClassFromString(@"SDLAppDelegate");
+    Method method = class_getInstanceMethod(cls, NSSelectorFromString(@"focusSomeWindow:"));
+    if (method != NULL) {
+      NumWorksOriginalFocusSomeWindow =
+          method_setImplementation(method, (IMP)NumWorksFocusSomeWindow);
+    }
+  });
+}
+
 + (void)registerCalculatorWindow:(NSWindow *)window {
   if (window == nil) {
     return;
@@ -165,6 +186,7 @@ static __weak NSWindow *sCalculatorWindow = nil;
 
   sCalculatorWindow = window;
   [self installProcessExitOnTerminate];
+  [self installWindowActivationGuard];
 
   /* Epsilon calls this from didInit() on the main thread, before it starts
    * pumping SDL events. Posting synchronously in that case guarantees
