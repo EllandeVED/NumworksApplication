@@ -29,6 +29,8 @@ protocol Dispatcher<Item>: Actor where Item: Encodable {
 }
 
 extension Dispatcher {
+    func hasQueuedItems() -> Bool { !queue.isEmpty }
+
     func enqueueIfCurrent(_ item: Item, tracking: TrackingState, epoch: UInt64) {
         guard tracking.accepts(epoch) else { return }
         enqueue(item)

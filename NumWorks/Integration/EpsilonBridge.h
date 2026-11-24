@@ -11,10 +11,14 @@ FOUNDATION_EXPORT NSNotificationName const EpsilonWindowDidBecomeAvailableNotifi
 + (void)registerCalculatorWindow:(NSWindow *)window;
 + (void)unregisterCalculatorWindow:(NSWindow *)window;
 
-/* When NO, Epsilon sleeps longer between polls and skips SDL presents.
- * Drive from CalculatorWindow show/hide (not occlusion). Presents are also
- * suppressed when NSApp is inactive — see NumWorksSimulatorActive.h. */
+/* Requested show/hide state. Changing it immediately wakes the native event
+ * wait; it never suspends the main thread or an executing calculation. */
 @property(class, nonatomic, getter=isSimulatorActive) BOOL simulatorActive;
+
+/* Re-evaluate rendering eligibility after window/application notifications.
+ * This only gates presentation and cosmetic work, never input processing. */
++ (void)refreshSimulatorVisibility;
+@property(class, nonatomic) BOOL simulatorDisplaySleeping;
 
 /* Runs the Epsilon simulator on the current thread. This wraps
  * epsilon_main(), the renamed Epsilon entry point (see adapt-epsilon.py /

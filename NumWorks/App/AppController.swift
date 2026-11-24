@@ -15,8 +15,8 @@ final class AppController: NSObject {
     private var settingsWindowController: SettingsWindowController?
     private var statusItemController: StatusItemController?
     private var bridgeObserver: NSObjectProtocol?
-    /// Intercepts ⌘, before SDL can swallow it (menu key equivalents never fire
-    /// while the calculator NSWindow is key).
+    /// Intercepts ⌘, before SDL can swallow it, and observes calculator input
+    /// so an automatic background launch alone cannot qualify as return use.
     private var settingsKeyMonitor: Any?
     private var hasAttached = false
     private var cancellables = Set<AnyCancellable>()
@@ -88,7 +88,15 @@ final class AppController: NSObject {
     /// event is consumed and the app-menu Settings item never runs.
     private func installSettingsKeyEquivalentMonitor() {
         guard settingsKeyMonitor == nil else { return }
-        settingsKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        settingsKeyMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.keyDown, .leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            MainActor.assumeIsolated {
+                if let window = self?.calculatorWindow.window, event.window === window {
+                    Telemetry.noteCalculatorUsed()
+                }
+            }
+            guard event.type == .keyDown else { return event }
             let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let commandOnly = flags.contains(.command)
                 && !flags.contains(.option)
@@ -229,9 +237,7 @@ final class AppController: NSObject {
         // XCTest / --ui-testing skip both so popups cannot block the suite.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             self?.offerMoveToApplicationsIfNeeded()
-            if !UITesting.skipAutomaticUpdateChecks {
-                UpdateController.shared.schedulePostLaunchUpdateCheck(after: 3)
-            }
+            UpdateController.shared.schedulePostLaunchUpdateCheck(after: 3)
         }
 
         if UITesting.shouldOpenSettingsOnLaunch {
@@ -380,6 +386,7 @@ final class AppController: NSObject {
         if statusItemController?.isEventFromStatusItem(NSApp.currentEvent) == true {
             return
         }
+        Telemetry.noteCalculatorUsed()
         if !calculatorWindow.isVisibleOnActiveSpace {
             calculatorWindow.show()
         }

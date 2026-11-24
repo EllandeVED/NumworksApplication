@@ -7,6 +7,10 @@ class AptabaseClient {
     private var sessionId = newSessionId()
     private var lastTouched = Date()
     private var flushTimer: Timer?
+    // Scheduler fields and flushTimer are accessed only through onMain.
+    private var pollingEnabled = false
+    private var schedulingRevision: UInt64 = 0
+    private var flushCadenceStart = ProcessInfo.processInfo.systemUptime
     private let eventDispatcher: EventDispatcher
     private let errorDispatcher: ErrorDispatcher
     private let env: EnvironmentInfo
@@ -29,6 +33,7 @@ class AptabaseClient {
             guard self.tracking.accepts(epoch) else { return }
             let event = self.makeEvent(name, props: props)
             await self.eventDispatcher.enqueueIfCurrent(event, tracking: self.tracking, epoch: epoch)
+            if self.tracking.accepts(epoch) { self.requestFlush() }
         }
     }
 
@@ -36,6 +41,7 @@ class AptabaseClient {
         guard let epoch = tracking.currentEpoch() else { return }
         let event = makeEvent(name, props: props)
         await eventDispatcher.enqueueIfCurrent(event, tracking: tracking, epoch: epoch)
+        if tracking.accepts(epoch) { requestFlush() }
     }
 
     public func trackError(_ error: any Error, fatal: Bool = false) {
@@ -59,6 +65,7 @@ class AptabaseClient {
         await errorDispatcher.enqueueIfCurrent(report, tracking: tracking, epoch: epoch)
         guard tracking.accepts(epoch) else { return }
         await errorDispatcher.flush()
+        reconcileFlushSchedule()
     }
 
     public func prepareEvent(_ name: String, with props: [String: AnyCodableValue] = [:]) -> PreparedEvent? {
@@ -86,14 +93,18 @@ class AptabaseClient {
     public func discardQueuedEvents() async {
         await eventDispatcher.discardQueuedItems()
         await errorDispatcher.discardQueuedItems()
+        reconcileFlushSchedule()
     }
 
     public func startPolling() {
         onMain { [weak self] in
             guard let self, self.tracking.currentEpoch() != nil else { return }
+            self.pollingEnabled = true
+            self.schedulingRevision &+= 1
+            self.flushCadenceStart = ProcessInfo.processInfo.systemUptime
             self.flushTimer?.invalidate()
-            self.flushTimer = Timer.scheduledTimer(timeInterval: self.flushInterval, target: self,
-                selector: #selector(self.timerFlushSync), userInfo: nil, repeats: true)
+            self.flushTimer = nil
+            self.reconcileFlushSchedule()
         }
     }
 
@@ -101,8 +112,11 @@ class AptabaseClient {
 
     private func stopPolling(flushOutstanding: Bool) {
         onMain { [weak self] in
-            self?.flushTimer?.invalidate()
-            self?.flushTimer = nil
+            guard let self else { return }
+            self.pollingEnabled = false
+            self.schedulingRevision &+= 1
+            self.flushTimer?.invalidate()
+            self.flushTimer = nil
         }
         if flushOutstanding, tracking.currentEpoch() != nil {
             Task { await self.flush() }
@@ -113,6 +127,62 @@ class AptabaseClient {
         guard tracking.currentEpoch() != nil else { return }
         await eventDispatcher.flush()
         await errorDispatcher.flush()
+        reconcileFlushSchedule()
+    }
+
+    deinit { flushTimer?.invalidate() }
+
+    @MainActor var isFlushScheduled: Bool { flushTimer != nil }
+
+    /// Enqueue completion schedules the next existing cadence boundary. Further
+    /// events share that deadline; an empty queue has no periodic tasks.
+    private func requestFlush() {
+        onMain { [weak self] in
+            guard let self else { return }
+            self.schedulingRevision &+= 1
+            self.scheduleOneShotIfNeeded()
+        }
+    }
+
+    private func scheduleOneShotIfNeeded() {
+        guard pollingEnabled, tracking.currentEpoch() != nil, flushTimer == nil else { return }
+        // Keep the old repeating timer's cadence even across empty periods.
+        // Starting a fresh full interval per event would postpone delivery near
+        // quit. Uptime avoids turning a wall-clock change into a long delay.
+        let interval = max(flushInterval, 0.001)
+        let elapsed = max(0, ProcessInfo.processInfo.systemUptime - flushCadenceStart)
+        let delay = interval - elapsed.truncatingRemainder(dividingBy: interval)
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            self.flushTimer = nil
+            self.schedulingRevision &+= 1
+            guard self.pollingEnabled, self.tracking.currentEpoch() != nil else { return }
+            Task { await self.flush() }
+        }
+        timer.tolerance = min(delay * 0.1, 1)
+        flushTimer = timer
+        RunLoop.main.add(timer, forMode: .default)
+    }
+
+    private func reconcileFlushSchedule() {
+        onMain { [weak self] in
+            guard let self else { return }
+            let revision = self.schedulingRevision
+            Task { [self] in
+                let eventsPending = await self.eventDispatcher.hasQueuedItems()
+                let errorsPending = await self.errorDispatcher.hasQueuedItems()
+                self.onMain { [weak self] in
+                    guard let self, self.schedulingRevision == revision else { return }
+                    // A stale empty snapshot must never cancel a newer enqueue.
+                    if eventsPending || errorsPending {
+                        self.scheduleOneShotIfNeeded()
+                    } else {
+                        self.flushTimer?.invalidate()
+                        self.flushTimer = nil
+                    }
+                }
+            }
+        }
     }
 
     private func makeEvent(_ name: String, props: [String: AnyCodableValue]) -> Event {
@@ -141,8 +211,4 @@ class AptabaseClient {
         else { DispatchQueue.main.async(execute: operation) }
     }
 
-    @objc private func timerFlushSync() {
-        guard tracking.currentEpoch() != nil else { return }
-        Task { await self.flush() }
-    }
 }

@@ -15,6 +15,7 @@ enum SettingsTab: String {
 
 struct SettingsRootView: View {
     @ObservedObject var preferences: Preferences
+    @ObservedObject var activity: SettingsWindowActivity
     let actions: SettingsActions
 
     @State private var selection = SettingsRootView.initialTab()
@@ -38,6 +39,7 @@ struct SettingsRootView: View {
                 .tag(SettingsTab.about)
         }
         .frame(width: 460, height: 520)
+        .environment(\.settingsWindowVisible, activity.isVisible && selection == .general)
     }
 
     private static func initialTab() -> SettingsTab {
@@ -212,6 +214,8 @@ private struct CheckForUpdatesButton: View {
 
 private struct CheckForUpdatesButtonLive: View {
     @ObservedObject private var updates = UpdateController.shared
+    @Environment(\.settingsWindowVisible) private var settingsWindowVisible
+    @State private var clockRevision = 0
     let actions: SettingsActions
 
     var body: some View {
@@ -230,48 +234,47 @@ private struct CheckForUpdatesButtonLive: View {
             .disabled(!updates.canCheckForUpdates || updates.isCheckingForUpdates)
             .accessibilityValue(updates.isCheckingForUpdates ? "Checking" : "Idle")
             Spacer(minLength: 8)
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                Text(UpdateCheckAge.label(for: updates.lastUpdateCheckDate, now: context.date))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel(
-                        UpdateCheckAge.accessibilityLabel(
-                            for: updates.lastUpdateCheckDate, now: context.date))
+            if settingsWindowVisible, let date = updates.lastUpdateCheckDate {
+                TimelineView(UpdateCheckAgeSchedule(checkedAt: date)) { context in
+                    ageLabel(now: context.date)
+                }
+                .id(date)
+                .id(clockRevision)
+                .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)
+                    .receive(on: RunLoop.main)) { _ in
+                    clockRevision &+= 1
+                }
+            } else {
+                ageLabel(now: .now)
             }
         }
     }
+
+    private func ageLabel(now: Date) -> some View {
+        Text(UpdateCheckAge.label(for: updates.lastUpdateCheckDate, now: now))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(
+                UpdateCheckAge.accessibilityLabel(for: updates.lastUpdateCheckDate, now: now))
+    }
 }
 
-private enum UpdateCheckAge {
-    static func label(for date: Date?, now: Date) -> String {
-        guard let date, date <= now else { return "N.A." }
-        let seconds = Int(now.timeIntervalSince(date))
-        if seconds < 60 {
-            return "Checked \(max(seconds, 0))s ago"
-        }
-        let minutes = seconds / 60
-        if minutes < 60 {
-            return "Checked \(minutes) min ago"
-        }
-        let hours = minutes / 60
-        if hours < 24 {
-            return hours == 1 ? "Checked 1 hour ago" : "Checked \(hours) hours ago"
-        }
-        let days = hours / 24
-        if days < 30 {
-            return days == 1 ? "Checked 1 day ago" : "Checked \(days) days ago"
-        }
-        let months = days / 30
-        if months < 12 {
-            return months == 1 ? "Checked 1 month ago" : "Checked \(months) months ago"
-        }
-        let years = months / 12
-        return years == 1 ? "Checked 1 year ago" : "Checked \(years) years ago"
+private struct UpdateCheckAgeSchedule: TimelineSchedule {
+    let checkedAt: Date
+
+    func entries(from startDate: Date, mode: Mode) -> Entries {
+        Entries(checkedAt: checkedAt, nextDate: startDate)
     }
 
-    static func accessibilityLabel(for date: Date?, now: Date) -> String {
-        let text = label(for: date, now: now)
-        return text == "N.A." ? "Never checked for updates" : text
+    struct Entries: Sequence, IteratorProtocol {
+        let checkedAt: Date
+        var nextDate: Date?
+
+        mutating func next() -> Date? {
+            guard let date = nextDate else { return nil }
+            nextDate = UpdateCheckAge.nextRefresh(for: checkedAt, after: date)
+            return date
+        }
     }
 }
 

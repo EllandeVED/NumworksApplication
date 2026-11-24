@@ -3,13 +3,14 @@ import Aptabase
 import os
 
 /// The SDK owns ordinary event delivery. The durable outbox alone owns
-/// first_launch, once per version/build and build mode (including app updates).
+/// first_launch and second_launch, once per version/build and build mode.
 @MainActor
 enum Telemetry {
     private static let appKey = "A-EU-3390120695"
     private static weak var preferences: Preferences?
     private static var didInitialize = false
     private static var didTrackAppStarted = false
+    private static var didUseCalculator = false
     private static var outbox: TelemetryOutbox?
     private static var transition: Task<Void, Never>?
     private static var revision = 0
@@ -26,7 +27,8 @@ enum Telemetry {
             outbox = TelemetryOutbox(store: store, sender: AptabaseMilestoneSender(),
                 onAccepted: { accepted in
                     await MainActor.run {
-                        guard accepted.mode == .release, accepted == Self.identity,
+                        guard accepted.milestone == .firstLaunch,
+                              accepted.mode == .release, accepted == Self.identity,
                               let preferences = Self.preferences,
                               preferences.telemetryEnabled else { return }
                         preferences.telemetryFirstLaunchVersion = accepted.displayVersion
@@ -80,7 +82,24 @@ enum Telemetry {
                 id: UUID(), identity: identity, consentGeneration: consent,
                 event: event, nextAttemptAt: Date())
             await outbox?.enqueue(record)
+            if didUseCalculator,
+               let secondEvent = Aptabase.shared.prepareEvent("second_launch", with: [
+                   "version": AppInfo.bundleVersion, "build": AppInfo.bundleBuild
+               ]) {
+                let second = PendingTelemetryMilestone(
+                    id: UUID(), identity: identity.forMilestone(.secondLaunch),
+                    consentGeneration: consent, event: secondEvent, nextAttemptAt: Date())
+                await outbox?.recordLaunch(session: TelemetryLaunchSession.current.id, secondLaunch: second)
+            }
         }
+    }
+
+    /// Explicit calculator open or input, never a background/login start alone.
+    /// Multiple opens in this process still describe a single qualifying run.
+    static func noteCalculatorUsed() {
+        guard !UITesting.isEnabled, !didUseCalculator else { return }
+        didUseCalculator = true
+        applyPreferenceChange()
     }
 
     static func track(_ name: String, _ props: [String: Value] = [:]) {

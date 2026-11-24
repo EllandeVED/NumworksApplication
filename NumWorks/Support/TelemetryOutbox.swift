@@ -16,6 +16,7 @@ actor TelemetryOutbox {
 
     private var state: TelemetryOutboxSnapshot?
     private var staged: [TelemetryMilestoneIdentity: PendingTelemetryMilestone] = [:]
+    private var stagedLaunches: [TelemetryQualifyingLaunch] = []
     private var legacySkips: Set<TelemetryMilestoneIdentity> = []
     private var acceptedAwaitingPersistence: [PendingTelemetryMilestone] = []
     private var dirty = false
@@ -58,6 +59,7 @@ actor TelemetryOutbox {
         self.consentGeneration = consentGeneration
         if !enabled {
             staged.removeAll()
+            stagedLaunches.removeAll()
             acceptedAwaitingPersistence.removeAll()
         }
         reconcileConsent()
@@ -65,15 +67,34 @@ actor TelemetryOutbox {
     }
 
     func enqueue(_ record: PendingTelemetryMilestone) {
-        guard enabled, !terminated, record.consentGeneration == consentGeneration else { return }
+        guard enabled, !terminated, record.consentGeneration == consentGeneration,
+              record.event.eventName == record.identity.milestone.rawValue else { return }
         if state?.acknowledged.contains(where: { $0.identity == record.identity }) == true { return }
         if state?.pending.contains(where: { $0.identity == record.identity }) == true { return }
         if staged[record.identity] == nil { staged[record.identity] = record }
         schedule(at: clock.now())
     }
 
+    /// Called once a user opens/uses the calculator. The process token survives
+    /// AppMover, so a relocation or repeated window opens cannot become a second run.
+    func recordLaunch(session: UUID, secondLaunch record: PendingTelemetryMilestone) {
+        guard enabled, !terminated, record.consentGeneration == consentGeneration,
+              record.identity.milestone == .secondLaunch,
+              record.event.eventName == TelemetryMilestone.secondLaunch.rawValue else { return }
+        if state?.acknowledged.contains(where: { $0.identity == record.identity }) == true { return }
+        if state?.pending.contains(where: { $0.identity == record.identity }) == true { return }
+        let first = record.identity.forMilestone(.firstLaunch)
+        if state?.launches.contains(where: {
+            $0.identity == first && ($0.firstSession == session || $0.secondSession != nil)
+        }) == true { return }
+        if !stagedLaunches.contains(where: { $0.session == session && $0.secondLaunch.identity == record.identity }) {
+            stagedLaunches.append(TelemetryQualifyingLaunch(session: session, secondLaunch: record))
+        }
+        schedule(at: clock.now())
+    }
+
     func importLegacySkip(_ identity: TelemetryMilestoneIdentity) {
-        guard identity.mode == .release else { return }
+        guard identity.mode == .release, identity.milestone == .firstLaunch else { return }
         legacySkips.insert(identity)
         schedule(at: clock.now())
     }
@@ -121,10 +142,7 @@ actor TelemetryOutbox {
                 guard token == lifecycle else { return }
             }
             guard enabled else { return }
-            guard let record = state?.pending.first(where: {
-                !$0.rejected && $0.consentGeneration == consentGeneration
-                    && $0.nextAttemptAt <= clock.now()
-            }) else { return }
+            guard let record = sendableRecords().first(where: { $0.nextAttemptAt <= clock.now() }) else { return }
 
             let task = Task { [sender] in await sender.send(record.event) }
             request = task
@@ -204,6 +222,27 @@ actor TelemetryOutbox {
                 }
             }
             staged.removeAll()
+            for launch in stagedLaunches {
+                let record = launch.secondLaunch
+                guard enabled, record.consentGeneration == consentGeneration,
+                      !candidate.acknowledged.contains(where: { $0.identity == record.identity }),
+                      !candidate.pending.contains(where: { $0.identity == record.identity }) else { continue }
+                let first = record.identity.forMilestone(.firstLaunch)
+                if let index = candidate.launches.firstIndex(where: { $0.identity == first }) {
+                    guard candidate.launches[index].firstSession != launch.session,
+                          candidate.launches[index].secondSession == nil else { continue }
+                    candidate.launches[index].secondSession = launch.session
+                    candidate.pending.append(record)
+                } else {
+                    // Old files have no qualifying-session history. Establish a
+                    // baseline rather than inventing a retrospective second use.
+                    candidate.launches.append(TelemetryLaunchHistory(
+                        identity: first, consentGeneration: consentGeneration,
+                        firstSession: launch.session, secondSession: nil))
+                }
+                dirty = true
+            }
+            stagedLaunches.removeAll()
             candidate.pending.sort { $0.event.timestamp < $1.event.timestamp }
             state = candidate
             if dirty {
@@ -228,18 +267,30 @@ actor TelemetryOutbox {
     private func reconcileConsent() {
         guard state != nil else { return }
         let before = state!.pending.count
+        let launchesBefore = state!.launches.count
         let allowed = enabled
         let currentConsent = consentGeneration
         state!.pending.removeAll { !allowed || $0.consentGeneration != currentConsent }
-        if state!.pending.count != before { dirty = true }
+        state!.launches.removeAll { !allowed || $0.consentGeneration != currentConsent }
+        if state!.pending.count != before || state!.launches.count != launchesBefore { dirty = true }
+    }
+
+    private func sendableRecords() -> [PendingTelemetryMilestone] {
+        guard let state else { return [] }
+        let completed = Set(state.acknowledged.map(\.identity))
+        return state.pending.filter {
+            !$0.rejected && $0.consentGeneration == consentGeneration
+                && ($0.identity.milestone == .firstLaunch
+                    || completed.contains($0.identity.forMilestone(.firstLaunch)))
+        }
     }
 
     private func scheduleNext() {
         guard automaticRetry, !terminated else { return }
-        if state == nil || dirty || !staged.isEmpty || !legacySkips.isEmpty {
+        if state == nil || dirty || !staged.isEmpty || !stagedLaunches.isEmpty || !legacySkips.isEmpty {
             schedule(at: storageRetryAt ?? clock.now())
         } else if enabled,
-                  let date = state?.pending.filter({ !$0.rejected }).map(\.nextAttemptAt).min() {
+                  let date = sendableRecords().map(\.nextAttemptAt).min() {
             schedule(at: date)
         }
     }

@@ -9,11 +9,12 @@ struct TelemetryTests {
 
     private func record(version: String = "2.0.17", build: String = "22",
                         mode: TelemetryBuildMode = .release, generation: Int = 0,
-                        timestamp: Date? = nil, session: String = "original-session")
+                        timestamp: Date? = nil, session: String = "original-session",
+                        milestone: TelemetryMilestone = .firstLaunch)
         -> PendingTelemetryMilestone {
         let date = timestamp ?? base
-        let identity = TelemetryMilestoneIdentity(version: version, build: build, mode: mode)
-        let event = Event(timestamp: date, sessionId: session, eventName: "first_launch",
+        let identity = TelemetryMilestoneIdentity(version: version, build: build, mode: mode, milestone: milestone)
+        let event = Event(timestamp: date, sessionId: session, eventName: milestone.rawValue,
             systemProps: Event.SystemProps(isDebug: mode == .debug, locale: "en", osName: "macOS",
                 osVersion: "15.5", appVersion: version, appBuildNumber: build,
                 sdkVersion: "aptabase-swift@0.4.0", deviceModel: "unit-test"),
@@ -414,6 +415,478 @@ struct TelemetryTests {
         #expect(await sender.events.first == old.event)
         #expect(await callbacks.values == [old.identity, current.identity])
         #expect(store.saved.acknowledged.contains { $0.recordID == old.id })
+    }
+
+    private func acceptedFirstSnapshot() -> TelemetryOutboxSnapshot {
+        let first = record()
+        return TelemetryOutboxSnapshot(acknowledged: [TelemetryAcknowledgement(
+            identity: first.identity, recordID: first.id, kind: .accepted)])
+    }
+
+    private func firstUserSession(_ store: TestTelemetryStore, _ clock: TestTelemetryClock,
+                                  session: UUID = UUID()) async -> UUID {
+        let outbox = box(store, ScriptedMilestoneSender(), clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: session, secondLaunch: record(milestone: .secondLaunch))
+        await outbox.prepareForTermination()
+        return session
+    }
+
+    @Test func secondLaunchRequiresTwoDistinctQualifyingSessionsAndNeverRepeats() async {
+        let store = TestTelemetryStore(), sender = ScriptedMilestoneSender(), clock = TestTelemetryClock(base)
+        let session = UUID()
+        let first = box(store, sender, clock)
+        await first.configure(enabled: true, consentGeneration: 0)
+        await first.enqueue(record())
+        for _ in 0..<10 {
+            await first.recordLaunch(session: session, secondLaunch: record(milestone: .secondLaunch))
+        }
+        await first.processDue()
+        #expect(await sender.events.map(\.eventName) == ["first_launch"])
+        #expect(store.saved.launches.first?.firstSession == session)
+        #expect(store.saved.launches.first?.secondSession == nil)
+        await first.prepareForTermination()
+
+        let moved = box(store, sender, clock)
+        await moved.configure(enabled: true, consentGeneration: 0)
+        await moved.recordLaunch(session: session, secondLaunch: record(milestone: .secondLaunch))
+        await moved.processDue()
+        #expect(await sender.events.count == 1) // AppMover carries the original token.
+        await moved.prepareForTermination()
+
+        for _ in 0..<3 {
+            let next = box(store, sender, clock)
+            await next.configure(enabled: true, consentGeneration: 0)
+            await next.enqueue(record())
+            await next.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+            await next.processDue()
+            await next.prepareForTermination()
+        }
+        #expect(await sender.events.map(\.eventName) == ["first_launch", "second_launch"])
+        #expect(store.saved.acknowledged.count == 2)
+    }
+
+    @Test func backgroundStartsWithoutCalculatorUseNeverAdvanceSecondLaunch() async {
+        let store = TestTelemetryStore(), sender = ScriptedMilestoneSender(), clock = TestTelemetryClock(base)
+        for _ in 0..<4 {
+            let outbox = box(store, sender, clock)
+            await outbox.configure(enabled: true, consentGeneration: 0)
+            await outbox.enqueue(record())
+            await outbox.processDue()
+            await outbox.prepareForTermination()
+        }
+        #expect(store.saved.launches.isEmpty)
+        #expect(await sender.events.map(\.eventName) == ["first_launch"])
+    }
+
+    @Test func secondLaunchIsSavedOnImmediateQuitWithoutWaitingForHTTP() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let sender = GatedMilestoneSender(), outbox = box(store, sender, clock)
+        let second = record(milestone: .secondLaunch), session = UUID()
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: session, secondLaunch: second)
+        await outbox.prepareForTermination()
+        #expect(await sender.count == 0)
+        #expect(store.saved.pending.first?.id == second.id)
+        #expect(store.saved.launches.first?.secondSession == session)
+        let resumed = box(store, ScriptedMilestoneSender(), clock)
+        await resumed.configure(enabled: true, consentGeneration: 0)
+        await resumed.processDue()
+        #expect(store.saved.acknowledged.contains { $0.identity.milestone == .secondLaunch })
+    }
+
+    @Test func offlineFirstAndSecondLaunchesRecoverInOrderWithOriginalPayloads() async {
+        let store = TestTelemetryStore(), clock = TestTelemetryClock(base)
+        let firstEvent = record()
+        let offline = ScriptedMilestoneSender([.retryableFailure(statusCode: 500, retryAfter: 30)])
+        let first = box(store, offline, clock)
+        await first.configure(enabled: true, consentGeneration: 0)
+        await first.enqueue(firstEvent)
+        await first.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await first.processDue()
+        await first.prepareForTermination()
+
+        clock.advance(1)
+        let secondEvent = record(timestamp: clock.now(), session: "second-session", milestone: .secondLaunch)
+        let sender = ScriptedMilestoneSender(), second = box(store, sender, clock)
+        await second.configure(enabled: true, consentGeneration: 0)
+        await second.recordLaunch(session: UUID(), secondLaunch: secondEvent)
+        await second.processDue()
+        #expect(await sender.events.isEmpty)
+        #expect(store.saved.pending.count == 2)
+        clock.advance(29)
+        await second.processDue()
+        #expect(await sender.events == [firstEvent.event, secondEvent.event])
+        #expect(store.saved.pending.isEmpty)
+    }
+
+    @Test func secondLaunchOfflineRetryAfterRestartDoesNotCreateAnotherMilestone() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let event = record(milestone: .secondLaunch)
+        let offline = ScriptedMilestoneSender([.retryableFailure(statusCode: nil, retryAfter: nil)])
+        let outbox = box(store, offline, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: event)
+        await outbox.processDue()
+        await outbox.prepareForTermination()
+        #expect(store.saved.pending.first?.id == event.id)
+        clock.advance(2)
+        let sender = ScriptedMilestoneSender(), resumed = box(store, sender, clock)
+        await resumed.configure(enabled: true, consentGeneration: 0)
+        await resumed.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await resumed.processDue()
+        #expect(await sender.events == [event.event])
+        #expect(store.saved.acknowledged.filter { $0.identity.milestone == .secondLaunch }.count == 1)
+    }
+
+    @Test func secondLaunch429HonoursTwoHourMinimum() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let sender = ScriptedMilestoneSender([
+            .retryableFailure(statusCode: 429, retryAfter: 7_200), .accepted(statusCode: 200)])
+        let outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        clock.advance(7_199)
+        await outbox.processDue()
+        #expect(await sender.events.count == 1)
+        #expect(store.saved.pending.first?.nextAttemptAt == base.addingTimeInterval(7_200))
+        clock.advance(1)
+        await outbox.processDue()
+        #expect(await sender.events.count == 2)
+        #expect(store.saved.pending.isEmpty)
+    }
+
+    @Test func rejectedSecondLaunchWaitsForLaterProcessAfter24Hours() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let sender = ScriptedMilestoneSender([.rejected(statusCode: 403, diagnostic: "test")])
+        let outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        clock.advance(86_400)
+        await outbox.processDue()
+        #expect(await sender.events.count == 1)
+        #expect(store.saved.pending.first?.rejected == true)
+        await outbox.prepareForTermination()
+        let resumed = box(store, sender, clock)
+        await resumed.configure(enabled: true, consentGeneration: 0)
+        await resumed.processDue()
+        #expect(await sender.events.count == 2)
+        #expect(store.saved.pending.isEmpty)
+    }
+
+    @Test func rejectedFirstLaunchCannotBeOvertakenBySecondLaunch() async {
+        let store = TestTelemetryStore(), clock = TestTelemetryClock(base)
+        let sender = ScriptedMilestoneSender([.rejected(statusCode: 403, diagnostic: "test")])
+        let outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.enqueue(record())
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.map(\.eventName) == ["first_launch"])
+        #expect(store.saved.pending.count == 2)
+        await outbox.prepareForTermination()
+        clock.advance(86_400)
+        let resumed = box(store, sender, clock)
+        await resumed.configure(enabled: true, consentGeneration: 0)
+        await resumed.processDue()
+        #expect(await sender.events.map(\.eventName) == ["first_launch", "first_launch", "second_launch"])
+    }
+
+    @Test func secondLaunchCounterAndEventAreOneCheckpointOnWriteFailure() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let before = store.saveCount
+        store.failWrites(after: before)
+        let sender = ScriptedMilestoneSender(), outbox = box(store, sender, clock)
+        let event = record(milestone: .secondLaunch)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: event)
+        await outbox.processDue()
+        #expect(await sender.events.isEmpty)
+        #expect(store.saved.launches.first?.secondSession == nil)
+        #expect(store.saved.pending.isEmpty)
+        store.failWrites(after: nil)
+        clock.advance(2)
+        await outbox.processDue()
+        #expect(await sender.events == [event.event])
+        #expect(store.saved.launches.first?.secondSession != nil)
+    }
+
+    @Test func failedSecondLaunchAcknowledgementWriteRetriesDiskOnly() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        store.failWrites(after: store.saveCount + 1)
+        let sender = ScriptedMilestoneSender(), outbox = box(store, sender, clock)
+        let event = record(milestone: .secondLaunch)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: event)
+        await outbox.processDue()
+        #expect(await sender.events.count == 1)
+        #expect(store.saved.pending.first?.id == event.id)
+        for _ in 0..<8 { await outbox.processDue() }
+        clock.advance(2)
+        await outbox.processDue()
+        #expect(await sender.events.count == 1)
+        store.failWrites(after: nil)
+        clock.advance(4)
+        await outbox.processDue()
+        #expect(await sender.events.count == 1)
+        #expect(store.saved.pending.isEmpty)
+    }
+
+    @Test func readFailurePreservesExistingLaunchHistoryUntilRecovery() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        let firstSession = await firstUserSession(store, clock)
+        let savedWrites = store.saveCount
+        store.failReads(true)
+        let sender = ScriptedMilestoneSender(), outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(store.saveCount == savedWrites)
+        #expect(store.saved.launches.first?.firstSession == firstSession)
+        #expect(await sender.events.isEmpty)
+        store.failReads(false)
+        clock.advance(2)
+        await outbox.processDue()
+        #expect(await sender.events.map(\.eventName) == ["second_launch"])
+    }
+
+    @Test func preFeatureJSONMigratesWithoutInventingSecondLaunch() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let store = TelemetryFileStore(directory: directory)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        var legacy = try #require(JSONSerialization.jsonObject(with: encoder.encode(acceptedFirstSnapshot())) as? [String: Any])
+        legacy.removeValue(forKey: "launches")
+        var acks = try #require(legacy["acknowledged"] as? [[String: Any]])
+        var identity = try #require(acks[0]["identity"] as? [String: Any])
+        identity.removeValue(forKey: "milestone")
+        acks[0]["identity"] = identity
+        legacy["acknowledged"] = acks
+        try JSONSerialization.data(withJSONObject: legacy).write(to: store.file)
+        let migrated = try store.load()
+        #expect(migrated.acknowledged.first?.identity.milestone == .firstLaunch)
+        #expect(migrated.launches.isEmpty)
+        let sender = ScriptedMilestoneSender(), clock = TestTelemetryClock(base)
+        let outbox = TelemetryOutbox(store: store, sender: sender, clock: clock, automaticRetry: false)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.enqueue(record())
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.isEmpty)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.map(\.eventName) == ["second_launch"])
+    }
+
+    @Test func legacyFirstSkipNeverSuppressesSecondLaunch() async {
+        let store = TestTelemetryStore(), sender = ScriptedMilestoneSender(), clock = TestTelemetryClock(base)
+        let outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.importLegacySkip(record().identity)
+        await outbox.importLegacySkip(record(milestone: .secondLaunch).identity) // Invalid migration request.
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.isEmpty)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.map(\.eventName) == ["second_launch"])
+    }
+
+    @Test func launchHistoriesAreIndependentForVersionsBuildsAndModes() async {
+        let store = TestTelemetryStore(), sender = ScriptedMilestoneSender(), clock = TestTelemetryClock(base)
+        let outbox = box(store, sender, clock), session = UUID()
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        let pairs: [(String, String, TelemetryBuildMode)] = [
+            ("2.0.17", "22", .release), ("2.0.17", "22", .debug),
+            ("2.0.17", "23", .release), ("2.0.18", "22", .release)]
+        for (version, build, mode) in pairs {
+            await outbox.enqueue(record(version: version, build: build, mode: mode))
+            await outbox.recordLaunch(session: session, secondLaunch: record(
+                version: version, build: build, mode: mode, milestone: .secondLaunch))
+            await outbox.processDue()
+        }
+        #expect(await sender.events.count == 4)
+        #expect(store.saved.launches.count == 4)
+        #expect(store.saved.launches.allSatisfy { $0.secondSession == nil })
+        for (version, build, mode) in pairs {
+            await outbox.recordLaunch(session: UUID(), secondLaunch: record(
+                version: version, build: build, mode: mode, milestone: .secondLaunch))
+            await outbox.processDue()
+        }
+        #expect(await sender.events.filter { $0.eventName == "second_launch" }.count == 4)
+    }
+
+    @Test func optingOutDeletesSecondLaunchHistoryAndPendingEvent() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let sender = ScriptedMilestoneSender(), outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.configure(enabled: false, consentGeneration: 1)
+        await outbox.processDue()
+        #expect(store.saved.launches.isEmpty)
+        #expect(store.saved.pending.isEmpty)
+        #expect(await sender.events.isEmpty)
+        await outbox.configure(enabled: true, consentGeneration: 1)
+        let current = UUID()
+        await outbox.recordLaunch(session: current, secondLaunch: record(generation: 1, milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.isEmpty)
+        #expect(store.saved.launches.first?.firstSession == current)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(generation: 1, milestone: .secondLaunch))
+        await outbox.processDue()
+        #expect(await sender.events.map(\.eventName) == ["second_launch"])
+    }
+
+    @Test func optingOutDuringSecondLaunchRequestIgnoresLateAcceptance() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let sender = GatedMilestoneSender(), outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        let pumping = Task { await outbox.processDue() }
+        await sender.waitForRequest()
+        await outbox.configure(enabled: false, consentGeneration: 1)
+        await outbox.processDue()
+        await sender.complete(.accepted(statusCode: 200))
+        await pumping.value
+        #expect(store.saved.launches.isEmpty)
+        #expect(!store.saved.acknowledged.contains { $0.identity.milestone == .secondLaunch })
+    }
+
+    @Test func failedOptOutWriteDoesNotResurrectSecondLaunchAfterRestart() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let old = box(store, ScriptedMilestoneSender(), clock)
+        await old.configure(enabled: true, consentGeneration: 0)
+        await old.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await old.prepareForTermination()
+        #expect(store.saved.pending.count == 1)
+        store.failWrites(after: store.saveCount)
+        let disabled = box(store, ScriptedMilestoneSender(), clock)
+        await disabled.configure(enabled: false, consentGeneration: 1)
+        await disabled.processDue()
+        store.failWrites(after: nil)
+        let sender = ScriptedMilestoneSender(), resumed = box(store, sender, clock)
+        await resumed.configure(enabled: true, consentGeneration: 1)
+        await resumed.recordLaunch(session: UUID(), secondLaunch: record(generation: 1, milestone: .secondLaunch))
+        await resumed.processDue()
+        #expect(await sender.events.isEmpty)
+        #expect(store.saved.pending.isEmpty)
+        #expect(store.saved.launches.first?.consentGeneration == 1)
+        #expect(store.saved.launches.first?.secondSession == nil)
+    }
+
+    @Test func concurrentDuplicateUseHooksOnlyAdvanceOneSession() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), sender = ScriptedMilestoneSender()
+        let clock = TestTelemetryClock(base), outbox = box(store, sender, clock)
+        let session = UUID(), event = record(milestone: .secondLaunch)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<50 {
+                group.addTask { await outbox.recordLaunch(session: session, secondLaunch: event) }
+            }
+        }
+        await outbox.processDue()
+        #expect(store.saved.launches.count == 1)
+        #expect(store.saved.launches.first?.secondSession == nil)
+        #expect(await sender.events.isEmpty)
+    }
+
+    @Test func relaunchSessionTokenIsLocalValidatedAndReusedOnlyWhenPassed() throws {
+        let original = TelemetryLaunchSession(environment: [:])
+        let relocated = TelemetryLaunchSession(environment: [TelemetryLaunchSession.environmentKey: original.id.uuidString])
+        #expect(relocated.id == original.id)
+        #expect(original.relaunchEnvironment == "\(TelemetryLaunchSession.environmentKey)=\(original.id.uuidString)")
+        let fallback = UUID()
+        #expect(TelemetryLaunchSession(environment: [TelemetryLaunchSession.environmentKey: "invalid"], fallback: fallback).id == fallback)
+        #expect(TelemetryLaunchSession(environment: [:], fallback: fallback).id == fallback)
+        let json = String(decoding: try JSONEncoder().encode(record(milestone: .secondLaunch).event), as: UTF8.self)
+        #expect(!json.contains(original.id.uuidString))
+        #expect(!json.contains(TelemetryLaunchSession.environmentKey))
+    }
+
+    @Test func anotherAppCopyCannotOverwriteLiveOwnersSnapshot() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let waiting = TelemetryFileStore(directory: directory)
+        do {
+            let owner = TelemetryFileStore(directory: directory)
+            try owner.save(acceptedFirstSnapshot())
+            #expect(throws: (any Error).self) { try waiting.load() }
+            #expect(throws: (any Error).self) { try waiting.save(.init()) }
+            #expect(try owner.load().acknowledged.count == 1)
+        }
+        #expect(try waiting.load().acknowledged.count == 1)
+    }
+
+    @Test func moverRelaunchPreservesArgumentsWithoutShellExpansion() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let stub = directory.appendingPathComponent("fake open")
+        try Data("#!/bin/sh\nprintf '%s\\0' \"$@\"\n".utf8).write(to: stub)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stub.path)
+        let session = TelemetryLaunchSession(environment: [:])
+        let path = "/tmp/Applications with spaces/'\";$(printf UNEXPECTED)\nNumWorks.app"
+        let process = Process(), output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = session.relaunchArguments(processID: .max, path: path, openExecutable: stub.path)
+        process.standardOutput = output
+        try process.run()
+        let bytes = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        #expect(process.terminationStatus == 0)
+        #expect(bytes.split(separator: 0).map { String(decoding: $0, as: UTF8.self) }
+            == ["--env", session.relaunchEnvironment, path])
+    }
+
+    @Test func completedSecondLaunchRemainsDoneAfterOptOutAndReenable() async {
+        let store = TestTelemetryStore(acceptedFirstSnapshot()), clock = TestTelemetryClock(base)
+        _ = await firstUserSession(store, clock)
+        let sender = ScriptedMilestoneSender(), outbox = box(store, sender, clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.processDue()
+        await outbox.configure(enabled: false, consentGeneration: 1)
+        await outbox.processDue()
+        await outbox.configure(enabled: true, consentGeneration: 1)
+        for _ in 0..<3 {
+            await outbox.recordLaunch(session: UUID(), secondLaunch: record(generation: 1, milestone: .secondLaunch))
+            await outbox.processDue()
+        }
+        #expect(await sender.events.map(\.eventName) == ["second_launch"])
+        #expect(store.saved.acknowledged.filter { $0.identity.milestone == .secondLaunch }.count == 1)
+    }
+
+    @Test func automaticSchedulingUnblocksSecondAfterFirstAcceptance() async throws {
+        let store = TestTelemetryStore(), clock = AdvancingTelemetryClock(base)
+        let sender = ScriptedMilestoneSender([
+            .retryableFailure(statusCode: 500, retryAfter: 60), .accepted(statusCode: 200), .accepted(statusCode: 200)])
+        let outbox = TelemetryOutbox(store: store, sender: sender, clock: clock)
+        await outbox.configure(enabled: true, consentGeneration: 0)
+        await outbox.enqueue(record())
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        await outbox.recordLaunch(session: UUID(), secondLaunch: record(milestone: .secondLaunch))
+        for _ in 0..<400 {
+            if store.saved.acknowledged.count == 2 { break }
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        await outbox.prepareForTermination()
+        #expect(await sender.events.map(\.eventName) == ["first_launch", "first_launch", "second_launch"])
+        #expect(clock.now() >= base.addingTimeInterval(60))
     }
 }
 

@@ -16,7 +16,7 @@ enum AppMover {
 
     /// Prompts (unless `prompt` is false) and moves the running app into
     /// Applications when it is not already installed there.
-    static func moveIfNecessary(prompt: Bool = true) {
+    static func moveIfNecessary(prompt: Bool = true, checkForUpdatesAfterMove: Bool = false) {
         let fm = FileManager.default
         guard !Bundle.main.isInstalled,
             let applications = preferredInstallDirectory() else { return }
@@ -50,10 +50,17 @@ enum AppMover {
             }
         }
 
+        // Opening a running destination cannot carry the one-time update
+        // request. Ask the user to quit it before replacing that copy.
+        guard !isApplicationAtUrlRunning(destinationUrl) else {
+            presentMoveFailed("A copy of NumWorks is already running in Applications. "
+                + "Quit that copy and try again.")
+            return
+        }
+
         if needAuth {
             let result = authorizedInstall(from: bundleUrl, to: destinationUrl)
             guard !result.cancelled else {
-                moveIfNecessary(prompt: prompt)
                 return
             }
             guard result.success else {
@@ -64,16 +71,11 @@ enum AppMover {
             }
         } else {
             if fm.fileExists(atPath: destinationUrl.path) {
-                if AppMover.isApplicationAtUrlRunning(destinationUrl) {
-                    NSWorkspace.shared.open(destinationUrl)
+                guard (try? fm.trashItem(at: destinationUrl, resultingItemURL: nil)) != nil else {
+                    presentMoveFailed(
+                        "Couldn’t replace the existing copy in Applications. "
+                            + "Quit that copy or move this app manually.")
                     return
-                } else {
-                    guard (try? fm.trashItem(at: destinationUrl, resultingItemURL: nil)) != nil else {
-                        presentMoveFailed(
-                            "Couldn’t replace the existing copy in Applications. "
-                                + "Quit that copy or move this app manually.")
-                        return
-                    }
                 }
             }
             guard (try? fm.copyItem(at: bundleUrl, to: destinationUrl)) != nil else {
@@ -87,7 +89,7 @@ enum AppMover {
         // Trash the original app
         _ = try? fm.removeItem(at: bundleUrl)
 
-        relaunch(at: destinationUrl.path, completionCallback: {
+        relaunch(at: destinationUrl.path, checkingForUpdates: checkForUpdatesAfterMove, completionCallback: {
             // Persist pending milestones; the relocated process can retry.
             // Quitting must not wait for an analytics HTTP request.
             Task { @MainActor in
@@ -154,12 +156,15 @@ enum AppMover {
         })
     }
 
-    static func relaunch(at path: String, completionCallback: @escaping () -> Void) {
+    static func relaunch(at path: String, checkingForUpdates: Bool = false,
+                         completionCallback: @escaping () -> Void) {
         let pid = ProcessInfo.processInfo.processIdentifier
         Process.runTask(command: "/usr/bin/xattr", arguments: ["-d", "-r", "com.apple.quarantine", path], completion: { _ in
-            let waitForExitScript =
-                "(while /bin/kill -0 \(pid) >&/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"\(path)\") &"
-            Process.runTask(command: "/bin/sh", arguments: ["-c", waitForExitScript])
+            // Positional parameters keep paths out of shell source. The local
+            // token lets the relocated copy continue the same qualifying run.
+            Process.runTask(command: "/bin/sh", arguments:
+                TelemetryLaunchSession.current.relaunchArguments(processID: pid, path: path,
+                    additionalEnvironment: checkingForUpdates ? [UpdateRelaunch.environment] : []))
             completionCallback()
         })
     }
