@@ -11,6 +11,19 @@
 int epsilon_main(int, char **) { return 0; }
 namespace Ion { const char *softwareVersion() { return "test"; } }
 
+// Match SDL's activation observer without initializing its video subsystem.
+@interface SDLAppDelegate : NSObject
+@property(nonatomic) NSUInteger focusCount;
+- (void)focusSomeWindow:(NSNotification *)notification;
+@end
+@implementation SDLAppDelegate
+- (void)focusSomeWindow:(NSNotification *)notification { self.focusCount++; }
+@end
+
+@interface EpsilonBridge (ActivationTesting)
++ (void)installWindowActivationGuard;
+@end
+
 using Clock = std::chrono::steady_clock;
 static double ms(Clock::time_point start) {
   return std::chrono::duration<double, std::milli>(Clock::now() - start).count();
@@ -48,6 +61,32 @@ int main() {
     [NSApplication sharedApplication];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
     [NSApp finishLaunching];
+    drain();
+
+    if ([EpsilonBridge respondsToSelector:@selector(installWindowActivationGuard)]) {
+      [EpsilonBridge installWindowActivationGuard];
+      [EpsilonBridge installWindowActivationGuard]; // Must not wrap itself.
+    }
+    SDLAppDelegate *delegate = [SDLAppDelegate new];
+    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    [center addObserver:delegate selector:@selector(focusSomeWindow:)
+        name:NSApplicationDidBecomeActiveNotification object:nil];
+    EpsilonBridge.simulatorActive = NO;
+    [center postNotificationName:NSApplicationDidBecomeActiveNotification object:NSApp];
+    require(delegate.focusCount == 0, "activation must not raise a hidden calculator");
+    EpsilonBridge.simulatorActive = YES;
+    [center postNotificationName:NSApplicationDidBecomeActiveNotification object:NSApp];
+    require(delegate.focusCount == 1, "activation of a shown calculator still reaches SDL");
+    // A delayed activation can arrive after hide and before native orderOut ends.
+    // This check deliberately has no timeout or native visibility dependency.
+    EpsilonBridge.simulatorActive = NO;
+    [center postNotificationName:NSApplicationDidBecomeActiveNotification object:NSApp];
+    require(delegate.focusCount == 1, "late activation must not reverse a hide request");
+    EpsilonBridge.simulatorActive = YES;
+    [center postNotificationName:NSApplicationDidBecomeActiveNotification object:NSApp];
+    require(delegate.focusCount == 2, "a later show must allow normal SDL activation again");
+    EpsilonBridge.simulatorActive = NO;
+    [center removeObserver:delegate];
     drain();
 
     auto start = Clock::now();
@@ -201,7 +240,7 @@ int main() {
     start = Clock::now();
     NumWorksSimulatorWaitForEvent(120);
     require(ms(start) >= 100, "quiet wait must block until its timer deadline");
-    printf("PASS: native wait, input preservation, timers, Carbon shortcut %.3f ms, nested wait, deferred focus %.3f ms, 40 show/hide wakes; slowest wake %.3f ms\n", hotkey.latency, followUpDelay, slowestWake);
+    printf("PASS: activation visibility guard, native wait, input preservation, timers, Carbon shortcut %.3f ms, nested wait, deferred focus %.3f ms, 40 show/hide wakes; slowest wake %.3f ms\n", hotkey.latency, followUpDelay, slowestWake);
   }
   return 0;
 }
