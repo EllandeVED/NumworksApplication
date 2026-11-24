@@ -43,6 +43,8 @@ final class CalculatorWindow {
     private let trafficLights = NativeTrafficLightsController()
     private var toolbarActions: ToolbarActions?
     private var windowObservers: [NSObjectProtocol] = []
+    private let workspaceCenter = NSWorkspace.shared.notificationCenter
+    private var workspaceObservers: [NSObjectProtocol] = []
     private let closeInterceptor = CalculatorCloseInterceptor()
 
     init(preferences: Preferences) {
@@ -55,6 +57,9 @@ final class CalculatorWindow {
     deinit {
         for observer in windowObservers {
             NotificationCenter.default.removeObserver(observer)
+        }
+        for observer in workspaceObservers {
+            workspaceCenter.removeObserver(observer)
         }
     }
 
@@ -115,6 +120,7 @@ final class CalculatorWindow {
 
     /// User-driven show (menu bar / shortcut). Remembers the previous app for hide.
     func showFromUser() {
+        if window != nil { Telemetry.noteCalculatorUsed() }
         rememberPreviousFrontAppIfNeeded()
         show()
         // SDL + status-item activation can leave the window unfocused on the first
@@ -161,6 +167,7 @@ final class CalculatorWindow {
         // Always activate — including .accessory (menu-bar-only) mode. Skipping
         // activate left the previously focused app’s window above ours.
         NSApp.activate(ignoringOtherApps: true)
+        if window.isMiniaturized { window.deminiaturize(nil) }
         window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
         if let contentView = window.contentView, window.firstResponder !== contentView {
@@ -169,6 +176,7 @@ final class CalculatorWindow {
         let style = preferences.windowStyle.isAvailable
             ? preferences.windowStyle : .native
         trafficLights.apply(hoverUntilPointerNearby: style == .native, to: window)
+        EpsilonBridge.refreshSimulatorVisibility()
     }
 
     func hide() {
@@ -212,6 +220,7 @@ final class CalculatorWindow {
                 window.makeFirstResponder(contentView)
             }
         }
+        EpsilonBridge.refreshSimulatorVisibility()
     }
 
     // MARK: - Preferences
@@ -317,9 +326,43 @@ final class CalculatorWindow {
                 WindowSizing.applyConstraints(to: window)
             }
         })
-        // Do not pause on occlusion: covering the calculator with another
-        // window must not freeze the main thread / feel like a hide glitch.
-        // Pause only via show()/hide() (orderOut).
+        // Visibility only gates rendering and cosmetic timers. AppKit keeps
+        // servicing native input even while the calculator is fully hidden.
+        for name in [NSWindow.didChangeOcclusionStateNotification,
+                     NSWindow.didMiniaturizeNotification,
+                     NSWindow.didDeminiaturizeNotification] {
+            windowObservers.append(center.addObserver(
+                forName: name, object: window, queue: .main
+            ) { _ in
+                EpsilonBridge.refreshSimulatorVisibility()
+            })
+        }
+        for name in [NSApplication.didBecomeActiveNotification,
+                     NSApplication.didResignActiveNotification,
+                     NSApplication.didHideNotification,
+                     NSApplication.didUnhideNotification] {
+            windowObservers.append(center.addObserver(
+                forName: name, object: NSApp, queue: .main
+            ) { _ in
+                EpsilonBridge.refreshSimulatorVisibility()
+            })
+        }
+        workspaceObservers.append(workspaceCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { _ in
+            EpsilonBridge.refreshSimulatorVisibility()
+        })
+        for name in [NSWorkspace.screensDidSleepNotification, NSWorkspace.willSleepNotification] {
+            workspaceObservers.append(workspaceCenter.addObserver(
+                forName: name, object: nil, queue: .main
+            ) { _ in EpsilonBridge.simulatorDisplaySleeping = true })
+        }
+        for name in [NSWorkspace.screensDidWakeNotification, NSWorkspace.didWakeNotification] {
+            workspaceObservers.append(workspaceCenter.addObserver(
+                forName: name, object: nil, queue: .main
+            ) { _ in EpsilonBridge.simulatorDisplaySleeping = false })
+        }
+        EpsilonBridge.refreshSimulatorVisibility()
     }
 
     private func detachObservers() {
@@ -327,5 +370,9 @@ final class CalculatorWindow {
             NotificationCenter.default.removeObserver(observer)
         }
         windowObservers.removeAll()
+        for observer in workspaceObservers {
+            workspaceCenter.removeObserver(observer)
+        }
+        workspaceObservers.removeAll()
     }
 }

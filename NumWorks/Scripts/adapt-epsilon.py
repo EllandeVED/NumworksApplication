@@ -199,7 +199,7 @@ PAUSE_MARKER = "// >>> NUMWORKS_PAUSE"
 
 
 def adapt_shared_events_cpp(root: Path) -> None:
-    """Slow the ~100 Hz poll when the calculator window is hidden/occluded."""
+    """Wait in AppKit until input or the calculator's existing deadline."""
     path = ion_dir(root) / "src/simulator/shared/events.cpp"
     if not path.is_file():
         die(f"missing {path.relative_to(root)}")
@@ -216,37 +216,133 @@ def adapt_shared_events_cpp(root: Path) -> None:
         else:
             text = PAUSE_INCLUDE + "\n" + text
 
-    if PAUSE_MARKER in text:
-        info("events.cpp pause hook already present")
-    else:
-        pattern = re.compile(
-            r"bool waitForInterruptingEvent\(int maximumDelay, int\s*\*\s*timeout\) \{\n"
-            r"  Keyboard::scan\(\);\n"
-            r"  /\* As pressing keys on the simulator does not generate interruptions, we need\n"
-            r"   \* to poll the keyboard more regularly than on the device\. \*/\n"
-            r"  constexpr int simulatorDelay = 10;\n"
-            r"  maximumDelay = std::min\(simulatorDelay, maximumDelay\);",
-        )
-        new = """bool waitForInterruptingEvent(int maximumDelay, int* timeout) {
-  Keyboard::scan();
-  /* As pressing keys on the simulator does not generate interruptions, we need
-   * to poll the keyboard more regularly than on the device. */
-  // >>> NUMWORKS_PAUSE
-  /* When the macOS shell hides the window (orderOut), poll less often.
-   * Keep the sleep short: epsilon_main runs on the AppKit main thread, so a
-   * long msleep would delay show/hide shortcuts and clicks. */
-  const int simulatorDelay = NumWorksSimulatorIsActive() ? 10 : 50;
-  // <<< NUMWORKS_PAUSE
-  maximumDelay = std::min(simulatorDelay, maximumDelay);"""
-        if not pattern.search(text):
-            die("events.cpp waitForInterruptingEvent pattern not found — upstream changed?")
-        text = pattern.sub(new, text, count=1)
+    for header in ['#include "keyboard.h"', '#include "window.h"']:
+        if header not in text:
+            text = text.replace(PAUSE_INCLUDE, PAUSE_INCLUDE + "\n" + header, 1)
+    match = extract_function_body(
+        text, r"bool waitForInterruptingEvent\(int maximumDelay, int\s*\*\s*timeout\)\s*\{"
+    )
+    if not match:
+        die("events.cpp waitForInterruptingEvent pattern not found — upstream changed?")
+    start, _, end, _ = match
+    body = text[start:end + 1]
+    if "NUMWORKS_NATIVE_WAIT" not in body and not all(
+        token in body for token in ["Keyboard::scan();", "Timing::msleep(",
+                                   "return !Keyboard::Queue::sharedQueue()->isEmpty();"]
+    ):
+        die("events.cpp wait implementation changed — review before replacing it")
+    new = """bool waitForInterruptingEvent(int maximumDelay, int* timeout) {
+  // >>> NUMWORKS_NATIVE_WAIT
+  static uint64_t repeatCheckAt = 0;
+  // getPlatformEvent already pumped the native event queue. Python and
+  // calculation interruption still use the ordinary, pumping scan().
+  Keyboard::scanWithoutPumping();
+  if (!Keyboard::Queue::sharedQueue()->isEmpty()) {
+    repeatCheckAt = 0;
+    return true;
+  }
+  if (SDL_HasEvents(SDL_FIRSTEVENT, SDL_LASTEVENT)) {
+    return true;
+  }
+  maximumDelay = std::max(0, std::min(maximumDelay, *timeout));
+  if (Simulator::Window::isHeadless()) {
+    *timeout -= maximumDelay;
+    return false;
+  }
+  const uint64_t start = Timing::millis();
+  if (maximumDelay < *timeout) {
+    // The shared state machine's repeat checks depend on the simulator's
+    // original short cadence. Keep that cadence only while a key is held.
+    // Native UI wakes do not restart this deadline or starve key repetition.
+    if (repeatCheckAt == 0) {
+      repeatCheckAt = start + (NumWorksSimulatorIsActive() ? 10 : 50);
+    }
+    maximumDelay = std::min<uint64_t>(maximumDelay,
+        repeatCheckAt > start ? repeatCheckAt - start : 0);
+  } else {
+    repeatCheckAt = 0;
+  }
+  const bool interrupted = NumWorksSimulatorWaitForEvent(maximumDelay);
+  // Charge early wakes only for elapsed time. Cap scheduler overshoot at the
+  // requested wait so it cannot swallow a repeat in the outer timer budget.
+  *timeout -= std::min<uint64_t>(maximumDelay, Timing::millis() - start);
+  if (!interrupted) {
+    repeatCheckAt = 0;
+  }
+  return interrupted;
+  // <<< NUMWORKS_NATIVE_WAIT
+}"""
+    text = text[:start] + new + text[end + 1:]
 
     if text != original:
         path.write_text(text)
         info("events.cpp updated")
     else:
         info("events.cpp already adapted")
+
+
+def adapt_idle_keyboard_cpp(root: Path) -> None:
+    """Separate state gathering from native pumping for the idle event path."""
+    path = ion_dir(root) / "src/simulator/shared/keyboard.cpp"
+    text = path.read_text()
+    if "// >>> NUMWORKS_SCAN" not in text:
+        old = "State scan(bool forPython) {\n"
+        new = """// >>> NUMWORKS_SCAN
+State scan(bool forPython) {
+  if (!Simulator::Window::isHeadless()) {
+    SDL_PumpEvents();
+  }
+  return scanWithoutPumping(forPython);
+}
+
+State scanWithoutPumping(bool forPython) {
+// <<< NUMWORKS_SCAN
+"""
+        if old not in text:
+            die("keyboard.cpp scan pattern not found — upstream changed?")
+        text = text.replace(old, new, 1)
+        text = text.replace(
+            "  // We need to tell SDL to get new state from the host OS\n  SDL_PumpEvents();\n\n",
+            "", 1)
+        path.write_text(text)
+    header = path.with_suffix(".h")
+    text = header.read_text()
+    if "State scanWithoutPumping" not in text:
+        text = text.replace("namespace Ion {\n", """namespace Ion {
+namespace Keyboard {
+// Only after getPlatformEvent has pumped SDL; never for Python keydown scans.
+State scanWithoutPumping(bool forPython = false);
+}
+""", 1)
+        header.write_text(text)
+
+
+def adapt_idle_timers(root: Path) -> None:
+    """Defer cursor redraws only; keep firmware/device deadlines unchanged."""
+    base = root / "epsilon" if is_split_layout(root) else root
+    path = base / "escher/src/blink_timer.cpp"
+    text = path.read_text()
+    if "// >>> NUMWORKS_IDLE_BLINK" in text:
+        return
+    include = """#ifdef NUMWORKS_MACOS_IDLE
+#include "NumWorksSimulatorActive.h"
+#endif
+"""
+    text = include + text
+    old = "bool BlinkTimer::fire() {\n"
+    if old not in text:
+        die("blink_timer.cpp fire pattern not found — upstream changed?")
+    text = text.replace(old, old + """  // >>> NUMWORKS_IDLE_BLINK
+#ifdef NUMWORKS_MACOS_IDLE
+  // Hidden/occluded cursor phases cannot be seen. Do not invalidate the LCD.
+  // Timer::tick still advances/resets normally, including during calculations.
+  if (!NumWorksSimulatorShouldPresent()) {
+    return false;
+  }
+#endif
+  // <<< NUMWORKS_IDLE_BLINK
+""", 1)
+    path.write_text(text)
 
 
 def adapt_shared_window_cpp(root: Path) -> None:
@@ -339,7 +435,7 @@ def makefile_fragment_legacy(main_paths: list[str]) -> str:
 # NumWorks macOS shell integration (generated by adapt-epsilon.py).
 # Builds the simulator as libepsilon.a; the shell calls epsilon_main().
 ifdef NUMWORKS_INTEGRATION_DIR
-SFLAGS += -I$(NUMWORKS_INTEGRATION_DIR)
+SFLAGS += -I$(NUMWORKS_INTEGRATION_DIR) -DNUMWORKS_MACOS_IDLE
 {main_rules}
 
 .PHONY: libepsilon.a
@@ -359,7 +455,7 @@ def makefile_fragment_split() -> str:
 # NumWorks macOS shell integration (generated by adapt-epsilon.py).
 # Builds the simulator as libepsilon.a; the shell calls epsilon_main().
 ifdef NUMWORKS_INTEGRATION_DIR
-SFLAGS += -I$(NUMWORKS_INTEGRATION_DIR)
+SFLAGS += -I$(NUMWORKS_INTEGRATION_DIR) -DNUMWORKS_MACOS_IDLE
 $(call all_objects_for,$(PATH_ion)/src/simulator/shared/main.cpp): SFLAGS += -Dmain=epsilon_main
 
 .PHONY: libepsilon.a
@@ -475,8 +571,47 @@ def main() -> None:
 
     adapt_window_mm(root)
     adapt_shared_events_cpp(root)
+    adapt_idle_keyboard_cpp(root)
+    adapt_idle_timers(root)
     adapt_shared_window_cpp(root)
     adapt_events_platform_cpp(root)
+    platform = ion_dir(root) / "src/simulator/shared/events_platform.cpp"
+    text = platform.read_text()
+    if "// >>> NUMWORKS_SINGLE_PUMP" not in text:
+        old = '  while (SDL_PollEvent(&event)) {'
+        if old not in text:
+            die("events_platform.cpp SDL_PollEvent pattern not found — upstream changed?")
+        text = text.replace(old, """  // >>> NUMWORKS_SINGLE_PUMP
+  SDL_PumpEvents();
+  // Peep drains the already-pumped queue without polling AppKit again per event.
+  // <<< NUMWORKS_SINGLE_PUMP
+  while (SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT) > 0) {""", 1)
+        platform.write_text(text)
+    if "// >>> NUMWORKS_WINDOW_EVENT_BATCH" not in text:
+        old = """    if (event.type == SDL_WINDOWEVENT) {
+      Simulator::Window::relayout();
+      break;
+    }
+"""
+        new = """    // >>> NUMWORKS_WINDOW_EVENT_BATCH
+    if (event.type == SDL_WINDOWEVENT) {
+      needsRelayout = true;
+      continue;
+    }
+    // Apply the latest geometry before input/hit testing. A burst of window
+    // notifications must not present a separate frame for every notification.
+    if (needsRelayout) {
+      Simulator::Window::relayout();
+      needsRelayout = false;
+    }
+    // <<< NUMWORKS_WINDOW_EVENT_BATCH
+"""
+        if old not in text:
+            die("events_platform.cpp window event pattern not found — upstream changed?")
+        text = text.replace("Event getPlatformEvent() {\n", "Event getPlatformEvent() {\n  bool needsRelayout = false;\n", 1)
+        text = text.replace(old, new, 1)
+        text = text.replace("  if (result != None) {\n", "  if (needsRelayout) {\n    Simulator::Window::relayout();\n  }\n  if (result != None) {\n", 1)
+        platform.write_text(text)
     adapt_makefile(root)
     info("done")
 

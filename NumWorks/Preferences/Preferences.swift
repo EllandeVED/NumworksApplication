@@ -25,6 +25,7 @@ final class Preferences: ObservableObject {
         static let appMoverOfferVersion = "appMoverOfferVersion"
         static let appMoverOfferCount = "appMoverOfferCount"
         static let telemetryEnabled = "telemetryEnabled"
+        static let telemetryConsentGeneration = "telemetryConsentGeneration"
         static let telemetryFirstLaunchVersion = "telemetryFirstLaunchVersion"
         /// Marks that launch-at-login was set explicitly (or via our default-on).
         static let launchAtLoginConfigured = "launchAtLoginConfigured"
@@ -174,12 +175,19 @@ final class Preferences: ObservableObject {
     /// Anonymous Aptabase usage/error reports. Opt-out; off means nothing is sent.
     @Published var telemetryEnabled: Bool {
         didSet {
+            if oldValue && !telemetryEnabled {
+                // Local only: invalidates any pending payload saved before opt-out.
+                defaults.set(telemetryConsentGeneration &+ 1, forKey: Key.telemetryConsentGeneration)
+            }
             defaults.set(telemetryEnabled, forKey: Key.telemetryEnabled)
             Telemetry.applyPreferenceChange()
         }
     }
 
-    /// Last `AppInfo.appVersion` whose `first_launch` was flushed (not a Settings UI field).
+    /// Local consent fence, never transmitted as an analytics identifier.
+    var telemetryConsentGeneration: Int { defaults.integer(forKey: Key.telemetryConsentGeneration) }
+
+    /// Release compatibility mirror. Legacy values are skips, not verified acceptance.
     var telemetryFirstLaunchVersion: String? {
         get { defaults.string(forKey: Key.telemetryFirstLaunchVersion) }
         set { defaults.set(newValue, forKey: Key.telemetryFirstLaunchVersion) }

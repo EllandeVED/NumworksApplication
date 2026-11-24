@@ -15,6 +15,7 @@ enum SettingsTab: String {
 
 struct SettingsRootView: View {
     @ObservedObject var preferences: Preferences
+    @ObservedObject var activity: SettingsWindowActivity
     let actions: SettingsActions
 
     @State private var selection = SettingsRootView.initialTab()
@@ -38,6 +39,7 @@ struct SettingsRootView: View {
                 .tag(SettingsTab.about)
         }
         .frame(width: 460, height: 520)
+        .environment(\.settingsWindowVisible, activity.isVisible && selection == .general)
     }
 
     private static func initialTab() -> SettingsTab {
@@ -196,8 +198,14 @@ private struct CheckForUpdatesButton: View {
 
     var body: some View {
         if UITesting.isEnabled {
-            Button("Check for Updates…", action: {})
-                .disabled(true)
+            HStack {
+                Button("Check for Updates…", action: {})
+                    .disabled(true)
+                Spacer(minLength: 8)
+                Text("N.A.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         } else {
             CheckForUpdatesButtonLive(actions: actions)
         }
@@ -206,6 +214,8 @@ private struct CheckForUpdatesButton: View {
 
 private struct CheckForUpdatesButtonLive: View {
     @ObservedObject private var updates = UpdateController.shared
+    @Environment(\.settingsWindowVisible) private var settingsWindowVisible
+    @State private var clockRevision = 0
     let actions: SettingsActions
 
     var body: some View {
@@ -223,7 +233,47 @@ private struct CheckForUpdatesButtonLive: View {
             }
             .disabled(!updates.canCheckForUpdates || updates.isCheckingForUpdates)
             .accessibilityValue(updates.isCheckingForUpdates ? "Checking" : "Idle")
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
+            if settingsWindowVisible, let date = updates.lastUpdateCheckDate {
+                TimelineView(UpdateCheckAgeSchedule(checkedAt: date)) { context in
+                    ageLabel(now: context.date)
+                }
+                .id(date)
+                .id(clockRevision)
+                .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)
+                    .receive(on: RunLoop.main)) { _ in
+                    clockRevision &+= 1
+                }
+            } else {
+                ageLabel(now: .now)
+            }
+        }
+    }
+
+    private func ageLabel(now: Date) -> some View {
+        Text(UpdateCheckAge.label(for: updates.lastUpdateCheckDate, now: now))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(
+                UpdateCheckAge.accessibilityLabel(for: updates.lastUpdateCheckDate, now: now))
+    }
+}
+
+private struct UpdateCheckAgeSchedule: TimelineSchedule {
+    let checkedAt: Date
+
+    func entries(from startDate: Date, mode: Mode) -> Entries {
+        Entries(checkedAt: checkedAt, nextDate: startDate)
+    }
+
+    struct Entries: Sequence, IteratorProtocol {
+        let checkedAt: Date
+        var nextDate: Date?
+
+        mutating func next() -> Date? {
+            guard let date = nextDate else { return nil }
+            nextDate = UpdateCheckAge.nextRefresh(for: checkedAt, after: date)
+            return date
         }
     }
 }

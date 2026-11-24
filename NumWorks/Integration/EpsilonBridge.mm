@@ -20,24 +20,66 @@ NSNotificationName const EpsilonWindowDidBecomeAvailableNotification =
     @"EpsilonWindowDidBecomeAvailableNotification";
 
 static IMP NumWorksOriginalTerminate = NULL;
-/* Start paused: AppController shows or hides after attach. Avoids ~100 Hz
- * polling while the window is still alpha-0 / ordered out. */
+/* Start with presentation disabled until Swift restores the frame and decides
+ * whether to show the calculator. Input processing is never suspended. */
 static atomic_bool sSimulatorActive = false;
+static atomic_bool sCanPresent = false;
+static atomic_uint sEventWaitDepth = 0;
+static atomic_uint_fast64_t sWakeGeneration = 0;
+static atomic_uint_fast64_t sConsumedWakeGeneration = 0;
+static BOOL sDisplaySleeping = NO;
 
 bool NumWorksSimulatorIsActive(void) {
   return atomic_load_explicit(&sSimulatorActive, memory_order_relaxed);
 }
 
 bool NumWorksSimulatorShouldPresent(void) {
-  if (!atomic_load_explicit(&sSimulatorActive, memory_order_relaxed)) {
+  return atomic_load_explicit(&sCanPresent, memory_order_relaxed);
+}
+
+void NumWorksSimulatorWake(void) {
+  atomic_fetch_add_explicit(&sWakeGeneration, 1, memory_order_seq_cst);
+  if (atomic_load_explicit(&sEventWaitDepth, memory_order_seq_cst) == 0) {
+    return;
+  }
+  /* CFRunLoopWakeUp alone does not make -nextEventMatchingMask: return.
+   * Posting an ordinary application-defined event also covers a Carbon/GCD
+   * callback which showed the window from inside that very call. SDL drains
+   * this harmless event together with native input on the next iteration. */
+  @autoreleasepool {
+    NSEvent *wake = [NSEvent otherEventWithType:NSEventTypeApplicationDefined
+        location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0
+        context:nil subtype:0x4e57 data1:0 data2:0];
+    [NSApp postEvent:wake atStart:NO];
+  }
+}
+
+bool NumWorksSimulatorWaitForEvent(int maximumDelayMilliseconds) {
+  NSCAssert(NSThread.isMainThread, @"The simulator event wait must run on main");
+  if (maximumDelayMilliseconds <= 0 || NSApp == nil) {
     return false;
   }
-  /* SDL_RenderPresent / nextDrawable can block indefinitely once the window
-   * is occluded in the background. Skipping the present keeps epsilon_main
-   * pumping AppKit (menu bar, hover) instead of hanging. The dirty flag is
-   * left set, so the frame is drawn as soon as we come back to the front. */
-  NSApplication *app = NSApp;
-  return app == nil || app.isActive;
+  @autoreleasepool {
+    uint_fast64_t generation = atomic_load_explicit(&sWakeGeneration,
+                                                   memory_order_seq_cst);
+    // A show/activation request made during SDL_PumpEvents must survive until
+    // this point. Give pending main-thread work another turn before parking.
+    if (generation != atomic_exchange_explicit(&sConsumedWakeGeneration,
+                                               generation, memory_order_seq_cst)) {
+      return true;
+    }
+    atomic_fetch_add_explicit(&sEventWaitDepth, 1, memory_order_seq_cst);
+    NSEvent *event = nil;
+    if (generation == atomic_load_explicit(&sWakeGeneration, memory_order_seq_cst)) {
+      event = [NSApp nextEventMatchingMask:NSEventMaskAny
+          untilDate:[NSDate dateWithTimeIntervalSinceNow:
+              maximumDelayMilliseconds / 1000.0]
+          inMode:NSDefaultRunLoopMode dequeue:NO];
+    }
+    atomic_fetch_sub_explicit(&sEventWaitDepth, 1, memory_order_seq_cst);
+    return event != nil || generation != atomic_load_explicit(&sWakeGeneration,
+                                                             memory_order_seq_cst);
+  }
 }
 
 static void NumWorksTerminate(id self, SEL _cmd, id sender) {
@@ -74,6 +116,30 @@ static __weak NSWindow *sCalculatorWindow = nil;
 + (void)setSimulatorActive:(BOOL)active {
   atomic_store_explicit(&sSimulatorActive, active ? true : false,
                         memory_order_relaxed);
+  [self refreshSimulatorVisibility];
+  NumWorksSimulatorWake();
+}
+
++ (BOOL)simulatorDisplaySleeping { return sDisplaySleeping; }
+
++ (void)setSimulatorDisplaySleeping:(BOOL)sleeping {
+  sDisplaySleeping = sleeping;
+  [self refreshSimulatorVisibility];
+}
+
++ (void)refreshSimulatorVisibility {
+  NSWindow *window = sCalculatorWindow;
+  BOOL canPresent = NumWorksSimulatorIsActive() && !sDisplaySleeping &&
+      NSApp.isActive && !NSApp.isHidden && window.isVisible &&
+      !window.isMiniaturized && window.isOnActiveSpace &&
+      (window.occlusionState & NSWindowOcclusionStateVisible) != 0;
+  /* Never park the event loop on occlusion. nextDrawable can block when a
+   * window is covered; only rendering/cursor animation is deferred here. */
+  bool previous = atomic_exchange_explicit(&sCanPresent, canPresent,
+                                           memory_order_relaxed);
+  if (previous != canPresent) {
+    NumWorksSimulatorWake();
+  }
 }
 
 + (void)installProcessExitOnTerminate {
