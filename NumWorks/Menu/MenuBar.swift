@@ -75,6 +75,7 @@ final class StatusItemController: NSObject {
     /// invert the click before mouseUp runs.
     private var pendingShouldHide: Bool?
     private var ignoreReopenUntil = Date.distantPast
+    private var statusItemActionDepth = 0
     private var cachedIcons: [MenuBarIconStyle: NSImage] = [:]
 
     struct StatusItemActions {
@@ -173,13 +174,16 @@ final class StatusItemController: NSObject {
     private var buttonWindow: NSWindow? { statusItem?.button?.window }
 
     func isEventFromStatusItem(_ event: NSEvent?) -> Bool {
-        if Date() < ignoreReopenUntil { return true }
+        if statusItemActionDepth > 0 || Date() < ignoreReopenUntil { return true }
         guard let event, let buttonWindow else { return false }
         return event.window === buttonWindow
     }
 
     @objc private func statusItemClicked(_ sender: Any?) {
-        let type = NSApp.currentEvent?.type
+        handleStatusItemEvent(NSApp.currentEvent?.type)
+    }
+
+    func handleStatusItemEvent(_ type: NSEvent.EventType?) {
         if type == .rightMouseUp {
             pendingShouldHide = nil
             showMenu(with: NSApp.currentEvent)
@@ -192,7 +196,14 @@ final class StatusItemController: NSObject {
             ignoreReopenUntil = Date().addingTimeInterval(0.45)
             return
         }
-        ignoreReopenUntil = Date().addingTimeInterval(0.45)
+        // AppKit can deliver reopen events while orderOut is still running.
+        // Keep the guard active through nested processing and start its grace
+        // period after the button action, rather than before a slow hide.
+        statusItemActionDepth += 1
+        defer {
+            statusItemActionDepth -= 1
+            ignoreReopenUntil = Date().addingTimeInterval(0.45)
+        }
         if let shouldHide = pendingShouldHide {
             pendingShouldHide = nil
             shouldHide ? actions.hideCalculator() : actions.showCalculator()
