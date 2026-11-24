@@ -3,6 +3,23 @@
     <channel>
         <title>NumWorks</title>
         <item>
+            <title>2.0.18</title>
+            <pubDate>Wed, 25 Nov 2026 00:15:45 +0100</pubDate>
+            <sparkle:version>23</sparkle:version>
+            <sparkle:shortVersionString>2.0.18</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[## What's New in 2.0.18
+
+- Fixed a few bugs with flags send timing, updates prompts
+- Reduced CPU comsumption, especially at idle
+- Fixed a bug whith hide/show behaviour
+
+**Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.17...2.0.18
+]]></description>
+            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.18/NumWorks-2.0.18.zip" length="4294340" type="application/octet-stream" sparkle:edSignature="BSSNTW1Xn93905n1IAPewyxC49fPMn5+tYjmsmjzbXWSt2tT4AKQ3PAKyIs9BP7oAnzXvx8fRCJxybQQl8FbCg=="/>
+        </item>
+        <item>
             <title>2.0.17</title>
             <pubDate>Tue, 24 Nov 2026 21:37:18 +0100</pubDate>
             <sparkle:version>22</sparkle:version>
@@ -32,23 +49,6 @@ Fixed some bugs
  **Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.15...2.0.16
 ]]></description>
             <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.16/NumWorks-2.0.16.zip" length="4121188" type="application/octet-stream" sparkle:edSignature="i9NxYIfj/1X1693RYFA0g46CwUs08xq+FKS/wYuCgIKUfC6jDnVkOSeUx63JPKNpC3ZlnPoLdv5gD7aamknNAw=="/>
-        </item>
-        <item>
-            <title>2.0.15</title>
-            <pubDate>Wed, 28 Oct 2026 15:14:13 +0100</pubDate>
-            <sparkle:version>20</sparkle:version>
-            <sparkle:shortVersionString>2.0.15</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>15.5</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[## What's New in 2.0.15
-
-- Polished the app
-- Made hide/show behaviour more stable
-- Added anonymous telemetry
-
-**Full Changelog**: https://github.com/EllandeVED/NumworksApplication/compare/2.0.14...2.0.15
-]]></description>
-            <enclosure url="https://github.com/EllandeVED/NumworksApplication/releases/download/2.0.15/NumWorks-2.0.15.zip" length="4106911" type="application/octet-stream" sparkle:edSignature="uRLMvJj/xlw91bid1vj3tO7rmXpr2OwEzv14MCdkG48Jg8Uhln7ZKDArI1ZAzDg/sC6TcsUc9uJ4mF1e4UIyAA=="/>
         </item>
     </channel>
 </rss>
