@@ -7,10 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1E1638C030917F2D0034352E /* Aptabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1E1638C130917F2D0034352E /* Aptabase */; };
 		1E0390D930191907001CD48C /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0390D830191907001CD48C /* LaunchAtLogin */; };
 		1E0391AC301947F9001CD48C /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1E0391AB301947F9001CD48C /* Sparkle */; };
 		1E1638B930917F2D0034352E /* Aptabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1E1638B830917F2D0034352E /* Aptabase */; };
+		1E1638C030917F2D0034352E /* Aptabase in Frameworks */ = {isa = PBXBuildFile; productRef = 1E1638C130917F2D0034352E /* Aptabase */; };
 		1EAA000A3019000A001CD48C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 1EAA000930190009001CD48C /* KeyboardShortcuts */; };
 /* End PBXBuildFile section */
 
@@ -524,7 +524,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_LIBRARY_VALIDATION = NO;
@@ -548,7 +548,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 2.0.17;
+				MARKETING_VERSION = 2.0.18;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
@@ -590,7 +590,7 @@
 				CODE_SIGN_ENTITLEMENTS = NumWorks/NumWorks.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 23;
 				DEVELOPMENT_TEAM = 6C2PG6C5FF;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -613,7 +613,7 @@
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output/release/simulator/macos/arm64",
 					"$(PROJECT_DIR)/NumWorks/Vendor/EpsilonSource/output",
 				);
-				MARKETING_VERSION = 2.0.17;
+				MARKETING_VERSION = 2.0.18;
 				OTHER_LDFLAGS = (
 					"$(SRCROOT)/NumWorks/Vendor/EpsilonSource/output/libepsilon.a",
 					"-lc++",
@@ -779,6 +779,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Aptabase;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		1E0390D730191907001CD48C /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -806,13 +813,6 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/Aptabase;
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
 		1E0390D830191907001CD48C /* LaunchAtLogin */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -829,15 +829,15 @@
 			package = 1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */;
 			productName = Aptabase;
 		};
-		1EAA000930190009001CD48C /* KeyboardShortcuts */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
-			productName = KeyboardShortcuts;
-		};
 		1E1638C130917F2D0034352E /* Aptabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 1E1638B730917F2D0034352E /* XCLocalSwiftPackageReference "Packages/Aptabase" */;
 			productName = Aptabase;
+		};
+		1EAA000930190009001CD48C /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1EAA000B3019000B001CD48C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
